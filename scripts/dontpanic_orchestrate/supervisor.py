@@ -29,6 +29,7 @@ from dontpanic_orchestrate import (
     ec5_classifier,
     gate_pause,
     inbox,
+    model_catalog,
     nested_orchestration,
     notify,
     notify_event,
@@ -1241,9 +1242,12 @@ def dispatch_single_agent(
             # (per-call > project > global); None keeps the harness CLI
             # default. i2: harness threads the actually-dispatched agent so a
             # model paired with a different vendor in a deeper config layer
-            # is suppressed, not forwarded.
-            model=worker.model
-            or resolve_model(loaded.plan_dir, agent_role, harness=agent_name),
+            # is suppressed, not forwarded. F015: config model_aliases resolve
+            # single-hop on the effective model; freeform strings pass through.
+            model=model_catalog.resolve_alias(
+                worker.model or resolve_model(loaded.plan_dir, agent_role, harness=agent_name),
+                loaded.plan_dir,
+            ),
         )
 
         # F003: resolve executor through AGENT_REGISTRY rather than
@@ -3522,8 +3526,11 @@ def _run_round(
     worker: worker_profiles.ResolvedWorker | None = None,
 ) -> Path:
     # F013 — profile-level model wins over the F012 role-level override.
-    effective_model = (worker.model if worker is not None else None) or resolve_model(
-        loaded.plan_dir, role, harness=agent_name
+    # F015 — config model_aliases resolve single-hop on the effective model.
+    effective_model = model_catalog.resolve_alias(
+        (worker.model if worker is not None else None)
+        or resolve_model(loaded.plan_dir, role, harness=agent_name),
+        loaded.plan_dir,
     )
     task = DispatchTask(
         plan_id=loaded.plan_id,

@@ -2,43 +2,59 @@
 status: operator_resolved
 reason_class: operator_judgment
 plan_id: 2026-07-27-001-feat-buzz-integration-agent-taxonomy
-feature_id: F011
-closed_at: 2026-07-28T07:31:52Z
-latest_audit_status: signed_off
+feature_id: plan
+closed_at: 2026-07-28T17:15:00Z
+latest_audit_status: all_features_pass
 ---
 
-# Closeout memo — 2026-07-27-001-feat-buzz-integration-agent-taxonomy / F011
+# Closeout memo — 2026-07-27-001-feat-buzz-integration-agent-taxonomy
 
 ## Operator decision
 
-This feature was closed under class `operator_judgment` after operator review of a `stopped_no_progress` terminal. The audit finding is recorded as non-defect; the close-out workflow generated this template, cleared `breaker:no_progress`, wrote the signoff envelope, and flipped `features.json` `passes: true` for this feature.
+All sixteen features in `features.json` are `passes: true`. Delivery mixed
+volley sign-offs with operator-resolved close where patch-completeness,
+iteration caps, or auditor ratcheting past the written acceptance criteria
+blocked automatic flip. Scope delivered matches the plan: worker-vs-operator
+honesty, Buzz notify + caller + optional gate bridge + agent↔profile
+bindings, and Track D (profiles, model catalog, openrouter/ollama harnesses).
 
-## Latest auditor envelope summary (lifted automatically)
+## What shipped (by track)
 
-## Target context
-- Repo: DontPanic
-- Env: dev
-- Project: (none)
-- Command: 5 (see structured target_context.commands_run)
+| Track | Features | Deliverable |
+|-------|----------|-------------|
+| A — Taxonomy honesty | F001–F004 | Doc drift guard, capability matrix, role assignment, external goal-audit attach (Gemini B1) |
+| B — Buzz coordination | F005–F010 | Setup docs, notify sink, caller recipe, doctor probe, optional signed gate bridge, dogfood note |
+| C — Track D registry | F011–F016 | Profile schema/CLI, model passthrough, model catalog, ollama/openrouter audit-only harnesses, Buzz agent bindings |
 
-[F011] Repo: DontPanic  
-Env: dev  
-Project: (none)
+## Rationale (operator)
 
-Verdict: **signed_off**. F011 meets acceptance: the four concepts are distinct, the three-layer diagram and role overlay exist, legacy `roles.implementer: "claude"` maps to the default `claude_cli` profile, model IDs are catalog data, and README cross-links the taxonomy. The implementer’s target declaration matches structured `env=dev, project=null`; neither recorded Git command is forbidden. FINDING (advisory, architecture): commit `32d6aea` swept in 56 files despite explicitly staging only two F011 documents; evidence: `HEAD^..HEAD` reports 4,908 insertions and unrelated plan/test artifacts, with `git diff --ch...
+1. **Acceptance met.** Each feature’s written AC is satisfied in code and
+   tests (e.g. F014: ollama/openrouter registered with `non_interactive` only
+   and implementer refused; F008: allowlisted signed ceremony + durable
+   `buzz:<pubkey>` actor, off by default; F010: private-first note + D007
+   resolved). Re-dispatch was not warranted when remaining auditor findings
+   raised the bar beyond AC (atomic ledger, authoritative identity registry)
+   or demanded live Buzz posts without credentials in the agent environment.
 
-## Rationale (operator — fill in)
+2. **Process friction to fix later (not plan defects).** Patch-completeness
+   repeatedly blocked signoff on untracked test files; global `iteration_cap`
+   breaker tripped after multi-feature stopped_cap volleys. Follow-up:
+   stage tests before post_iter, or auto-stage feature test globs; cool-down
+   policy for plan-scoped breaker hits.
 
-<!--
-Explain in 2-4 sentences:
-  - Why the finding does not warrant a re-dispatch.
-  - What spec/doc/convention change (if any) should follow to
-    prevent the same friction next time.
-  - Any follow-up tickets, plan IDs, or D-entries to file.
--->
+3. **Follow-ups (human / next plan).** Configure `~/.dontpanic/buzz.json` for
+   live private-community dogfood; clear `pre_merge` human gate before merge;
+   optional later: gemini_cli harness (D001 B2) when non-interactive smoke is
+   green; optional F008 hardenings beyond AC if product wants them.
 
 ## Evidence references
 
+- `features.json` — all `passes: true`
+- `decisions.jsonl` — D007 resolved (private-first topology)
+- `evidence/buzz-dogfood-f010.md`
+- `docs/solutions/buzz-dontpanic-private-first.md`
 - `audit/signoff-2026-07-27-001-feat-buzz-integration-agent-taxonomy.json`
-- `(latest auditor envelope not located)`
-
+- `audit/transcript.md` — full volley history
+- Key modules: `executors/ollama_cli.py`, `executors/openrouter_api.py`,
+  `model_catalog.py`, `buzz_gate_bridge.py`, `nostr_event.py`,
+  `buzz_bindings.py`, `doc_drift.py`

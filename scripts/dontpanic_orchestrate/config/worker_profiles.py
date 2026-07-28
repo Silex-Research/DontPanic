@@ -55,15 +55,21 @@ def normalize_harness(name: str) -> str:
 CAPABILITY_FLAGS: tuple[str, ...] = ("file_edit", "tool_use", "non_interactive")
 """The harness capability axes that gate role holding (F011 vocabulary)."""
 
-# Capability flags per registered harness. Both current harnesses run a
-# sandboxed non-interactive CLI with tool use + file edit. A registered
-# harness NOT listed here defaults conservatively to audit-style capability
-# only (DEFAULT_HARNESS_CAPABILITIES) — a future read-only or
-# goal-audit-only harness (gemini_cli per D001 B2) must be listed
-# explicitly to hold the implementer role.
+# Capability flags per registered harness. claude/codex run a sandboxed
+# non-interactive CLI with tool use + file edit; ollama/openrouter (F014)
+# are chat-only read-oriented harnesses — non_interactive dispatch with NO
+# file_edit/tool_use sandbox, so they may hold audit-style roles but never
+# implementer. A registered harness NOT listed here defaults conservatively
+# to audit-style capability only (DEFAULT_HARNESS_CAPABILITIES) — a future
+# harness (gemini_cli per D001 B2) must be listed explicitly to hold the
+# implementer role. Each executor class mirrors its row in a
+# ``capabilities`` declaration; test_f014_harness_adapters guards against
+# drift between the two surfaces.
 HARNESS_CAPABILITIES: dict[str, frozenset[str]] = {
     "claude": frozenset(CAPABILITY_FLAGS),
     "codex": frozenset(CAPABILITY_FLAGS),
+    "ollama": frozenset({"non_interactive"}),
+    "openrouter": frozenset({"non_interactive"}),
 }
 
 DEFAULT_HARNESS_CAPABILITIES: frozenset[str] = frozenset({"non_interactive"})
@@ -171,6 +177,16 @@ def widened_capabilities(profile: WorkerProfile) -> list[str]:
         for flag in CAPABILITY_FLAGS
         if getattr(profile.capabilities, flag) is True and flag not in base
     )
+
+
+def harness_missing_capabilities_for_role(harness: str, role: str) -> list[str]:
+    """Capability flags ``role`` requires that ``harness`` (bare, no profile
+    overrides) does not declare. F014 — gates the LEGACY role-value path
+    (``roles.implementer: "ollama"``) the same way profiles are gated, so
+    registering an audit-only harness never widens it into the implementer
+    slot. Unknown (non-canonical) roles require nothing."""
+    required = ROLE_REQUIRED_CAPABILITIES.get(role, frozenset())
+    return sorted(required - harness_capabilities(harness))
 
 
 def missing_capabilities_for_role(profile: WorkerProfile, role: str) -> list[str]:

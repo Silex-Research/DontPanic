@@ -53,6 +53,21 @@ Known limitation: a bare attributive disclaimer adjacent to a mention wins
 over a claim label on the far side of the MENTION ("Shipped executors —
 Gemini — cannot be dispatched" is excused); such self-contradicting prose
 is out of scope.
+
+The guard is TWO-WAY (auditor F014-i1 finding 2). The forward direction
+above catches an unregistered agent claimed as shipped; :func:`scan_text_stale`
+catches the reverse — a REGISTERED harness still described as
+planned/operator-only/not-dispatchable, the exact drift README carried after
+``ollama``/``openrouter`` registered (F014). A registered agent's mention is
+stale when its own segment is a disclaimer, when its weak-separator clause
+resolves to a disclaimer, or — for a unit whose only agent mention is this
+one — when the unit contains any disclaimer segment not owned by another
+agent name. Multi-agent units deliberately do NOT strong-bind a registered
+mention to a distant disclaimer: honest wording routinely pairs registered
+and operator-only agents in one unit ("Claude and Codex ... — Gemini and
+Grok are operator-only"), and the sole-mention rule covers the install-bullet
+style ("**ollama** — ... (operator-side tooling)") where distance binding is
+unambiguous.
 """
 
 from __future__ import annotations
@@ -66,10 +81,13 @@ from dontpanic_orchestrate.executors import AGENT_REGISTRY
 from dontpanic_orchestrate.invocation_context import AGENT_RUNTIMES
 
 # Fixed allowlist, repo-root relative. The matrix doc lands with F003 of the
-# same plan; scanning skips paths that do not exist yet.
+# same plan; scanning skips paths that do not exist yet. CONFIGURATION.md
+# joins after F014 (auditor F014-i2): it is the operator-facing harness
+# inventory and previously still labeled openrouter/ollama as "future".
 DOC_ALLOWLIST: tuple[str, ...] = (
     "README.md",
     "docs/AGENT_CAPABILITY_MATRIX.md",
+    "docs/CONFIGURATION.md",
 )
 
 # Agent names worth watching for overstated dispatch claims: the canonical
@@ -149,9 +167,39 @@ class DocDriftViolation:
         )
 
 
+@dataclass(frozen=True)
+class StaleDisclaimerViolation:
+    """One stale negative claim: a registered harness described as not shipped."""
+
+    path: str
+    line: int
+    agent: str
+    excerpt: str
+
+    def __str__(self) -> str:
+        return (
+            f"{self.path}:{self.line}: describes registered harness "
+            f"{self.agent!r} as planned/operator-only/not dispatchable "
+            f"(registered: {registered_worker_names()}): {self.excerpt!r}"
+        )
+
+
 def registered_worker_names() -> list[str]:
     """Registered dispatchable worker names — ``sorted(AGENT_REGISTRY.keys())``."""
     return sorted(AGENT_REGISTRY)
+
+
+def _name_re(agent: str) -> re.Pattern[str]:
+    """Word-boundary matcher for an agent name, cached in _AGENT_NAME_RES.
+
+    The stale scan iterates the REGISTERED set, which may contain harness ids
+    outside WATCHED_AGENTS; those gain a cached pattern on first use.
+    """
+    pattern = _AGENT_NAME_RES.get(agent)
+    if pattern is None:
+        pattern = re.compile(rf"\b{re.escape(agent)}\b", re.IGNORECASE)
+        _AGENT_NAME_RES[agent] = pattern
+    return pattern
 
 
 def _iter_units(text: str) -> Iterator[tuple[int, str]]:
@@ -360,5 +408,92 @@ def scan_allowlisted_docs(
             continue
         violations.extend(
             scan_text(doc.read_text(encoding="utf-8"), path=rel, registered=registered)
+        )
+    return violations
+
+
+def _mention_stale(
+    agent: str,
+    segments: list[str],
+    classes: list[str],
+    strengths: list[str],
+    index: int,
+    *,
+    sole_mentioned: bool,
+) -> bool:
+    """True when a REGISTERED agent's mention reads as a negative claim.
+
+    Mirror image of :func:`_mention_excused`, with one deliberate asymmetry:
+    no strong-boundary binding for multi-agent units (see module docstring —
+    honest wording pairs registered and operator-only agents in one unit).
+    A disclaimer-class own segment that resumes into a claim is the forward
+    guard's self-contradiction territory, not a stale negative claim.
+    """
+    if classes[index] == "claim":
+        return False
+    if classes[index] == "disclaimer":
+        return not _claim_continues_past(classes, index, 1)
+    clause = _weakly_reached(classes, strengths, index)
+    if "claim" in clause:
+        return False
+    if "disclaimer" in clause:
+        return True
+    if not sole_mentioned:
+        return False
+    return any(
+        cls == "disclaimer" and not _owned_by_other(seg, agent)
+        for seg, cls in zip(segments, classes, strict=True)
+    )
+
+
+def scan_text_stale(
+    text: str,
+    *,
+    path: str = "<text>",
+    registered: Iterable[str] | None = None,
+) -> list[StaleDisclaimerViolation]:
+    """Scan doc text for registered harnesses described as not shipped."""
+    registered_names = sorted(
+        set(registered) if registered is not None else registered_worker_names()
+    )
+    violations: list[StaleDisclaimerViolation] = []
+    known_names = sorted({*WATCHED_AGENTS, *registered_names})
+    for line_no, unit in _iter_units(text):
+        if not (_NEGATING_DISCLAIMER_RE.search(unit) or _STATUS_DISCLAIMER_RE.search(unit)):
+            continue
+        segments, strengths = _split_unit(unit)
+        classes = [_segment_class(s) for s in segments]
+        mentioned = {
+            name for name in known_names if any(_name_re(name).search(s) for s in segments)
+        }
+        for agent in registered_names:
+            agent_re = _name_re(agent)
+            mentions = [i for i, s in enumerate(segments) if agent_re.search(s)]
+            if not mentions:
+                continue
+            sole = mentioned == {agent}
+            if any(
+                _mention_stale(agent, segments, classes, strengths, i, sole_mentioned=sole)
+                for i in mentions
+            ):
+                violations.append(
+                    StaleDisclaimerViolation(path=path, line=line_no, agent=agent, excerpt=unit)
+                )
+    return violations
+
+
+def scan_allowlisted_docs_stale(
+    repo_root: Path,
+    *,
+    registered: Iterable[str] | None = None,
+) -> list[StaleDisclaimerViolation]:
+    """Stale-claim scan of every existing :data:`DOC_ALLOWLIST` path."""
+    violations: list[StaleDisclaimerViolation] = []
+    for rel in DOC_ALLOWLIST:
+        doc = repo_root / rel
+        if not doc.is_file():
+            continue
+        violations.extend(
+            scan_text_stale(doc.read_text(encoding="utf-8"), path=rel, registered=registered)
         )
     return violations

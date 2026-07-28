@@ -1,0 +1,185 @@
+{
+  "audit_kind": "v1_evidence_coverage_heuristic",
+  "generated_at": "2026-07-28T18:37:17.056441+00:00",
+  "plan_id": "2026-07-27-001-feat-buzz-integration-agent-taxonomy",
+  "contract_path": "./objective_contract.json",
+  "evidence_manifest_uris": [],
+  "findings": [
+    {
+      "finding_id": "F2C-E001",
+      "gap_class": "missing_evidence",
+      "severity": "medium",
+      "title": "Required evidence 'diff or file evidence of README/docs honesty fix (F001)' not captured",
+      "narrative": "The contract declares required_evidence='diff or file evidence of README/docs honesty fix (F001)' but no captured EvidenceRef artifact under evidence/goal-governance/post_impl/ has a uri or note containing this substring. Either the implementation didn't produce this artifact, the operator's matcher string drifted from the actual filename / note convention, or the contract should be updated to drop the requirement. Per D002 \u2014 this is a v1 evidence-coverage heuristic; the matcher only inspects uri / note metadata, not artifact bytes, and a hit would not certify journey correctness either.",
+      "subsystem": "cli_human",
+      "journey": "new-user-reads-honest-executor-panel",
+      "matcher_string": "diff or file evidence of README/docs honesty fix (F001)",
+      "evidence_uris": []
+    },
+    {
+      "finding_id": "F2C-E002",
+      "gap_class": "missing_evidence",
+      "severity": "medium",
+      "title": "Required evidence 'test_output for doc-drift guard (F002)' not captured",
+      "narrative": "The contract declares required_evidence='test_output for doc-drift guard (F002)' but no captured EvidenceRef artifact under evidence/goal-governance/post_impl/ has a uri or note containing this substring. Either the implementation didn't produce this artifact, the operator's matcher string drifted from the actual filename / note convention, or the contract should be updated to drop the requirement. Per D002 \u2014 this is a v1 evidence-coverage heuristic; the matcher only inspects uri / note metadata, not artifact bytes, and a hit would not certify journey correctness either.",
+      "subsystem": "cli_human",
+      "journey": "new-user-reads-honest-executor-panel",
+      "matcher_string": "test_output for doc-drift guard (F002)",
+      "evidence_uris": []
+    },
+    {
+      "finding_id": "F2C-E003",
+      "gap_class": "missing_evidence",
+      "severity": "medium",
+      "title": "Required evidence 'file evidence of capability matrix + OpenCode ECOSYSTEM row (F003)' not captured",
+      "narrative": "The contract declares required_evidence='file evidence of capability matrix + OpenCode ECOSYSTEM row (F003)' but no captured EvidenceRef artifact under evidence/goal-governance/post_impl/ has a uri or note containing this substring. Either the implementation didn't produce this artifact, the operator's matcher string drifted from the actual filename / note convention, or the contract should be updated to drop the requirement. Per D002 \u2014 this is a v1 evidence-coverage heuristic; the matcher only inspects uri / note metadata, not artifact bytes, and a hit would not certify journey correctness either.",
+      "subsystem": "cli_human",
+      "journey": "new-user-reads-honest-executor-panel",
+      "matcher_string": "file evidence of capability matrix + OpenCode ECOSYSTEM row (F003)",
+      "evidence_uris": []
+    },
+    {
+      "finding_id": "F2C-E004",
+      "gap_class": "missing_evidence",
+      "severity": "medium",
+      "title": "Required evidence 'test_output or CLI evidence for Gemini path B1 or B2 (F004)' not captured",
+      "narrative": "The contract declares required_evidence='test_output or CLI evidence for Gemini path B1 or B2 (F004)' but no captured EvidenceRef artifact under evidence/goal-governance/post_impl/ has a uri or note containing this substring. Either the implementation didn't produce this artifact, the operator's matcher string drifted from the actual filename / note convention, or the contract should be updated to drop the requirement. Per D002 \u2014 this is a v1 evidence-coverage heuristic; the matcher only inspects uri / note metadata, not artifact bytes, and a hit would not certify journey correctness either.",
+      "subsystem": "cli_human",
+      "journey": "new-user-reads-honest-executor-panel",
+      "matcher_string": "test_output or CLI evidence for Gemini path B1 or B2 (F004)",
+      "evidence_uris": []
+    },
+    {
+      "finding_id": "F2C-E005",
+      "gap_class": "missing_evidence",
+      "severity": "medium",
+      "title": "Required evidence 'file evidence of Buzz ECOSYSTEM + community model (F005)' not captured",
+      "narrative": "The contract declares required_evidence='file evidence of Buzz ECOSYSTEM + community model (F005)' but no captured EvidenceRef artifact under evidence/goal-governance/post_impl/ has a uri or note containing this substring. Either the implementation didn't produce this artifact, the operator's matcher string drifted from the actual filename / note convention, or the contract should be updated to drop the requirement. Per D002 \u2014 this is a v1 evidence-coverage heuristic; the matcher only inspects uri / note metadata, not artifact bytes, and a hit would not certify journey correctness either.",
+      "subsystem": "cli_human",
+      "journey": "new-user-reads-honest-executor-panel",
+      "matcher_string": "file evidence of Buzz ECOSYSTEM + community model (F005)",
+      "evidence_uris": []
+    },
+    {
+      "finding_id": "F2C-E006",
+      "gap_class": "missing_evidence",
+      "severity": "medium",
+      "title": "Required evidence 'doctor/setup evidence of advisory WARN for missing Buzz (F009)' not captured",
+      "narrative": "The contract declares required_evidence='doctor/setup evidence of advisory WARN for missing Buzz (F009)' but no captured EvidenceRef artifact under evidence/goal-governance/post_impl/ has a uri or note containing this substring. Either the implementation didn't produce this artifact, the operator's matcher string drifted from the actual filename / note convention, or the contract should be updated to drop the requirement. Per D002 \u2014 this is a v1 evidence-coverage heuristic; the matcher only inspects uri / note metadata, not artifact bytes, and a hit would not certify journey correctness either.",
+      "subsystem": "cli_human",
+      "journey": "new-user-reads-honest-executor-panel",
+      "matcher_string": "doctor/setup evidence of advisory WARN for missing Buzz (F009)",
+      "evidence_uris": []
+    },
+    {
+      "finding_id": "F2C-E007",
+      "gap_class": "missing_evidence",
+      "severity": "medium",
+      "title": "Required evidence 'test_output for notify_buzz fail-soft + configured path (F006)' not captured",
+      "narrative": "The contract declares required_evidence='test_output for notify_buzz fail-soft + configured path (F006)' but no captured EvidenceRef artifact under evidence/goal-governance/post_impl/ has a uri or note containing this substring. Either the implementation didn't produce this artifact, the operator's matcher string drifted from the actual filename / note convention, or the contract should be updated to drop the requirement. Per D002 \u2014 this is a v1 evidence-coverage heuristic; the matcher only inspects uri / note metadata, not artifact bytes, and a hit would not certify journey correctness either.",
+      "subsystem": "cli_human",
+      "journey": "new-user-reads-honest-executor-panel",
+      "matcher_string": "test_output for notify_buzz fail-soft + configured path (F006)",
+      "evidence_uris": []
+    },
+    {
+      "finding_id": "F2C-E008",
+      "gap_class": "missing_evidence",
+      "severity": "medium",
+      "title": "Required evidence 'file evidence of Buzz-as-caller recipe (F007)' not captured",
+      "narrative": "The contract declares required_evidence='file evidence of Buzz-as-caller recipe (F007)' but no captured EvidenceRef artifact under evidence/goal-governance/post_impl/ has a uri or note containing this substring. Either the implementation didn't produce this artifact, the operator's matcher string drifted from the actual filename / note convention, or the contract should be updated to drop the requirement. Per D002 \u2014 this is a v1 evidence-coverage heuristic; the matcher only inspects uri / note metadata, not artifact bytes, and a hit would not certify journey correctness either.",
+      "subsystem": "cli_human",
+      "journey": "new-user-reads-honest-executor-panel",
+      "matcher_string": "file evidence of Buzz-as-caller recipe (F007)",
+      "evidence_uris": []
+    },
+    {
+      "finding_id": "F2C-E009",
+      "gap_class": "missing_evidence",
+      "severity": "medium",
+      "title": "Required evidence 'file evidence of harness/model/profile vocabulary (F011)' not captured",
+      "narrative": "The contract declares required_evidence='file evidence of harness/model/profile vocabulary (F011)' but no captured EvidenceRef artifact under evidence/goal-governance/post_impl/ has a uri or note containing this substring. Either the implementation didn't produce this artifact, the operator's matcher string drifted from the actual filename / note convention, or the contract should be updated to drop the requirement. Per D002 \u2014 this is a v1 evidence-coverage heuristic; the matcher only inspects uri / note metadata, not artifact bytes, and a hit would not certify journey correctness either.",
+      "subsystem": "cli_human",
+      "journey": "new-user-reads-honest-executor-panel",
+      "matcher_string": "file evidence of harness/model/profile vocabulary (F011)",
+      "evidence_uris": []
+    },
+    {
+      "finding_id": "F2C-E010",
+      "gap_class": "missing_evidence",
+      "severity": "medium",
+      "title": "Required evidence 'test_output for model pass-through (F012)' not captured",
+      "narrative": "The contract declares required_evidence='test_output for model pass-through (F012)' but no captured EvidenceRef artifact under evidence/goal-governance/post_impl/ has a uri or note containing this substring. Either the implementation didn't produce this artifact, the operator's matcher string drifted from the actual filename / note convention, or the contract should be updated to drop the requirement. Per D002 \u2014 this is a v1 evidence-coverage heuristic; the matcher only inspects uri / note metadata, not artifact bytes, and a hit would not certify journey correctness either.",
+      "subsystem": "cli_human",
+      "journey": "new-user-reads-honest-executor-panel",
+      "matcher_string": "test_output for model pass-through (F012)",
+      "evidence_uris": []
+    },
+    {
+      "finding_id": "F2C-E011",
+      "gap_class": "missing_evidence",
+      "severity": "medium",
+      "title": "Required evidence 'test_output for worker profiles + legacy alias (F013)' not captured",
+      "narrative": "The contract declares required_evidence='test_output for worker profiles + legacy alias (F013)' but no captured EvidenceRef artifact under evidence/goal-governance/post_impl/ has a uri or note containing this substring. Either the implementation didn't produce this artifact, the operator's matcher string drifted from the actual filename / note convention, or the contract should be updated to drop the requirement. Per D002 \u2014 this is a v1 evidence-coverage heuristic; the matcher only inspects uri / note metadata, not artifact bytes, and a hit would not certify journey correctness either.",
+      "subsystem": "cli_human",
+      "journey": "new-user-reads-honest-executor-panel",
+      "matcher_string": "test_output for worker profiles + legacy alias (F013)",
+      "evidence_uris": []
+    },
+    {
+      "finding_id": "F2C-J001",
+      "gap_class": "journey_gap",
+      "severity": "high",
+      "title": "No captured evidence for journey 'new-user-reads-honest-executor-panel'",
+      "narrative": "The contract's user_journey 'new-user-reads-honest-executor-panel' has zero captured EvidenceRef artifacts under any source surface (web/ios/android/backend). This is a coverage gap \u2014 the v1 auditor cannot tell whether the journey was implemented or whether evidence simply was not captured. Operator must either capture artifacts under the journey or record an explicit non-goal in the contract.",
+      "subsystem": "cli_human",
+      "journey": "new-user-reads-honest-executor-panel",
+      "matcher_string": null,
+      "evidence_uris": []
+    },
+    {
+      "finding_id": "F2C-J002",
+      "gap_class": "journey_gap",
+      "severity": "high",
+      "title": "No captured evidence for journey 'cost-topology-goal-audit'",
+      "narrative": "The contract's user_journey 'cost-topology-goal-audit' has zero captured EvidenceRef artifacts under any source surface (web/ios/android/backend). This is a coverage gap \u2014 the v1 auditor cannot tell whether the journey was implemented or whether evidence simply was not captured. Operator must either capture artifacts under the journey or record an explicit non-goal in the contract.",
+      "subsystem": "cli_human",
+      "journey": "cost-topology-goal-audit",
+      "matcher_string": null,
+      "evidence_uris": []
+    },
+    {
+      "finding_id": "F2C-J003",
+      "gap_class": "journey_gap",
+      "severity": "high",
+      "title": "No captured evidence for journey 'buzz-strongly-recommended-setup'",
+      "narrative": "The contract's user_journey 'buzz-strongly-recommended-setup' has zero captured EvidenceRef artifacts under any source surface (web/ios/android/backend). This is a coverage gap \u2014 the v1 auditor cannot tell whether the journey was implemented or whether evidence simply was not captured. Operator must either capture artifacts under the journey or record an explicit non-goal in the contract.",
+      "subsystem": "cli_human",
+      "journey": "buzz-strongly-recommended-setup",
+      "matcher_string": null,
+      "evidence_uris": []
+    },
+    {
+      "finding_id": "F2C-J004",
+      "gap_class": "journey_gap",
+      "severity": "high",
+      "title": "No captured evidence for journey 'buzz-status-and-gates'",
+      "narrative": "The contract's user_journey 'buzz-status-and-gates' has zero captured EvidenceRef artifacts under any source surface (web/ios/android/backend). This is a coverage gap \u2014 the v1 auditor cannot tell whether the journey was implemented or whether evidence simply was not captured. Operator must either capture artifacts under the journey or record an explicit non-goal in the contract.",
+      "subsystem": "cli_human",
+      "journey": "buzz-status-and-gates",
+      "matcher_string": null,
+      "evidence_uris": []
+    },
+    {
+      "finding_id": "F2C-J005",
+      "gap_class": "journey_gap",
+      "severity": "high",
+      "title": "No captured evidence for journey 'buzz-like-harness-and-model-selection'",
+      "narrative": "The contract's user_journey 'buzz-like-harness-and-model-selection' has zero captured EvidenceRef artifacts under any source surface (web/ios/android/backend). This is a coverage gap \u2014 the v1 auditor cannot tell whether the journey was implemented or whether evidence simply was not captured. Operator must either capture artifacts under the journey or record an explicit non-goal in the contract.",
+      "subsystem": "cli_human",
+      "journey": "buzz-like-harness-and-model-selection",
+      "matcher_string": null,
+      "evidence_uris": []
+    }
+  ]
+}

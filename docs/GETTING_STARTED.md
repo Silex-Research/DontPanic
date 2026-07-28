@@ -196,6 +196,77 @@ First-hour checklist:
    projections (summaries, hashes, gate links) and never secrets, home
    paths, or full transcripts, but private work belongs in a private room
    regardless.
+
+   **Optional — Buzz agent ↔ worker-profile bindings (off by default).**
+   If your community has agent identities (say Fizz/Honey/Bumble) that
+   correspond to DontPanic worker profiles, an `agent_bindings` key maps
+   the Buzz agent id or display name to the local profile id so docs and
+   status can show the chain Buzz agent → profile → harness + model:
+
+   ```json
+   {
+     "relay_url": "https://relay.your-team.example",
+     "channels": ["11111111-2222-4333-8444-555555555555"],
+     "reporter_key_ref": "env:BUZZ_PRIVATE_KEY",
+     "agent_bindings": { "Fizz": "fizz", "Honey": "honey" }
+   }
+   ```
+
+   Inspect the join with `dontpanic workers buzz-bindings`. Bindings are
+   **display-only**: Buzz remains the UX for membership; DontPanic's
+   roles/profiles remain the dispatch authority, and model selection
+   stays single-sourced in the profile — the binding carries no
+   harness or model of its own. A binding never confers dispatch
+   authority (a Buzz name that happens to equal a profile id dispatches
+   via the profile table, never via the binding), an unbound agent
+   gains nothing, and no Buzz message auto-dispatches anything —
+   Buzz-initiated runs still go through the confirm-gated caller
+   recipe (`examples/buzz-caller/README.md`). The
+   notify reporter key above stays a separate thin identity, unrelated
+   to these bindings.
+
+   **Optional — Buzz gate bridge (off by default).** A `gate_bridge` key
+   lets an **allowlisted human** clear a *pending* DontPanic gate by
+   posting a **signed Nostr event** whose content is the exact ceremony
+   `dontpanic approve plan=<plan_id> gate=<gate>`. Reactions / emoji
+   **never** auto-confirm (ECOSYSTEM.md non-goal). Apply via
+   `dontpanic buzz-gate <plan> --payload <file|->` or
+   `dontpanic buzz-gate <plan> --poll` (shells out to configured
+   `poll_command` — typically the Buzz CLI; DontPanic still has no relay
+   client of its own):
+
+   ```json
+   {
+     "relay_url": "https://relay.your-team.example",
+     "channels": ["11111111-2222-4333-8444-555555555555"],
+     "reporter_key_ref": "env:BUZZ_PRIVATE_KEY",
+     "gate_bridge": {
+       "enabled": true,
+       "approver_pubkeys": ["<hex pubkey of a HUMAN operator>"],
+       "agent_pubkeys": ["<hex pubkeys of your agent identities>"],
+       "channel": "11111111-2222-4333-8444-555555555555",
+       "gate_kinds": ["pre_impl", "pre_merge"],
+       "poll_command": ["buzz", "timeline", "--json"],
+       "webhook_secret_ref": "env:BUZZ_GATE_WEBHOOK_SECRET"
+     }
+   }
+   ```
+
+   The bridge stays off unless `enabled: true`, `approver_pubkeys` is
+   non-empty, **and** `agent_pubkeys` is present as a list (empty list is
+   an explicit “no agent identities”; omitting the key fails closed).
+   `approver_pubkeys` lists **human** operator pubkeys only — any key in
+   `agent_pubkeys` is refused even if it also appears in the allowlist
+   (D006: agent keys may post status and request approval, never
+   self-clear). Cryptographic verification is **in-process** (BIP-340 /
+   NIP-01): the payload must wrap a raw signed event; the legacy
+   `sig_verified: true` flat shape is rejected. Webhook deliveries also
+   require a valid HMAC-SHA256 over the event id using
+   `webhook_secret_ref`. An accepted approval records the durable actor
+   `buzz:<pubkey>` in gate-state history, an INBOX `gate_cleared` event,
+   a consumed-event ledger entry, and a `decisions.jsonl` audit note.
+   Synthetic gates (`breaker:*`, `defer:*`, …) and any non-pending gate
+   always refuse — those stay on the operator CLI (`dontpanic approve`).
 6. Point your Buzz-side workflow (the caller sketch in `ECOSYSTEM.md`) at
    the DontPanic CLI, with your relay URL, channels, and reporter key in the
    workflow's own config. DontPanic's notify sink posts projections itself

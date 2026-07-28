@@ -1118,6 +1118,8 @@ class TestCommandCatalogCoversCliSurface:
             "dontpanic config set",
             "dontpanic project config init",
             "dontpanic project config set",
+            "dontpanic models list",
+            "dontpanic models aliases",
         }
         catalog_names = {entry["name"] for entry in avs._COMMAND_CATALOG}
         missing = expected - catalog_names

@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-07-28T06:58:26Z",
+  "captured_at": "2026-07-28T16:57:25Z",
   "decision_lines": [
     "D001\u001fa4fbe44a01bde9e7f1cd897a1e12e4a7520de47d0ddc649ec32af613ed5b1b89",
     "D002\u001f3c60a75be1dceb41ef2b08890bac0b62cc59c38b3db1ecec8b9e78ce6ffb7051",
@@ -7,7 +7,7 @@
     "D004\u001f05464242c548e96653f192923658c1dba66910e42471573dded6479e226fd6e4",
     "D005\u001f0f4efc64b3d7656d25ae6150dcd6c2a0a0ea4b66832defd5671ac85ce838b18c",
     "D006\u001f09296d743c5ac9687313b01faba202ce44b2ee02fc36875469025f2a0469ff3e",
-    "D007\u001fe20d530c3f1fee89c863cf84e4955f2a7ec4af3bea08e8551f2e497f80a79593",
+    "D007\u001fef8309cc6e9372bc994e8e56db26590c09625a0ec69d382bdcfd21b2ce596228",
     "D008\u001f7dbedfcd6370be83dab5502215ff1dc1f04c43f40edc99746555410e13866822",
     "D009\u001ffe56453373a42979c3331ff2855e817a093c9e66f615ca6056cb88298842336d",
     "D010\u001f7e4acf7ecaaf83311acd512a5a5e045024c8b1c070974099397b211ad6d2aff5",
@@ -28,7 +28,7 @@
         "acceptance": "No remaining committed doc claims Gemini, Grok, or Ollama are registered dispatch executors while they are absent from AGENT_REGISTRY; README onboarding section and agent-status wording agree on worker vs operator.",
         "agents_required": null,
         "depends_on": [],
-        "passes": false
+        "passes": true
       },
       "F002": {
         "acceptance": "A automated check fails when README-style prose claims a non-registry agent is a shipped executor, and passes on the post-F001 corrected docs.",
@@ -36,7 +36,7 @@
         "depends_on": [
           "F001"
         ],
-        "passes": false
+        "passes": true
       },
       "F003": {
         "acceptance": "Committed matrix + ECOSYSTEM/OpenCode caller row exist; a reader can map the four-agent cost topology onto can_operate vs can_be_dispatched without reading Python source.",
@@ -44,7 +44,7 @@
         "depends_on": [
           "F001"
         ],
-        "passes": false
+        "passes": true
       },
       "F004": {
         "acceptance": "After D001, either (B1) an operator can attach a Gemini goal/experience audit as first-class evidence without register-worker, or (B2) gemini is in AGENT_REGISTRY and can be assigned goal_auditor with tests; illegal role assignments still refuse with a clear message.",
@@ -61,7 +61,7 @@
         "depends_on": [
           "F001"
         ],
-        "passes": false
+        "passes": true
       },
       "F006": {
         "acceptance": "dispatch_event fans to buzz when configured; returns False and does not raise when buzz is absent; unit tests cover both; content redaction checks pass; example/config copy steers operators to a private community.",
@@ -70,7 +70,7 @@
           "F005",
           "F009"
         ],
-        "passes": false
+        "passes": true
       },
       "F007": {
         "acceptance": "Committed caller recipe documents the full confirm-gated flow and explicit non-auto-confirm rule; operator can follow it without reading orchestrator source.",
@@ -79,7 +79,7 @@
           "F005",
           "F006"
         ],
-        "passes": false
+        "passes": true
       },
       "F008": {
         "acceptance": "When enabled, an allowlisted human approval in Buzz clears a DontPanic gate with a durable actor record; non-allowlisted actors are refused; feature remains off-by-default.",
@@ -88,7 +88,7 @@
           "F006",
           "F007"
         ],
-        "passes": false
+        "passes": true
       },
       "F009": {
         "acceptance": "Unconfigured Buzz yields advisory WARN with private-community remediation on doctor/setup paths; configured Buzz is ok; hard install does not fail solely because Buzz is absent; no default public community URL is written.",
@@ -96,7 +96,7 @@
         "depends_on": [
           "F005"
         ],
-        "passes": false
+        "passes": true
       },
       "F010": {
         "acceptance": "A short committed note records at least one real private-community usage pattern and whether a public DontPanic community is worth running; D007 status updated.",
@@ -114,7 +114,7 @@
           "F001",
           "F003"
         ],
-        "passes": false
+        "passes": true
       },
       "F012": {
         "acceptance": "When a model is configured for a role/harness, dispatch argv includes the vendor model flag; when unset, behavior matches pre-change defaults; tests cover both.",
@@ -122,7 +122,7 @@
         "depends_on": [
           "F011"
         ],
-        "passes": false
+        "passes": true
       },
       "F013": {
         "acceptance": "Operator can create a Buzz-like profile (e.g. honey: codex_cli + gpt model + auditor-only), assign it to roles.auditor, and dispatch uses that harness+model; legacy roles.implementer=claude still works; illegal capability/role combos refuse clearly.",
@@ -130,7 +130,7 @@
         "depends_on": [
           "F012"
         ],
-        "passes": false
+        "passes": true
       },
       "F014": {
         "acceptance": "At least one of openrouter|ollama|gemini_cli ships as a harness with declared capabilities and tests; implementer remains refused for harnesses that lack coding capabilities; no model version appears as a registry key.",
@@ -139,7 +139,7 @@
           "F013",
           "F004"
         ],
-        "passes": false
+        "passes": true
       },
       "F015": {
         "acceptance": "models list works for at least one discoverable harness; aliases resolve; freeform model does not require a code change; doctor distinguishes unknown vs rejected.",
@@ -147,7 +147,7 @@
         "depends_on": [
           "F013"
         ],
-        "passes": false
+        "passes": true
       },
       "F016": {
         "acceptance": "When bindings are configured, docs and status can show Buzz agent \u2192 profile \u2192 harness+model; unbound agents do not gain dispatch; feature off by default.",
@@ -156,7 +156,7 @@
           "F013",
           "F007"
         ],
-        "passes": false
+        "passes": true
       }
     },
     "feature_ids": [
@@ -179,16 +179,16 @@
     ]
   },
   "file_hashes": {
-    "audit/gate-state.json": "131978bf002599da2b8bc2fdf926cffb726e9b2463e19fc52e019851bd2e34d1",
-    "decisions.jsonl": "ce4dcf5b06117b01ec3355a0abb72b2748a99f1164eeda1c4b9b43c4711da14e",
-    "features.json": "f38647b1b764f771886133e71c82cf995d05e9505c5c3d1cfd785da29fd8e714",
+    "audit/gate-state.json": "395907cbd19ea9932ef3fc51e9e47ce25e49df9528906df56da67338d27bd8cf",
+    "decisions.jsonl": "e434ab40c6c05cfd312a4dbc87d63036cf662feac151809ea0d67a73e9658e01",
+    "features.json": "67f878889e802c0436daad033b6a7753bcdac3157ed74391f4960589c216df1a",
     "objective_contract.json": "48c0a1b3ecbefcbff208e862b9975746d55955a4b5f07d7ac7b905889ca4733a",
     "plan.md": "145a9674c7278555b40a1c23bf0347d648cb010c0d6cc5b83f1d45a377617223"
   },
   "file_mtimes": {
-    "audit/gate-state.json": 1785219648.0636518,
-    "decisions.jsonl": 1785148192.0995874,
-    "features.json": 1785219648.816055,
+    "audit/gate-state.json": 1785257782.4155657,
+    "decisions.jsonl": 1785257831.8188431,
+    "features.json": 1785257782.8054419,
     "objective_contract.json": 1785147165.8436632,
     "plan.md": 1785148694.9034703
   },

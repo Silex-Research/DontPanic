@@ -147,7 +147,7 @@ def _resolve_contract_rel(plan_dir: Path) -> str:
             ref = links.get("objective_contract")
             if isinstance(ref, str) and ref.strip():
                 return ref
-    except Exception:  # noqa: BLE001 — fingerprint must never raise on bad input
+    except Exception:  # noqa: BLE001, S110 — fingerprint must never raise on bad input
         pass
     return _DEFAULT_CONTRACT_REL
 
@@ -405,9 +405,7 @@ def _resolve_goal_auditor_agent(
     aud_vendor = _aud_peek.harness if _aud_peek is not None else auditor
     impl_vendor = _impl_peek.harness if _impl_peek is not None else resolved_implementer
 
-    if impl_vendor == aud_vendor and not _is_truthy_env(
-        os.environ.get(_SAME_VENDOR_OVERRIDE_ENV)
-    ):
+    if impl_vendor == aud_vendor and not _is_truthy_env(os.environ.get(_SAME_VENDOR_OVERRIDE_ENV)):
         raise SufficiencyAuditError(
             "cross-vendor invariant (D006 / Goal Governance V1 §5) violated: "
             f"resolved auditor {auditor!r} (harness {aud_vendor!r}) equals implementer "
@@ -927,6 +925,10 @@ def _production_sufficiency_dispatch(plan_dir: Path):
         # F012 i1 (codex audit i0 high finding) — forward the configured
         # goal-audit model override; None keeps the harness CLI default.
         # F013: the profile-level model wins over the role-level override.
+        # F015 i1: config model_aliases resolve single-hop on the effective
+        # model, mirroring supervisor._run_round; freeform strings pass
+        # through unchanged.
+        from dontpanic_orchestrate import model_catalog
         from dontpanic_orchestrate.config.resolvers import resolve_goal_audit_model
 
         task = DispatchTask(
@@ -940,7 +942,10 @@ def _production_sufficiency_dispatch(plan_dir: Path):
             iteration=0,
             extra_context={"prompt_override": prompt},
             permission_policy="auditor",
-            model=worker.model or resolve_goal_audit_model(plan_dir, harness=worker.harness),
+            model=model_catalog.resolve_alias(
+                worker.model or resolve_goal_audit_model(plan_dir, harness=worker.harness),
+                plan_dir,
+            ),
         )
         return executor.dispatch(task).raw_response or ""
 

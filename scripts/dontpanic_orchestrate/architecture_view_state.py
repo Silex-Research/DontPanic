@@ -442,6 +442,17 @@ _COMMAND_CATALOG: tuple[dict[str, Any], ...] = (
         "module_path": "scripts/dontpanic_orchestrate/project_config.py",
         "summary": "Edit a key in a project's runtime defaults file.",
     },
+    # ── models (F015) ─────────────────────────────────────────────────
+    {
+        "name": "dontpanic models list",
+        "module_path": "scripts/dontpanic_orchestrate/models_cli.py",
+        "summary": "Discover a harness's model catalog (ollama list / OpenRouter cache / documented pass-through).",
+    },
+    {
+        "name": "dontpanic models aliases",
+        "module_path": "scripts/dontpanic_orchestrate/models_cli.py",
+        "summary": "Print the merged model_aliases table (global config overlaid by project config).",
+    },
 )
 
 

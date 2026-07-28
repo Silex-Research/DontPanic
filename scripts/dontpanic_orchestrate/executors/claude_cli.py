@@ -58,6 +58,9 @@ def _permission_flags(policy: str | None) -> tuple[str, ...]:
 class ClaudeCLIExecutor(BaseExecutor):
     agent_name = "claude"
     cli_binary = DEFAULT_BIN
+    # F014: full coding harness — sandboxed non-interactive CLI with tool
+    # use + file edit, so it may hold the implementer role.
+    capabilities = frozenset({"file_edit", "tool_use", "non_interactive"})
 
     def __init__(self, binary: str = DEFAULT_BIN) -> None:
         self.binary = shutil.which(binary) or binary

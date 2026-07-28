@@ -1,0 +1,58 @@
+{
+  "task_id": "2026-07-27-001-feat-buzz-integration-agent-taxonomy",
+  "audit_id": "2026-07-27-001-feat-buzz-integration-agent-taxonomy#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-07-28T15:24:44Z",
+  "completed_at": "2026-07-28T15:28:24Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "worker: profile_id=None harness=codex model=(harness default)",
+    "quota gate aud=37.022385",
+    "reviewing implementer audit at claude-implementer-F014-i1.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-07-27-001-feat-buzz-integration-agent-taxonomy-scn_vcnj target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 362820 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 3467983,
+    "tokens_out": 15932,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 5 (see structured target_context.commands_run)\n\n[F014] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nOverall verdict: **needs_changes**. The implementer’s target declaration is correct and matches structured context (`env=dev`, `project=null`); its three recorded commands contain no forbidden shapes. FINDING (high, documentation): Shipped-harness documentation remains internally contradictory—`README.md:29,277,460,807` still says only Claude/Codex are dispatchable and Ollama is operator-only/planned, while `AGENT_CAPABILITY_MATRIX.md:112,196` makes similarly stale claims despite the new registry and role table; update all current-state descriptions to identify Ollama/OpenRouter as audit-only dispatchable harnesses and state their model/key prerequisites. FINDING (low, test_coverage): The documentation drift guard is one-way—it detects unregistered agents falsely called shipped but cannot detect registered harnesses still described as planned/operator-only; add a live-registry consistency assertion for negative claims. FINDING (advisory, documentation): The implementer’s signed-off summary ends mid-sentence at “Finding 3,” while its captured worker output reports `aborted_streaming`; regenerate the audit summary so completion evidence is intact.\n\nChecks run:\n\n$ PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest -q -s -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_f014_harness_adapters.py\n\nPytest could not run because the read-only audit sandbox has no writable temporary directory; all 32 cas",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest -q -s -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_f014_harness_adapters.py",
+      "python3 -m ruff check --no-cache scripts/dontpanic_orchestrate/executors/ollama_cli.py scripts/dontpanic_orchestrate/executors/openrouter_api.py scripts/dontpanic_orchestrate/tests/test_f014_harness_adapters.py scripts/dontpanic_orchestrate/config/worker_profiles.py scripts/dontpanic_orchestrate/role_assignment.py scripts/dontpanic_orchestrate/worker_profiles.py",
+      "python3 -m ruff check --no-cache scripts/dontpanic_orchestrate/tests/test_f014_harness_adapters.py scripts/dontpanic_orchestrate/executors/openrouter_api.py",
+      "PYTHONDONTWRITEBYTECODE=1 python3 -c 'from pathlib import Path; from dontpanic_orchestrate.executors import AGENT_REGISTRY; from dontpanic_orchestrate.config.worker_profiles import harness_capabilities, harness_missing_capabilities_for_role; from dontpanic_orchestrate.executors import openrouter_api; from dontpanic_orchestrate.executors.base import DispatchTask; assert {\"ollama\",\"openrouter\"} <= set(AGENT_REGISTRY); assert harness_capabilities(\"ollama\") == frozenset({\"non_interactive\"}); assert harness_capabilities(\"openrouter\") == frozenset({\"non_interactive\"}); assert harness_missing_capabilities_for_role(\"ollama\",\"implementer\") == [\"file_edit\",\"tool_use\"]; openrouter_api._post_chat=lambda *a,**k: {\"choices\":[{\"message\":{\"content\":\"[]\"}}]}; task=DispatchTask(plan_id=\"p\",plan_dir=Path(\".\"),feature_id=\"F014\",feature_description=\"d\",feature_acceptance=\"a\",feature_steps=[],agent_role=\"goal_auditor\",model=\"vendor/model\",subprocess_env={\"OPENROUTER_API_KEY\":\"test\"}); result=openrouter_api.OpenRouterAPIExecutor().dispatch(task); assert result.success and result.raw_response == \"[]\"; print(\"registry/capability/refusal/raw-response contracts passed\")'",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts OPENROUTER_API_KEY=audit-probe python3 -c 'import dontpanic_doctor as d; rows=d.check_agent_onboarding(); line=next(r for r in rows if r.name==\"agent:executors\"); print(line.message); assert \"openrouter(available)\" in line.message and \"ollama(\" in line.message'"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "documentation",
+      "feature_id": "F014",
+      "issue": "Shipped-harness documentation remains internally contradictory—`README.md:29,277,460,807` still says only Claude/Codex are dispatchable and Ollama is operator-only/planned, while `AGENT_CAPABILITY_MATRIX.md:112,196` makes similarly stale claims despite the new registry and role table; update all current-state descriptions to identify Ollama/OpenRouter as audit-only dispatchable harnesses and state their model/key prerequisites.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "low",
+      "category": "test_coverage",
+      "feature_id": "F014",
+      "issue": "The documentation drift guard is one-way—it detects unregistered agents falsely called shipped but cannot detect registered harnesses still described as planned/operator-only; add a live-registry consistency assertion for negative claims.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "advisory",
+      "category": "documentation",
+      "feature_id": "F014",
+      "issue": "The implementer’s signed-off summary ends mid-sentence at “Finding 3,” while its captured worker output reports `aborted_streaming`; regenerate the audit summary so completion evidence is intact. Checks run: $ PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest -q -s -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_f014_harness_adapters.py Pytest could not run because the read-only audit sandbox has no writable temporary directory; all 32 cases failed during ",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

@@ -1,0 +1,52 @@
+{
+  "task_id": "2026-07-27-001-feat-buzz-integration-agent-taxonomy",
+  "audit_id": "2026-07-27-001-feat-buzz-integration-agent-taxonomy#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-07-28T16:02:23Z",
+  "completed_at": "2026-07-28T16:05:02Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "worker: profile_id=None harness=codex model=(harness default)",
+    "quota gate aud=37.022385",
+    "reviewing implementer audit at claude-implementer-F016-i1.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-07-27-001-feat-buzz-integration-agent-taxonomy-igzdt_ta target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 2259635 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1022654,
+    "tokens_out": 15593,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 6 (see structured target_context.commands_run)\n\n[F016] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nOverall verdict: **needs_changes**. The implementer’s target declaration is correct and its recorded commands contain no forbidden shapes. FINDING (medium, documentation): `GETTING_STARTED.md:219` still falsely says every bound Buzz agent name is never dispatchable; the collision tests prove a matching profile ID remains dispatchable independently of its binding. Recommendation: use the narrower “bindings never confer dispatch authority” wording already adopted elsewhere. FINDING (advisory, test_coverage): the summary claims Ruff check and format-check were run, but neither appears in `target_context.commands_run`; record all claimed validation commands. Ruff lint and formatting passed, 100 relevant tests collected, and the collision probe passed; full pytest execution was blocked before startup because the read-only environment has no writable temporary directory.\n\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_f016_buzz_agent_bindings.py scripts/dontpanic_orchestrate/tests/test_f013_worker_profiles.py scripts/dontpanic_orchestrate/tests/test_doc_drift_guard_f002.py scripts/dontpanic_orchestrate/tests/test_agent_brief_capability_matrix_f003.py scripts/dontpanic_orchestrate/tests/test_f005_buzz_docs.py -q -p no:cacheprovider\n$ ruff check --no-cache scripts/dontpanic_orchestrate/buzz_bindings.py scripts/dontpanic_orchestrate/workers_cli.py scripts/dontpanic_orchestrate/tests",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_f016_buzz_agent_bindings.py scripts/dontpanic_orchestrate/tests/test_f013_worker_profiles.py scripts/dontpanic_orchestrate/tests/test_doc_drift_guard_f002.py scripts/dontpanic_orchestrate/tests/test_agent_brief_capability_matrix_f003.py scripts/dontpanic_orchestrate/tests/test_f005_buzz_docs.py -q -p no:cacheprovider",
+      "ruff check --no-cache scripts/dontpanic_orchestrate/buzz_bindings.py scripts/dontpanic_orchestrate/workers_cli.py scripts/dontpanic_orchestrate/tests/test_f016_buzz_agent_bindings.py",
+      "ruff format --check --no-cache scripts/dontpanic_orchestrate/buzz_bindings.py scripts/dontpanic_orchestrate/workers_cli.py scripts/dontpanic_orchestrate/tests/test_f016_buzz_agent_bindings.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_f016_buzz_agent_bindings.py scripts/dontpanic_orchestrate/tests/test_f013_worker_profiles.py scripts/dontpanic_orchestrate/tests/test_doc_drift_guard_f002.py scripts/dontpanic_orchestrate/tests/test_agent_brief_capability_matrix_f003.py scripts/dontpanic_orchestrate/tests/test_f005_buzz_docs.py --collect-only -q -s -p no:cacheprovider",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c 'from dontpanic_orchestrate import worker_profiles as wp; from dontpanic_orchestrate.config.worker_profiles import WorkerProfile; wp.load_profiles=lambda project_path=None: {\"fizz\": WorkerProfile(harness=\"claude\", model=\"claude-fable-5\"), \"honey\": WorkerProfile(harness=\"claude\", model=\"claude-opus-5\")}; before=wp.resolve_worker(None, \"implementer\", \"fizz\"); print(before.profile_id, before.model); print(wp.is_dispatchable_name(\"Ghost\"));'",
+      "rg -n 'never dispatchable|never.*dispatchable|bound Buzz agent name' README.md docs/*.md scripts/dontpanic_orchestrate/buzz_bindings.py scripts/dontpanic_orchestrate/tests/test_f016_buzz_agent_bindings.py"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "medium",
+      "category": "documentation",
+      "feature_id": "F016",
+      "issue": "`GETTING_STARTED.md:219` still falsely says every bound Buzz agent name is never dispatchable; the collision tests prove a matching profile ID remains dispatchable independently of its binding. Recommendation: use the narrower “bindings never confer dispatch authority” wording already adopted elsewhere.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "advisory",
+      "category": "test_coverage",
+      "feature_id": "F016",
+      "issue": "the summary claims Ruff check and format-check were run, but neither appears in `target_context.commands_run`; record all claimed validation commands. Ruff lint and formatting passed, 100 relevant tests collected, and the collision probe passed; full pytest execution was blocked before startup because the read-only environment has no writable temporary directory. $ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_f016_buzz_agent_bindings.py s",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

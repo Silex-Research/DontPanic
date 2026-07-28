@@ -81,6 +81,60 @@
       "gate": "breaker:iteration_cap",
       "at": "2026-07-28T07:31:44Z",
       "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:iteration_cap",
+      "at": "2026-07-28T15:42:49Z",
+      "actor": "supervisor",
+      "reason": "max_iterations=2 reached without signoff"
+    },
+    {
+      "action": "pause",
+      "at": "2026-07-28T15:44:51Z",
+      "actor": "supervisor",
+      "pause_gates": [
+        "breaker:iteration_cap"
+      ]
+    },
+    {
+      "action": "approve",
+      "gate": "breaker:iteration_cap",
+      "at": "2026-07-28T15:45:03Z",
+      "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:iteration_cap",
+      "at": "2026-07-28T16:38:46Z",
+      "actor": "supervisor",
+      "reason": "max_iterations=2 reached without signoff"
+    },
+    {
+      "action": "approve",
+      "gate": "breaker:iteration_cap",
+      "at": "2026-07-28T16:42:39Z",
+      "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:iteration_cap",
+      "at": "2026-07-28T16:55:31Z",
+      "actor": "supervisor",
+      "reason": "max_iterations=2 reached without signoff"
+    },
+    {
+      "action": "approve",
+      "gate": "breaker:iteration_cap",
+      "at": "2026-07-28T16:56:22Z",
+      "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:iteration_cap",
+      "at": "2026-07-28T17:01:37Z",
+      "actor": "supervisor",
+      "reason": "max_iterations=1 reached without signoff"
     }
   ],
   "gate_events": [
@@ -100,5 +154,8 @@
   "completed_stages": [
     "pre_impl",
     "pre_merge"
+  ],
+  "active_breakers": [
+    "breaker:iteration_cap"
   ]
 }

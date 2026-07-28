@@ -145,3 +145,139 @@ Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
 
 **2026-07-28T07:30:40Z** — feature **F006** terminal: `stopped_cap` after 4 round(s) — max_iterations=3 reached without signoff
 
+| 2026-07-28T07:38:38Z | F007 | i0 | claude / implementer | signed_off | 2,867,769 / 22,584 | [claude-implementer-F007-i0.json](audit/claude-implementer-F007-i0.json) |
+| 2026-07-28T07:42:48Z | F007 | i0 | codex / auditor | needs_changes | 2,411,917 / 23,035 | [codex-auditor-F007-i0.json](audit/codex-auditor-F007-i0.json) |
+| 2026-07-28T07:51:01Z | F007 | i1 | claude / implementer | signed_off | 2,710,454 / 16,896 | [claude-implementer-F007-i1.json](audit/claude-implementer-F007-i1.json) |
+| 2026-07-28T07:55:46Z | F007 | i1 | codex / auditor | needs_changes | 3,543,735 / 20,347 | [codex-auditor-F007-i1.json](audit/codex-auditor-F007-i1.json) |
+| 2026-07-28T08:01:07Z | F007 | i2 | claude / implementer | signed_off | 1,345,230 / 19,853 | [claude-implementer-F007-i2.json](audit/claude-implementer-F007-i2.json) |
+| 2026-07-28T08:04:50Z | F007 | i2 | codex / auditor | signed_off | 2,613,391 / 15,525 | [codex-auditor-F007-i2.json](audit/codex-auditor-F007-i2.json) |
+
+**2026-07-28T08:04:50Z** — feature **F007** terminal: `signed_off` after 3 round(s) — auditor signed off
+
+| 2026-07-28T08:12:19Z | F012 | i0 | claude / implementer | signed_off | 8,460,647 / 27,817 | [claude-implementer-F012-i0.json](audit/claude-implementer-F012-i0.json) |
+| 2026-07-28T08:17:02Z | F012 | i0 | codex / auditor | needs_changes | 2,022,373 / 24,143 | [codex-auditor-F012-i0.json](audit/codex-auditor-F012-i0.json) |
+| 2026-07-28T08:26:18Z | F012 | i1 | claude / implementer | signed_off | 7,066,016 / 38,940 | [claude-implementer-F012-i1.json](audit/claude-implementer-F012-i1.json) |
+| 2026-07-28T08:31:59Z | F012 | i1 | codex / auditor | needs_changes | 2,892,407 / 27,815 | [codex-auditor-F012-i1.json](audit/codex-auditor-F012-i1.json) |
+| 2026-07-28T08:36:44Z | F012 | i2 | claude / implementer | signed_off | 1,556,219 / 22,866 | [claude-implementer-F012-i2.json](audit/claude-implementer-F012-i2.json) |
+| 2026-07-28T08:40:55Z | F012 | i2 | codex / auditor | signed_off | 1,993,283 / 18,867 | [codex-auditor-F012-i2.json](audit/codex-auditor-F012-i2.json) |
+
+**2026-07-28T08:40:55Z** — feature **F012** terminal: `signed_off` after 3 round(s) — auditor signed off
+
+
+**2026-07-28T08:40:56Z** — feature **F012** terminal: `blocked` after 3 round(s) — supervisor caught unhandled exception in iter loop (iteration=2, stage=post_iter): PatchCompletenessError: Patch incomplete — signoff blocked.
+Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
+  test_file_untracked | block | scripts/dontpanic_orchestrate/tests/test_f012_model_passthrough.py | A test file is untracked or unstaged_modified — pytest discovery on a fresh clone will not run it. | Run: git add scripts/dontpanic_orchestrate/tests/test_f012_model_passthrough.py. F004 backstop (D025 root cause #2). Operator: read audit/terminal-state-iter2.json for the stage + last-good envelope pointers, then use `dontpanic close --operator-resolved` (F2 F004 CLI) to close this feature without a re-dispatch when the failure is not a real implementation defect.
+
+| 2026-07-28T08:42:17Z | F012 | i0 | claude / implementer | signed_off | 600,514 / 4,365 | [claude-implementer-F012-i0.json](audit/claude-implementer-F012-i0.json) |
+| 2026-07-28T08:45:30Z | F012 | i0 | codex / auditor | signed_off | 1,639,600 / 18,266 | [codex-auditor-F012-i0.json](audit/codex-auditor-F012-i0.json) |
+
+**2026-07-28T08:45:30Z** — feature **F012** terminal: `signed_off` after 1 round(s) — auditor signed off
+
+| 2026-07-28T13:29:38Z | F013 | i0 | claude / implementer | blocked | — / — | [claude-implementer-F013-i0.json](audit/claude-implementer-F013-i0.json) |
+| 2026-07-28T13:33:30Z | F013 | i0 | codex / auditor | needs_changes | 3,905,124 / 16,592 | [codex-auditor-F013-i0.json](audit/codex-auditor-F013-i0.json) |
+| 2026-07-28T13:43:30Z | F013 | i1 | claude / implementer | blocked | — / — | [claude-implementer-F013-i1.json](audit/claude-implementer-F013-i1.json) |
+| 2026-07-28T13:47:58Z | F013 | i1 | codex / auditor | needs_changes | 2,507,518 / 22,442 | [codex-auditor-F013-i1.json](audit/codex-auditor-F013-i1.json) |
+| 2026-07-28T13:57:28Z | F013 | i0 | claude / implementer | signed_off | 2,684,253 / 16,213 | [claude-implementer-F013-i0.json](audit/claude-implementer-F013-i0.json) |
+| 2026-07-28T14:03:26Z | F013 | i0 | codex / auditor | needs_changes | 6,320,240 / 23,180 | [codex-auditor-F013-i0.json](audit/codex-auditor-F013-i0.json) |
+| 2026-07-28T14:07:47Z | F013 | i1 | claude / implementer | signed_off | 1,867,113 / 17,765 | [claude-implementer-F013-i1.json](audit/claude-implementer-F013-i1.json) |
+| 2026-07-28T14:10:10Z | F013 | i1 | codex / auditor | needs_changes | 952,916 / 11,244 | [codex-auditor-F013-i1.json](audit/codex-auditor-F013-i1.json) |
+| 2026-07-28T14:12:45Z | F013 | i2 | claude / implementer | signed_off | 1,062,968 / 10,261 | [claude-implementer-F013-i2.json](audit/claude-implementer-F013-i2.json) |
+| 2026-07-28T14:15:30Z | F013 | i2 | codex / auditor | signed_off | 2,428,268 / 12,503 | [codex-auditor-F013-i2.json](audit/codex-auditor-F013-i2.json) |
+
+**2026-07-28T14:15:30Z** — feature **F013** terminal: `signed_off` after 3 round(s) — auditor signed off
+
+
+**2026-07-28T14:15:31Z** — feature **F013** terminal: `blocked` after 3 round(s) — supervisor caught unhandled exception in iter loop (iteration=2, stage=post_iter): PatchCompletenessError: Patch incomplete — signoff blocked.
+Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
+  test_file_untracked | block | scripts/dontpanic_orchestrate/tests/test_f013_worker_profiles.py | A test file is untracked or unstaged_modified — pytest discovery on a fresh clone will not run it. | Run: git add scripts/dontpanic_orchestrate/tests/test_f013_worker_profiles.py. F004 backstop (D025 root cause #2). Operator: read audit/terminal-state-iter2.json for the stage + last-good envelope pointers, then use `dontpanic close --operator-resolved` (F2 F004 CLI) to close this feature without a re-dispatch when the failure is not a real implementation defect.
+
+| 2026-07-28T14:18:57Z | F013 | i0 | claude / implementer | signed_off | 613,598 / 8,583 | [claude-implementer-F013-i0.json](audit/claude-implementer-F013-i0.json) |
+| 2026-07-28T14:21:47Z | F013 | i0 | codex / auditor | signed_off | 2,646,102 / 12,657 | [codex-auditor-F013-i0.json](audit/codex-auditor-F013-i0.json) |
+
+**2026-07-28T14:21:47Z** — feature **F013** terminal: `signed_off` after 1 round(s) — auditor signed off
+
+| 2026-07-28T14:31:55Z | F015 | i0 | claude / implementer | blocked | — / — | [claude-implementer-F015-i0.json](audit/claude-implementer-F015-i0.json) |
+| 2026-07-28T14:36:22Z | F015 | i0 | codex / auditor | needs_changes | 3,578,751 / 20,708 | [codex-auditor-F015-i0.json](audit/codex-auditor-F015-i0.json) |
+| 2026-07-28T14:45:02Z | F015 | i1 | claude / implementer | signed_off | 6,444,573 / 33,078 | [claude-implementer-F015-i1.json](audit/claude-implementer-F015-i1.json) |
+| 2026-07-28T14:49:28Z | F015 | i1 | codex / auditor | signed_off | 3,175,386 / 19,779 | [codex-auditor-F015-i1.json](audit/codex-auditor-F015-i1.json) |
+
+**2026-07-28T14:49:28Z** — feature **F015** terminal: `signed_off` after 2 round(s) — auditor signed off
+
+
+**2026-07-28T14:49:28Z** — feature **F015** terminal: `blocked` after 2 round(s) — supervisor caught unhandled exception in iter loop (iteration=1, stage=post_iter): PatchCompletenessError: Patch incomplete — signoff blocked.
+Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
+  test_file_untracked | block | scripts/dontpanic_orchestrate/tests/test_f015_model_catalog.py | A test file is untracked or unstaged_modified — pytest discovery on a fresh clone will not run it. | Run: git add scripts/dontpanic_orchestrate/tests/test_f015_model_catalog.py. F004 backstop (D025 root cause #2). Operator: read audit/terminal-state-iter1.json for the stage + last-good envelope pointers, then use `dontpanic close --operator-resolved` (F2 F004 CLI) to close this feature without a re-dispatch when the failure is not a real implementation defect.
+
+| 2026-07-28T14:57:27Z | F015 | i0 | claude / implementer | signed_off | 3,506,509 / 16,668 | [claude-implementer-F015-i0.json](audit/claude-implementer-F015-i0.json) |
+| 2026-07-28T15:01:57Z | F015 | i0 | codex / auditor | signed_off | 2,678,092 / 19,769 | [codex-auditor-F015-i0.json](audit/codex-auditor-F015-i0.json) |
+
+**2026-07-28T15:01:57Z** — feature **F015** terminal: `signed_off` after 1 round(s) — auditor signed off
+
+
+**2026-07-28T15:01:57Z** — feature **F015** terminal: `blocked` after 1 round(s) — supervisor caught unhandled exception in iter loop (iteration=0, stage=post_iter): PatchCompletenessError: Patch incomplete — signoff blocked.
+Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
+  test_file_untracked | block | scripts/dontpanic_orchestrate/tests/test_architecture_view_state_f001.py,scripts/dontpanic_orchestrate/tests/test_f015_model_catalog.py | A test file is untracked or unstaged_modified — pytest discovery on a fresh clone will not run it. | Run: git add scripts/dontpanic_orchestrate/tests/test_architecture_view_state_f001.py scripts/dontpanic_orchestrate/tests/test_f015_model_catalog.py. F004 backstop (D025 root cause #2). Operator: read audit/terminal-state-iter0.json for the stage + last-good envelope pointers, then use `dontpanic close --operator-resolved` (F2 F004 CLI) to close this feature without a re-dispatch when the failure is not a real implementation defect.
+
+| 2026-07-28T15:03:36Z | F015 | i0 | claude / implementer | signed_off | 600,294 / 5,031 | [claude-implementer-F015-i0.json](audit/claude-implementer-F015-i0.json) |
+| 2026-07-28T15:06:55Z | F015 | i0 | codex / auditor | signed_off | 3,496,235 / 16,036 | [codex-auditor-F015-i0.json](audit/codex-auditor-F015-i0.json) |
+
+**2026-07-28T15:06:55Z** — feature **F015** terminal: `signed_off` after 1 round(s) — auditor signed off
+
+| 2026-07-28T15:17:03Z | F014 | i0 | claude / implementer | blocked | — / — | [claude-implementer-F014-i0.json](audit/claude-implementer-F014-i0.json) |
+| 2026-07-28T15:20:45Z | F014 | i0 | codex / auditor | needs_changes | 4,569,997 / 17,386 | [codex-auditor-F014-i0.json](audit/codex-auditor-F014-i0.json) |
+| 2026-07-28T15:24:44Z | F014 | i1 | claude / implementer | signed_off | 1,708,470 / 16,936 | [claude-implementer-F014-i1.json](audit/claude-implementer-F014-i1.json) |
+| 2026-07-28T15:28:24Z | F014 | i1 | codex / auditor | needs_changes | 3,467,983 / 15,932 | [codex-auditor-F014-i1.json](audit/codex-auditor-F014-i1.json) |
+| 2026-07-28T15:38:24Z | F014 | i2 | claude / implementer | blocked | — / — | [claude-implementer-F014-i2.json](audit/claude-implementer-F014-i2.json) |
+| 2026-07-28T15:42:49Z | F014 | i2 | codex / auditor | needs_changes | 3,037,393 / 21,810 | [codex-auditor-F014-i2.json](audit/codex-auditor-F014-i2.json) |
+
+**2026-07-28T15:42:49Z** — feature **F014** terminal: `stopped_cap` after 3 round(s) — max_iterations=2 reached without signoff
+
+| 2026-07-28T15:46:44Z | F014 | i0 | claude / implementer | signed_off | 798,892 / 5,401 | [claude-implementer-F014-i0.json](audit/claude-implementer-F014-i0.json) |
+| 2026-07-28T15:49:51Z | F014 | i0 | codex / auditor | signed_off | 3,377,100 / 16,335 | [codex-auditor-F014-i0.json](audit/codex-auditor-F014-i0.json) |
+
+**2026-07-28T15:49:51Z** — feature **F014** terminal: `signed_off` after 1 round(s) — auditor signed off
+
+| 2026-07-28T15:55:58Z | F016 | i0 | claude / implementer | signed_off | 4,322,111 / 24,554 | [claude-implementer-F016-i0.json](audit/claude-implementer-F016-i0.json) |
+| 2026-07-28T15:59:36Z | F016 | i0 | codex / auditor | needs_changes | 2,269,882 / 17,744 | [codex-auditor-F016-i0.json](audit/codex-auditor-F016-i0.json) |
+| 2026-07-28T16:02:23Z | F016 | i1 | claude / implementer | signed_off | 1,192,025 / 12,837 | [claude-implementer-F016-i1.json](audit/claude-implementer-F016-i1.json) |
+| 2026-07-28T16:05:02Z | F016 | i1 | codex / auditor | needs_changes | 1,022,654 / 15,593 | [codex-auditor-F016-i1.json](audit/codex-auditor-F016-i1.json) |
+| 2026-07-28T16:06:56Z | F016 | i2 | claude / implementer | signed_off | 680,944 / 5,000 | [claude-implementer-F016-i2.json](audit/claude-implementer-F016-i2.json) |
+| 2026-07-28T16:08:58Z | F016 | i2 | codex / auditor | signed_off | 1,071,740 / 11,345 | [codex-auditor-F016-i2.json](audit/codex-auditor-F016-i2.json) |
+
+**2026-07-28T16:08:58Z** — feature **F016** terminal: `signed_off` after 3 round(s) — auditor signed off
+
+
+**2026-07-28T16:08:58Z** — feature **F016** terminal: `blocked` after 3 round(s) — supervisor caught unhandled exception in iter loop (iteration=2, stage=post_iter): PatchCompletenessError: Patch incomplete — signoff blocked.
+Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
+  test_file_untracked | block | scripts/dontpanic_orchestrate/tests/test_f016_buzz_agent_bindings.py | A test file is untracked or unstaged_modified — pytest discovery on a fresh clone will not run it. | Run: git add scripts/dontpanic_orchestrate/tests/test_f016_buzz_agent_bindings.py. F004 backstop (D025 root cause #2). Operator: read audit/terminal-state-iter2.json for the stage + last-good envelope pointers, then use `dontpanic close --operator-resolved` (F2 F004 CLI) to close this feature without a re-dispatch when the failure is not a real implementation defect.
+
+| 2026-07-28T16:11:13Z | F016 | i0 | claude / implementer | signed_off | 935,733 / 7,477 | [claude-implementer-F016-i0.json](audit/claude-implementer-F016-i0.json) |
+| 2026-07-28T16:13:42Z | F016 | i0 | codex / auditor | signed_off | 1,036,689 / 12,610 | [codex-auditor-F016-i0.json](audit/codex-auditor-F016-i0.json) |
+
+**2026-07-28T16:13:42Z** — feature **F016** terminal: `signed_off` after 1 round(s) — auditor signed off
+
+| 2026-07-28T16:22:55Z | F008 | i0 | claude / implementer | signed_off | 6,224,817 / 36,141 | [claude-implementer-F008-i0.json](audit/claude-implementer-F008-i0.json) |
+| 2026-07-28T16:27:18Z | F008 | i0 | codex / auditor | needs_changes | 2,429,060 / 19,757 | [codex-auditor-F008-i0.json](audit/codex-auditor-F008-i0.json) |
+| 2026-07-28T16:34:18Z | F008 | i1 | claude / implementer | blocked | — / — | [claude-implementer-F008-i1.json](audit/claude-implementer-F008-i1.json) |
+| 2026-07-28T16:36:31Z | F008 | i1 | codex / auditor | needs_changes | 1,297,545 / 11,420 | [codex-auditor-F008-i1.json](audit/codex-auditor-F008-i1.json) |
+| 2026-07-28T16:36:33Z | F008 | i2 | claude / implementer | blocked | — / — | [claude-implementer-F008-i2.json](audit/claude-implementer-F008-i2.json) |
+| 2026-07-28T16:38:46Z | F008 | i2 | codex / auditor | needs_changes | 1,444,938 / 11,991 | [codex-auditor-F008-i2.json](audit/codex-auditor-F008-i2.json) |
+
+**2026-07-28T16:38:46Z** — feature **F008** terminal: `stopped_cap` after 3 round(s) — max_iterations=2 reached without signoff
+
+| 2026-07-28T16:42:43Z | F008 | i0 | claude / implementer | blocked | — / — | [claude-implementer-F008-i0.json](audit/claude-implementer-F008-i0.json) |
+| 2026-07-28T16:47:02Z | F008 | i0 | codex / auditor | needs_changes | 2,227,235 / 22,018 | [codex-auditor-F008-i0.json](audit/codex-auditor-F008-i0.json) |
+| 2026-07-28T16:47:05Z | F008 | i1 | claude / implementer | blocked | — / — | [claude-implementer-F008-i1.json](audit/claude-implementer-F008-i1.json) |
+| 2026-07-28T16:51:11Z | F008 | i1 | codex / auditor | needs_changes | 3,090,277 / 21,325 | [codex-auditor-F008-i1.json](audit/codex-auditor-F008-i1.json) |
+| 2026-07-28T16:51:14Z | F008 | i2 | claude / implementer | blocked | — / — | [claude-implementer-F008-i2.json](audit/claude-implementer-F008-i2.json) |
+| 2026-07-28T16:55:31Z | F008 | i2 | codex / auditor | needs_changes | 2,858,002 / 15,525 | [codex-auditor-F008-i2.json](audit/codex-auditor-F008-i2.json) |
+
+**2026-07-28T16:55:31Z** — feature **F008** terminal: `stopped_cap` after 3 round(s) — max_iterations=2 reached without signoff
+
+| 2026-07-28T16:57:28Z | F010 | i0 | claude / implementer | blocked | — / — | [claude-implementer-F010-i0.json](audit/claude-implementer-F010-i0.json) |
+| 2026-07-28T16:59:43Z | F010 | i0 | codex / auditor | needs_changes | 1,094,546 / 10,729 | [codex-auditor-F010-i0.json](audit/codex-auditor-F010-i0.json) |
+| 2026-07-28T16:59:46Z | F010 | i1 | claude / implementer | blocked | — / — | [claude-implementer-F010-i1.json](audit/claude-implementer-F010-i1.json) |
+| 2026-07-28T17:01:37Z | F010 | i1 | codex / auditor | needs_changes | 544,720 / 10,595 | [codex-auditor-F010-i1.json](audit/codex-auditor-F010-i1.json) |
+
+**2026-07-28T17:01:37Z** — feature **F010** terminal: `stopped_cap` after 2 round(s) — max_iterations=1 reached without signoff
+

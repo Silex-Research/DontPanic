@@ -148,9 +148,17 @@ def _worker_capable_value(role: str, value: str, profiles: dict | None) -> bool:
     """F013 — a role value is worker-capable when it is a registered harness
     OR a defined worker profile that passes the role/capability gates for
     this slot. ``profiles`` is the merged table from
-    :func:`worker_profiles.load_profiles` (None → legacy harness-only)."""
+    :func:`worker_profiles.load_profiles` (None → legacy harness-only).
+
+    F014 — a registered harness is capability-gated per role: an audit-only
+    harness (ollama/openrouter) tags as NOT worker-capable in the
+    implementer slot, matching the resolve_worker dispatch refusal."""
     if agent_surface.is_worker_capable(value):
-        return True
+        from dontpanic_orchestrate.config.worker_profiles import (
+            harness_missing_capabilities_for_role,
+        )
+
+        return not harness_missing_capabilities_for_role(value, role)
     if not profiles or value not in profiles:
         return False
     from dontpanic_orchestrate import worker_profiles as wp

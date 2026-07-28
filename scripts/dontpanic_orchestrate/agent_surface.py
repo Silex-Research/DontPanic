@@ -350,8 +350,25 @@ def assert_registrable(
     :class:`RegisterWorkerError` so every caller keeps one refusal type.
     ``role`` scopes the allowed_roles/capability check to the slot being
     assigned; ``project_path`` includes that project's profile layer.
+
+    F014: a registered harness is additionally capability-gated per role —
+    an audit-only harness (ollama/openrouter) is refused for the
+    implementer slot with the same vocabulary the profile path uses.
     """
     if is_worker_capable(name):
+        if role is not None:
+            from dontpanic_orchestrate.config.worker_profiles import (
+                ROLE_REQUIRED_CAPABILITIES,
+                harness_missing_capabilities_for_role,
+            )
+
+            missing = harness_missing_capabilities_for_role(name, role)
+            if missing:
+                raise RegisterWorkerError(
+                    f"harness {name!r} cannot hold role {role!r}: missing "
+                    f"capabilities {missing}. The {role} role requires "
+                    f"{sorted(ROLE_REQUIRED_CAPABILITIES.get(role, frozenset()))}."
+                )
         return
 
     # Lazy import — worker_profiles imports config layers, not this module,

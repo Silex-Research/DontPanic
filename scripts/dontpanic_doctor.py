@@ -584,7 +584,7 @@ def _missing_cap_snippet(
         f'          "cap": {cap_value},\n'
         f'          "unit": "{cap_unit}",\n'
         f'          "_note": "{note}"\n'
-        f'        }}'
+        f"        }}"
     )
     return snippet
 
@@ -840,6 +840,14 @@ def check_registered_project(entry: object) -> list[CheckResult]:
         )
     )
 
+    # 7. Plan 2026-07-27-001 F015 i1 (codex audit finding 2): per-project
+    # configured-model catalog probe. The project's own roles / worker
+    # profiles / model_aliases may bind models the global check never sees;
+    # unknown stays advisory (WARN), only a harness probe refusal FAILs, so
+    # the F003 per-project clean-state contract is preserved for the
+    # pass-through defaults.
+    results.extend(check_model_catalog(project_path, name_prefix=f"project:{name}:"))
+
     # NOTE: the managed-block freshness check (Plan 2026-05-30-001 F005 AC6) is
     # intentionally NOT part of the --include-projects sweep — repo onboarding
     # is opt-in, so a non-onboarded registered project must not introduce a WARN
@@ -869,6 +877,7 @@ def _validate_roles_against_registry(
     sys.path.insert(0, str(REPO_ROOT / "scripts"))
     try:
         from dontpanic_orchestrate import project_config as pc
+        from dontpanic_orchestrate.config.roles import role_name
     finally:
         sys.path.pop(0)
 
@@ -877,7 +886,9 @@ def _validate_roles_against_registry(
 
     declared: list[tuple[str, str]] = []
     for role in ("implementer", "auditor", "goal_auditor"):
-        val = getattr(roles_obj, role, None)
+        # F015 i1: entries may be the F012 object shape ({name, model}) —
+        # validate the name, not the RoleSpec object.
+        val = role_name(getattr(roles_obj, role, None))
         if val:
             declared.append((role, val))
     if not declared:
@@ -886,7 +897,11 @@ def _validate_roles_against_registry(
     unknown = [(r, a) for r, a in declared if not pc.is_known_agent(a)]
     if unknown:
         details = ", ".join(f"roles.{r}={a!r}" for r, a in unknown)
-        return [_bad(name_prefix, f"{layer_label} role(s) not in AGENT_REGISTRY: {details}", remediation)]
+        return [
+            _bad(
+                name_prefix, f"{layer_label} role(s) not in AGENT_REGISTRY: {details}", remediation
+            )
+        ]
     joined = ", ".join(f"roles.{r}={a}" for r, a in declared)
     return [_ok(name_prefix, f"{layer_label} roles recognized: {joined}")]
 
@@ -909,16 +924,20 @@ def _check_managed_block(name: str, project_path: Path) -> CheckResult:
     # Plan 2026-05-30-001 F005 (codex audit finding #4): `projects add` refuses an
     # already-registered name without --force --yes, so the re-onboard remediation
     # must include them to be directly executable for the common registered case.
-    remediation = (
-        f"run `dontpanic projects add {name} {project_path} --onboard --force --yes` to (re)write the managed block"
-    )
+    remediation = f"run `dontpanic projects add {name} {project_path} --onboard --force --yes` to (re)write the managed block"
     agents_md = project_path / "AGENTS.md"
     if not agents_md.is_file():
-        return _warn(cname, f"{agents_md} is missing (repo not onboarded — no DontPanic managed block)", remediation)
+        return _warn(
+            cname,
+            f"{agents_md} is missing (repo not onboarded — no DontPanic managed block)",
+            remediation,
+        )
     try:
         text = agents_md.read_text()
     except OSError as exc:
-        return _bad(cname, f"{agents_md} is unreadable: {exc}", f"check file permissions on {agents_md}")
+        return _bad(
+            cname, f"{agents_md} is unreadable: {exc}", f"check file permissions on {agents_md}"
+        )
     match = ro.find_block(text, ro.BLOCK_AGENTS)
     if match is None:
         return _warn(
@@ -1081,11 +1100,20 @@ def check_agent_onboarding(skip_auth: bool = False) -> list[CheckResult]:
     # advertise the core dispatch command so an onboarded agent knows it can
     # orchestrate. Surface the full list for operator visibility.
     try:
-        commands = list(manifest.supported_commands) if manifest is not None else am._default_supported_commands()
+        commands = (
+            list(manifest.supported_commands)
+            if manifest is not None
+            else am._default_supported_commands()
+        )
     except Exception:  # noqa: BLE001
         commands = []
     if "orchestrate" in commands:
-        results.append(_ok("agent:commands", f"supported commands include 'orchestrate' ({', '.join(commands)})"))
+        results.append(
+            _ok(
+                "agent:commands",
+                f"supported commands include 'orchestrate' ({', '.join(commands)})",
+            )
+        )
     elif commands:
         results.append(
             _warn(
@@ -1184,7 +1212,9 @@ def check_config_home() -> CheckResult:
     states = hr.classify_homes()
     legacy_only, divergent = hr.split_brain_summary(states)
     if not legacy_only and not divergent:
-        return _ok("config-home", "canonical (~/.dontpanic) and legacy (~/.jarvis) homes are reconciled")
+        return _ok(
+            "config-home", "canonical (~/.dontpanic) and legacy (~/.jarvis) homes are reconciled"
+        )
     parts = []
     if legacy_only:
         parts.append(f"legacy-only (migratable): {', '.join(legacy_only)}")
@@ -1192,7 +1222,8 @@ def check_config_home() -> CheckResult:
         parts.append(f"divergent (needs manual merge): {', '.join(divergent)}")
     return _warn(
         "config-home",
-        "split-brain between canonical (~/.dontpanic) and legacy (~/.jarvis) homes — " + "; ".join(parts),
+        "split-brain between canonical (~/.dontpanic) and legacy (~/.jarvis) homes — "
+        + "; ".join(parts),
         "run `dontpanic reconcile homes --dry-run` to preview, then `--confirm` to migrate legacy-only files",
     )
 
@@ -1296,6 +1327,98 @@ def check_buzz_config(config_path: Path | None = None) -> CheckResult:
     return _ok("buzz-config", "buzz configured (~/.dontpanic/buzz.json)")
 
 
+# Plan 2026-07-27-001 F015 (D4): configured-model catalog probe. Freeform
+# model strings are allowed by design — a model the harness catalog does not
+# list is an advisory WARN ("unknown"), and only an authoritative harness
+# probe refusal (e.g. `ollama show` failing for a locally-bound model) is a
+# FAIL ("rejected"). Pass-through harnesses (claude/codex — no discovery
+# surface) PASS with a note. No network in the doctor path: API-backed
+# catalogs (openrouter) are consulted cache-only (allow_network=False).
+# i1 (codex audit finding 2): parameterized by project root so registered /
+# explicitly selected projects probe THEIR roles / profiles / aliases, not
+# this repo's; the no-arg call keeps the global (DontPanic-repo) surface.
+def check_model_catalog(
+    project_root: Path | None = None, *, name_prefix: str = ""
+) -> list[CheckResult]:
+    root = (project_root or REPO_ROOT).resolve()
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    try:
+        from dontpanic_orchestrate import model_catalog as mc
+        from dontpanic_orchestrate import worker_profiles as wp
+        from dontpanic_orchestrate.config import resolvers
+    finally:
+        sys.path.pop(0)
+
+    results: list[CheckResult] = []
+    for role in ("implementer", "auditor", "goal_auditor"):
+        check_name = f"{name_prefix}models:{role}"
+        try:
+            name = resolvers.resolve_role(root, role)
+            worker = wp.peek_worker(root, name)
+            harness = worker.harness if worker is not None else name
+            # i1 (codex audit finding 3): resolve_model's atomic harness
+            # check needs the harness the role actually dispatches to — the
+            # configured name may be a D015 alias or a worker-profile id,
+            # and passing it verbatim suppressed role-level models.
+            raw_model = (worker.model if worker is not None else None) or resolvers.resolve_model(
+                root, role, harness=harness
+            )
+            model = mc.resolve_alias(raw_model, root)
+        except Exception as exc:  # noqa: BLE001 — probe must never crash the doctor
+            results.append(
+                _warn(
+                    check_name,
+                    f"could not resolve the configured model: {exc}",
+                    "check roles.* / worker_profiles.* config (`dontpanic workers list`)",
+                )
+            )
+            continue
+        if model is None:
+            results.append(_ok(check_name, f"{name}: harness CLI default model"))
+            continue
+        alias_note = f" (alias {raw_model!r} -> {model!r})" if model != raw_model else ""
+        try:
+            probe = mc.probe_model(harness, model, allow_network=False)
+        except mc.UnknownHarnessError as exc:
+            results.append(
+                _warn(
+                    check_name,
+                    f"{name}: model {model!r} bound to unknown harness {harness!r}: {exc}",
+                    "assign a registered harness or a valid worker profile to the role",
+                )
+            )
+            continue
+        if probe.status == "rejected":
+            results.append(
+                _bad(
+                    check_name,
+                    f"{name} ({harness}): model {model!r} REJECTED by harness probe"
+                    f"{alias_note}: {probe.detail}",
+                    f"pull/fix the model or pick one from `dontpanic models list --harness {harness}`",
+                )
+            )
+        elif probe.status in ("ok", "pass_through"):
+            note = (
+                "pass-through — freeform model forwarded to the harness CLI unverified"
+                if probe.status == "pass_through"
+                else probe.detail
+            )
+            results.append(
+                _ok(check_name, f"{name} ({harness}): model {model!r}{alias_note} — {note}")
+            )
+        else:  # "unknown" | "unverifiable" — advisory, freeform is allowed
+            results.append(
+                _warn(
+                    check_name,
+                    f"{name} ({harness}): model {model!r}{alias_note} {probe.status} "
+                    f"to the harness catalog: {probe.detail}",
+                    f"verify with `dontpanic models list --harness {harness}` "
+                    "(freeform models are allowed; this is advisory)",
+                )
+            )
+    return results
+
+
 def check_project_onboarding(name_or_path: str) -> list[CheckResult]:
     """Plan 2026-05-30-001 F005: validate ONE project by registry name or by
     filesystem path. A registered name resolves to its ``ProjectEntry``; an
@@ -1391,10 +1514,30 @@ def check_registered_projects() -> list[CheckResult]:
 # `dashboard/app.tsx` or `jarvis_doctor.py`).
 _KNOWN_CODE_EXTS: frozenset[str] = frozenset(
     {
-        ".py", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs",
-        ".json", ".yaml", ".yml", ".toml", ".md", ".sh",
-        ".rs", ".go", ".rb", ".swift", ".kt", ".java",
-        ".html", ".css", ".scss", ".sql", ".jsonl",
+        ".py",
+        ".ts",
+        ".tsx",
+        ".js",
+        ".jsx",
+        ".mjs",
+        ".cjs",
+        ".json",
+        ".yaml",
+        ".yml",
+        ".toml",
+        ".md",
+        ".sh",
+        ".rs",
+        ".go",
+        ".rb",
+        ".swift",
+        ".kt",
+        ".java",
+        ".html",
+        ".css",
+        ".scss",
+        ".sql",
+        ".jsonl",
     }
 )
 # Backtick-quoted segment (multi-line / inline).
@@ -1688,7 +1831,7 @@ def _suggest_allowed_paths_fix(drifted: list[str], allowed: list[str]) -> str:
     suggested = f"{sample}/**"
     return (
         "add the parent dir glob to child_charter.allowed_paths "
-        f"(e.g. \"{suggested}\"), or remove the out-of-scope step. "
+        f'(e.g. "{suggested}"), or remove the out-of-scope step. '
         f"Detected prefixes: {prefixes}"
     )
 
@@ -1899,15 +2042,18 @@ def validate_plans_strict(
                 "(must start with --- and parse as a mapping)"
             )
             findings.append(
-                _bad(check_name, message, remediation) if strict
+                _bad(check_name, message, remediation)
+                if strict
                 else _warn(check_name, message, remediation)
             )
-            details.append({
-                "plan_id": plan_id,
-                "path": _path_str(plan_md),
-                "status": "parse_error",
-                "error": parse_err,
-            })
+            details.append(
+                {
+                    "plan_id": plan_id,
+                    "path": _path_str(plan_md),
+                    "status": "parse_error",
+                    "error": parse_err,
+                }
+            )
             continue
         if not _is_locked_plan(fm):
             continue
@@ -1919,11 +2065,13 @@ def validate_plans_strict(
         errors = list(validator.iter_errors(fm))
         if not errors:
             clean_count += 1
-            details.append({
-                "plan_id": plan_id,
-                "path": _path_str(plan_md),
-                "status": "clean",
-            })
+            details.append(
+                {
+                    "plan_id": plan_id,
+                    "path": _path_str(plan_md),
+                    "status": "clean",
+                }
+            )
             continue
         fail_count += 1
         # Surface the first 3 errors per plan so the operator gets a usable
@@ -1948,12 +2096,14 @@ def validate_plans_strict(
             findings.append(_bad(check_name, message, remediation))
         else:
             findings.append(_warn(check_name, message, remediation))
-        details.append({
-            "plan_id": plan_id,
-            "path": _path_str(plan_md),
-            "status": status_label,
-            "errors": error_records,
-        })
+        details.append(
+            {
+                "plan_id": plan_id,
+                "path": _path_str(plan_md),
+                "status": status_label,
+                "errors": error_records,
+            }
+        )
 
     # Summary always first so the rendered output reads "summary, then
     # details". When everything is green this is the only entry; the
@@ -2078,9 +2228,7 @@ def _classify_architecture_drift(
     total = len(union) or 1
     changed = len(added) + len(removed) + len(modified)
     unchanged = total - changed
-    missing_required = _missing_required_surfaces(
-        stored_map=stored, current_map=current_map
-    )
+    missing_required = _missing_required_surfaces(stored_map=stored, current_map=current_map)
     if missing_required:
         # Structural loss always trumps the ratio classifier: a vanished
         # subsystem is major drift regardless of how few files differ.
@@ -2181,7 +2329,9 @@ def check_architecture_drift(
     normal development and shouldn't block a doctor sweep.
     """
     repo_root = (repo_root or REPO_ROOT).resolve()
-    arch_path = (architecture_path or (repo_root / "docs" / "architecture" / "architecture.json")).resolve()
+    arch_path = (
+        architecture_path or (repo_root / "docs" / "architecture" / "architecture.json")
+    ).resolve()
 
     # Lazy import — keep the doctor importable without dragging in the
     # crawler module at module-load time.
@@ -2238,7 +2388,9 @@ def check_architecture_drift(
 
     prior_fp = prior.get("source_fingerprint") or {}
     stored_root = prior_fp.get("file_hashes_root")
-    stored_map = prior_fp.get("file_hashes") if isinstance(prior_fp.get("file_hashes"), dict) else None
+    stored_map = (
+        prior_fp.get("file_hashes") if isinstance(prior_fp.get("file_hashes"), dict) else None
+    )
 
     current_map: dict[str, str] = current_fp["file_hashes"]
     current_root = current_fp["file_hashes_root"]
@@ -2257,7 +2409,9 @@ def check_architecture_drift(
             "files_count_stored": prior_fp.get("files_count"),
             "recommendation": _architecture_drift_recommendation("fresh"),
         }
-        result = _ok(name, f"fresh — {current_fp['files_count']} tracked files match stored fingerprint")
+        result = _ok(
+            name, f"fresh — {current_fp['files_count']} tracked files match stored fingerprint"
+        )
         result.details = [details]
         return result
 
@@ -2319,9 +2473,7 @@ def check_architecture_drift(
         return result
 
     missing_suffix = (
-        f"; missing required surface(s): {', '.join(missing_required)}"
-        if missing_required
-        else ""
+        f"; missing required surface(s): {', '.join(missing_required)}" if missing_required else ""
     )
     message = (
         f"{state} — {changed_count}/{total} files differ ({pct:.1f}%): "
@@ -2411,9 +2563,7 @@ def check_dashboard_readiness(
         )
     else:
         if cache_path.is_file():
-            results.append(
-                _ok("dashboard-cache", f"what-now cache present at {cache_path}")
-            )
+            results.append(_ok("dashboard-cache", f"what-now cache present at {cache_path}"))
         else:
             results.append(
                 _warn(
@@ -2632,10 +2782,7 @@ def check_upgrade_readiness(
             return _warn(name, f"up to date with {latest}{behind_note}", UPGRADE_REMEDIATION)
         return _ok(name, msg)
 
-    msg = (
-        f"{pend_req} required + {pend_adv} advisory upgrade action(s) pending"
-        f"{behind_note}"
-    )
+    msg = f"{pend_req} required + {pend_adv} advisory upgrade action(s) pending{behind_note}"
     return _warn(name, msg, UPGRADE_REMEDIATION)
 
 
@@ -2830,9 +2977,7 @@ def acknowledge_upgrade(
         new_marker = dismiss_advisory(new_marker, item.item_id)
     # Stamp the consent instant on first write; never overwrite an existing stamp.
     if new_marker.first_initialized_at is None:
-        new_marker = new_marker.model_copy(
-            update={"first_initialized_at": now or _utc_now_iso()}
-        )
+        new_marker = new_marker.model_copy(update={"first_initialized_at": now or _utc_now_iso()})
 
     write_upgrade_state(new_marker, path=marker_path)  # SOLE marker writer (D015).
 
@@ -2985,6 +3130,10 @@ def run_all_checks(
     # strongly recommended, never required) — stripped from both strict-exit
     # computations so an install never fails solely because Buzz is absent.
     results.append(check_buzz_config())
+    # Plan 2026-07-27-001 F015: configured-model catalog probe. Unknown models
+    # stay advisory WARN (freeform is allowed); a harness-probe rejection is a
+    # real FAIL, so this check is NOT stripped from the strict-exit matrix.
+    results.extend(check_model_catalog())
     return results
 
 
@@ -3391,6 +3540,7 @@ def main(argv: list[str] | None = None) -> int:
             from dontpanic_orchestrate.init.report_html import (
                 write_install_report,
             )
+
             pr = _load_prereq_registry()
             activation_context = pr.build_activation_context(REPO_ROOT)
             sweep = pr.run_sweep(

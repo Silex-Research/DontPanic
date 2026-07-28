@@ -92,6 +92,13 @@ class GlobalConfig(BaseModel):
     :mod:`dontpanic_orchestrate.worker_profiles`. Written by the
     ``dontpanic workers`` CLI. Project-layer profiles win per id."""
 
+    model_aliases: dict[str, str] | None = None
+    """F015 (D4) — short model names mapped to vendor model ids (e.g.
+    ``{"sonnet": "claude-sonnet-5"}``). Resolved single-hop by
+    :func:`dontpanic_orchestrate.model_catalog.resolve_alias` wherever a
+    configured model reaches dispatch; project-layer aliases win per key.
+    Freeform (non-alias) model strings always pass through unchanged."""
+
 
 def dontpanic_home() -> Path:
     """Resolve the per-user state directory.

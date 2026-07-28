@@ -1,0 +1,46 @@
+{
+  "task_id": "2026-07-27-001-feat-buzz-integration-agent-taxonomy",
+  "audit_id": "2026-07-27-001-feat-buzz-integration-agent-taxonomy#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-07-28T15:46:44Z",
+  "completed_at": "2026-07-28T15:49:51Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "worker: profile_id=None harness=codex model=(harness default)",
+    "quota gate aud=37.022385",
+    "reviewing implementer audit at claude-implementer-F014-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-07-27-001-feat-buzz-integration-agent-taxonomy-cia5o8hu target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 617759 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 3377100,
+    "tokens_out": 16335,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 7 (see structured target_context.commands_run)\n\n[F014] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nOverall verdict: **signed_off**. The implementer’s declaration correctly matches structured context (`env=dev`, `project=null`), and its recorded pytest command has no forbidden shape. Code inspection and mocked verification confirm stable registry IDs, declared audit-only capabilities, implementer refusal, doctor probes, documented roles, and working OpenRouter completion/sufficiency integration.\n\nFINDING (advisory, correctness): The audit JSON incorrectly claims its summary lacks `Env: dev`. Evidence: the summary explicitly contains `- Env: dev`, matching structured context. Recommendation: remove the erroneous finding or regenerate the audit summary.\n\nThe full suite was blocked only by the read-only sandbox’s lack of a temporary directory; 39 non-temp cases passed, and the remaining two integrations passed through no-write production-path smoke checks. Targeted F014 Ruff checks passed; a broader check exposed a pre-existing `agent_surface.py` import-order violation outside the F014 diff.\n\n$ PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest -q -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_f014_harness_adapters.py\n\n$ python3 -m ruff check --no-cache scripts/dontpanic_orchestrate/executors/ollama_cli.py scripts/dontpanic_orchestrate/executors/openrouter_api.py scripts/dontpanic_orchestrate/executors/__init__.py scripts/dontpanic_orchestrate/config/worker_profiles.py scripts/dontpanic_orche",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest -q -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_f014_harness_adapters.py",
+      "python3 -m ruff check --no-cache scripts/dontpanic_orchestrate/executors/ollama_cli.py scripts/dontpanic_orchestrate/executors/openrouter_api.py scripts/dontpanic_orchestrate/executors/__init__.py scripts/dontpanic_orchestrate/config/worker_profiles.py scripts/dontpanic_orchestrate/worker_profiles.py scripts/dontpanic_orchestrate/agent_surface.py scripts/dontpanic_orchestrate/tests/test_f014_harness_adapters.py",
+      "python3 -m ruff check --no-cache scripts/dontpanic_orchestrate/executors/ollama_cli.py scripts/dontpanic_orchestrate/executors/openrouter_api.py scripts/dontpanic_orchestrate/executors/__init__.py scripts/dontpanic_orchestrate/config/worker_profiles.py scripts/dontpanic_orchestrate/worker_profiles.py scripts/dontpanic_orchestrate/tests/test_f014_harness_adapters.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts OPENROUTER_API_KEY=audit-probe python3 -c 'import re; from pathlib import Path; import dontpanic_doctor as d; from dontpanic_orchestrate import worker_profiles as wp; from dontpanic_orchestrate.executors import AGENT_REGISTRY, openrouter_api; from dontpanic_orchestrate.executors.base import DispatchTask; assert {\"ollama\",\"openrouter\"} <= set(AGENT_REGISTRY); assert all(re.fullmatch(r\"[a-z][a-z_]*\", key) for key in AGENT_REGISTRY); assert not wp.is_dispatchable_name(\"ollama\", role=\"implementer\"); assert wp.is_dispatchable_name(\"ollama\", role=\"auditor\"); openrouter_api._post_chat=lambda *a,**k: {\"model\":\"vendor/model\",\"choices\":[{\"message\":{\"content\":\"[]\"}}],\"usage\":{\"prompt_tokens\":1,\"completion_tokens\":1}}; task=DispatchTask(plan_id=\"p\",plan_dir=Path(\".\"),feature_id=\"F014\",feature_description=\"d\",feature_acceptance=\"a\",feature_steps=[],agent_role=\"goal_auditor\",model=\"vendor/model\"); result=openrouter_api.OpenRouterAPIExecutor().dispatch(task); assert result.success and result.raw_response==\"[]\"; line=next(r for r in d.check_agent_onboarding() if r.name==\"agent:executors\"); assert \"openrouter(available)\" in line.message and \"ollama(\" in line.message; print(line.message); print(\"registry, role-gate, mocked dispatch, and doctor probe contracts passed\")'",
+      "PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest -q -s -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_f014_harness_adapters.py -k 'not test_completion_dispatch_via_openrouter_yields_parseable_auditor_text and not test_sufficiency_dispatch_via_openrouter_returns_assistant_content'",
+      "PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest -q -s -p no:cacheprovider --noconftest scripts/dontpanic_orchestrate/tests/test_f014_harness_adapters.py -k 'not test_completion_dispatch_via_openrouter_yields_parseable_auditor_text and not test_sufficiency_dispatch_via_openrouter_returns_assistant_content'",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts OPENROUTER_API_KEY=audit-probe python3 -c 'from pathlib import Path; from dontpanic_orchestrate import completion_dispatch, sufficiency_auditor; from dontpanic_orchestrate.config import resolvers; from dontpanic_orchestrate.executors import openrouter_api; resolvers.resolve_goal_audit_model=lambda *a,**k:\"vendor/model\"; openrouter_api._post_chat=lambda *a,**k:{\"model\":\"vendor/model\",\"choices\":[{\"message\":{\"content\":\"[]\"}}],\"usage\":{}}; assert completion_dispatch._dispatch_via_executor(\"openrouter\",\"prompt\",plan_dir=Path(\".\"))==\"[]\"; dispatch=sufficiency_auditor._production_sufficiency_dispatch(Path(\".\")); assert dispatch(\"openrouter\",\"prompt\")==\"[]\"; print(\"completion and sufficiency OpenRouter integrations passed\")'"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "advisory",
+      "category": "correctness",
+      "feature_id": "F014",
+      "issue": "The audit JSON incorrectly claims its summary lacks `Env: dev`. Evidence: the summary explicitly contains `- Env: dev`, matching structured context. Recommendation: remove the erroneous finding or regenerate the audit summary. The full suite was blocked only by the read-only sandbox’s lack of a temporary directory; 39 non-temp cases passed, and the remaining two integrations passed through no-write production-path smoke checks. Targeted F014 Ruff checks passed; a broader check exposed a pre-exis",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "signed_off"
+}

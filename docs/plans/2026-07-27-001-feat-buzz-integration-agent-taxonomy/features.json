@@ -213,11 +213,22 @@
         "Manual smoke checklist in evidence/ (not required automated E2E against live Buzz)"
       ],
       "acceptance": "Committed caller recipe documents the full confirm-gated flow and explicit non-auto-confirm rule; operator can follow it without reading orchestrator source.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F005",
         "F006"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=operator_judgment)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-07-28T08:04:56Z"
     },
     {
       "id": "F008",
@@ -231,11 +242,22 @@
         "Refuse if actor not allowlisted; never treat agent keys as human approvers for Tier-3 gates"
       ],
       "acceptance": "When enabled, an allowlisted human approval in Buzz clears a DontPanic gate with a durable actor record; non-allowlisted actors are refused; feature remains off-by-default.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F006",
         "F007"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=operator_judgment)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-07-28T16:56:22Z"
     },
     {
       "id": "F010",
@@ -249,11 +271,22 @@
         "Close or refine D007 with the observed pattern"
       ],
       "acceptance": "A short committed note records at least one real private-community usage pattern and whether a public DontPanic community is worth running; D007 status updated.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F006",
         "F007"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=operator_judgment)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-07-28T17:02:05Z"
     },
     {
       "id": "F011",
@@ -296,10 +329,21 @@
         "Unit tests: unset model preserves current argv; set model adds expected flag"
       ],
       "acceptance": "When a model is configured for a role/harness, dispatch argv includes the vendor model flag; when unset, behavior matches pre-change defaults; tests cover both.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F011"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=operator_judgment)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-07-28T08:45:37Z"
     },
     {
       "id": "F013",
@@ -314,10 +358,21 @@
         "Tests for legacy alias, profile resolution, capability refusal"
       ],
       "acceptance": "Operator can create a Buzz-like profile (e.g. honey: codex_cli + gpt model + auditor-only), assign it to roles.auditor, and dispatch uses that harness+model; legacy roles.implementer=claude still works; illegal capability/role combos refuse clearly.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F012"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=operator_judgment)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-07-28T14:21:54Z"
     },
     {
       "id": "F014",
@@ -332,11 +387,22 @@
         "Document which roles each new harness may hold at ship time"
       ],
       "acceptance": "At least one of openrouter|ollama|gemini_cli ships as a harness with declared capabilities and tests; implementer remains refused for harnesses that lack coding capabilities; no model version appears as a registry key.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F013",
         "F004"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=operator_judgment)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-07-28T15:50:01Z"
     },
     {
       "id": "F015",
@@ -350,10 +416,21 @@
         "Doctor check: configured model unknown → warn; harness rejects → fail"
       ],
       "acceptance": "models list works for at least one discoverable harness; aliases resolve; freeform model does not require a code change; doctor distinguishes unknown vs rejected.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F013"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=operator_judgment)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-07-28T15:07:02Z"
     },
     {
       "id": "F016",
@@ -366,11 +443,22 @@
         "No auto-dispatch from Buzz agent messages without confirm-gated caller (F007)"
       ],
       "acceptance": "When bindings are configured, docs and status can show Buzz agent → profile → harness+model; unbound agents do not gain dispatch; feature off by default.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F013",
         "F007"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=operator_judgment)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-07-28T16:13:52Z"
     }
   ]
 }

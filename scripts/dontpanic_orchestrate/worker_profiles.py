@@ -38,6 +38,7 @@ from dontpanic_orchestrate.config.worker_profiles import (
     PROFILE_ID_PATTERN,
     ROLE_REQUIRED_CAPABILITIES,
     WorkerProfile,
+    harness_missing_capabilities_for_role,
     missing_capabilities_for_role,
     normalize_harness,
     widened_capabilities,
@@ -67,6 +68,13 @@ class ProfileCapabilityRefusedError(WorkerProfileError):
 
 class ProfileHarnessUnknownError(WorkerProfileError):
     """Profile names a harness with no executor in AGENT_REGISTRY."""
+
+
+class HarnessCapabilityRefusedError(WorkerProfileError):
+    """F014 — a LEGACY role value (bare harness name, no profile) was
+    assigned a role its harness capabilities do not support, e.g.
+    ``roles.implementer: "ollama"`` when the ollama harness declares
+    ``non_interactive`` only. Registration alone never grants a role."""
 
 
 @dataclass(frozen=True)
@@ -194,6 +202,9 @@ def is_dispatchable_name(
     defined profile that passes the gates (for ``role`` when given, for
     at least one canonical role otherwise)."""
     if normalize_harness(name) in AGENT_REGISTRY:
+        if role is not None:
+            # F014 — same capability gate as resolve_worker's legacy path.
+            return not harness_missing_capabilities_for_role(name, role)
         return True
     profile = load_profiles(project_path).get(name)
     if profile is None:
@@ -216,6 +227,17 @@ def resolve_worker(
     """
     normalized = normalize_harness(name)
     if normalized in AGENT_REGISTRY:
+        # F014 — audit-only harnesses (ollama/openrouter) are registered but
+        # must never dispatch as implementer; gate the legacy path with the
+        # same capability vocabulary as profiles.
+        missing = harness_missing_capabilities_for_role(normalized, role)
+        if missing:
+            raise HarnessCapabilityRefusedError(
+                f"harness {normalized!r} cannot hold role {role!r}: missing "
+                f"capabilities {missing}. The {role} role requires "
+                f"{sorted(ROLE_REQUIRED_CAPABILITIES.get(role, frozenset()))}; "
+                f"assign a coding harness (claude/codex) instead."
+            )
         return ResolvedWorker(
             name=name, profile_id=None, display_name=None, harness=normalized, model=None
         )
@@ -319,6 +341,7 @@ def validate_profile(profile_id: str, profile: WorkerProfile) -> list[str]:
 
 
 __all__ = [
+    "HarnessCapabilityRefusedError",
     "ProfileCapabilityRefusedError",
     "ProfileHarnessUnknownError",
     "ProfileRoleRefusedError",

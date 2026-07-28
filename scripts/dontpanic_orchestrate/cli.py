@@ -5856,6 +5856,97 @@ def _skills_rubric_main(argv: list[str]) -> int:
     return 0
 
 
+def _buzz_gate_main(argv: list[str]) -> int:
+    """Plan 2026-07-27-001 F008 — ``dontpanic buzz-gate <plan> (--payload|--poll)``.
+
+    Applies one (or a poll batch of) signed Nostr approval events through
+    the F008 gate bridge. Cryptographic verification is in-process
+    (BIP-340 / NIP-01); the legacy ``sig_verified`` flat payload is
+    refused. Off by default — requires an enabled ``gate_bridge`` block
+    with an allowlisted human pubkey and explicit ``agent_pubkeys``.
+
+    Exit codes: 0 = approved / poll with at least one approved or noop;
+    2 = refused, malformed, or poll misconfigured.
+    """
+    from dontpanic_orchestrate import buzz_gate_bridge
+
+    parser = argparse.ArgumentParser(prog="dontpanic buzz-gate")
+    parser.add_argument("plan", help="plan id or plan directory path")
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument(
+        "--payload",
+        help="path to the signed-event payload JSON ('-' reads stdin)",
+    )
+    mode.add_argument(
+        "--poll",
+        action="store_true",
+        help="run configured gate_bridge.poll_command and process candidates",
+    )
+    args = parser.parse_args(argv)
+
+    plan_dir = _resolve_plan_dir(args.plan)
+    loaded = plan_loader.load(plan_dir)
+
+    if args.poll:
+        try:
+            decisions = buzz_gate_bridge.poll_approvals(
+                plan_dir, plan_id=loaded.plan_id
+            )
+        except ValueError as exc:
+            print(f"[buzz-gate] REFUSED — poll failed: {exc}", file=sys.stderr)
+            return 2
+        if not decisions:
+            print("[buzz-gate] poll: no ceremony candidates")
+            return 0
+        any_ok = False
+        for decision in decisions:
+            if decision.outcome in (
+                buzz_gate_bridge.APPROVED,
+                buzz_gate_bridge.NOOP_ALREADY_CLEARED,
+            ):
+                any_ok = True
+                print(
+                    f"[buzz-gate] {decision.outcome} gate {decision.gate!r} "
+                    f"(actor {decision.actor})"
+                )
+            else:
+                print(
+                    f"[buzz-gate] REFUSED gate {decision.gate!r} "
+                    f"({decision.outcome}): {decision.reason}",
+                    file=sys.stderr,
+                )
+        return 0 if any_ok else 2
+
+    try:
+        raw = (
+            sys.stdin.read()
+            if args.payload == "-"
+            else Path(args.payload).read_text(encoding="utf-8")
+        )
+        payload = buzz_gate_bridge.parse_approval_payload(raw)
+    except (OSError, UnicodeError, ValueError) as exc:
+        print(f"[buzz-gate] REFUSED — unreadable/malformed payload: {exc}", file=sys.stderr)
+        return 2
+
+    decision = buzz_gate_bridge.process_approval(
+        plan_dir, plan_id=loaded.plan_id, payload=payload
+    )
+    if decision.outcome == buzz_gate_bridge.APPROVED:
+        print(
+            f"[buzz-gate] cleared gate {decision.gate!r} for {loaded.plan_id} "
+            f"(actor {decision.actor})"
+        )
+        return 0
+    if decision.outcome == buzz_gate_bridge.NOOP_ALREADY_CLEARED:
+        print(f"[buzz-gate] gate {decision.gate!r} already cleared; no change")
+        return 0
+    print(
+        f"[buzz-gate] REFUSED gate {decision.gate!r} ({decision.outcome}): {decision.reason}",
+        file=sys.stderr,
+    )
+    return 2
+
+
 def _print_top_level_help(*, file) -> None:
     # The "Start here (for AI agents)" block is the F004 discovery pointer. It is
     # rendered from the shared guidance helper (projected over the F002 inventory)
@@ -5878,6 +5969,7 @@ Public-alpha command surface:
   manifest init|show             Publish the machine-readable agent manifest
   agent brief|status|setup|commands|guide|register-worker  Machine agent surface (operator vs worker; `commands` = JSON guidance, `guide` = offline operating guide)
   roles show|set                 Assign worker executors to implementer/auditor/goal_auditor roles
+  models list|aliases            Harness model discovery (`list --harness <id>`) + merged model_aliases table
   operator-roles set|list        Operator-role PREFERENCES (intent only; never dispatch authority)
   skills recommend|rubric        Skill recommendations for a plan + rubric migration suggestions
   orchestrate [<plan>]           Teaching gateway: brief/workflow, or forward to dispatch-from-plan
@@ -5898,6 +5990,7 @@ Public-alpha command surface:
   close --operator-resolved      Operator close-out of a stopped_no_progress feature
   dispatch-from-plan             Dry-run or confirm feature-by-feature dispatch
   approve|resume|ps              Clear gates and inspect active supervisors
+  buzz-gate <plan> --payload     Apply one allowlisted Buzz human approval to a pending gate (off-by-default bridge)
   quota-caps|calibrate-claude    Configure local quota guardrails
   mcp serve                      Start the local MCP server
 
@@ -5983,6 +6076,8 @@ def _run_cli(argv: list[str] | None = None) -> int:
         return _approve_main(raw[1:])
     if raw and raw[0] == "resume":
         return _resume_main(raw[1:])
+    if raw and raw[0] == "buzz-gate":
+        return _buzz_gate_main(raw[1:])
     if raw and raw[0] == "claude-touch":
         return _claude_touch_main(raw[1:])
     if raw and raw[0] == "close":
@@ -6019,6 +6114,10 @@ def _run_cli(argv: list[str] | None = None) -> int:
         from dontpanic_orchestrate.workers_cli import workers_main as _workers_main
 
         return _workers_main(raw[1:])
+    if raw and raw[0] == "models":
+        from dontpanic_orchestrate.models_cli import models_main as _models_main
+
+        return _models_main(raw[1:])
     if raw and raw[0] == "operator-roles":
         return _operator_roles_main(raw[1:])
     if raw and raw[0] == "skills":

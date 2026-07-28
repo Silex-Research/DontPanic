@@ -47,7 +47,8 @@ before writing any config.
 | `cursor` | yes | no | no | Operator surface — IDE MCP client against `dontpanic mcp serve`. |
 | `antigravity` | yes | no | no | Operator surface. |
 | `aider` | yes | no | no | Operator surface. |
-| `ollama` | yes | no | no | Local models used as operator-side tooling (safety probes, embeddings); not a dispatchable executor. A capability-gated `ollama` harness is planned under Track D (D002/D010). |
+| `ollama` | yes | **yes** | no | Shipped as a capability-gated harness (F014): `ollama run <model>` chat dispatch, capabilities `non_interactive` only. May hold `auditor`/`goal_auditor`; **implementer is refused** (no file_edit/tool_use sandbox). Model tags are catalog data. |
+| `openrouter` | yes | **yes** | no | Shipped as a capability-gated API harness (F014): chat completions with `OPENROUTER_API_KEY`, capabilities `non_interactive` only. May hold `auditor`/`goal_auditor`; **implementer is refused**. Model slugs are catalog data (D012). |
 
 Any agent name **not** in this table still has `can_operate=true` and
 `can_be_dispatched=false` — the classification is registry-driven, so an
@@ -65,8 +66,24 @@ role slots (`agent_surface.ROLES`) are:
 | `goal_auditor` | Goal/experience audit: does the result serve the plan's stated goal? | `codex` (see the Gemini path below) |
 
 Assigning a role to an operator-only agent (e.g. `roles.goal_auditor=gemini`)
-is refused — the role holder must be in the registry. `dontpanic agent status`
-shows the effective per-role assignment and each holder's classification.
+is refused — the role holder must be in the registry. Registration alone is
+not enough either (F014): each harness declares capability flags, and the
+role's requirements gate every path (legacy `roles.*` harness names, worker
+profiles, `roles set`, and dispatch). Roles each registered harness may hold
+at ship time:
+
+| Harness | Declared capabilities | implementer | auditor | goal_auditor |
+|---|---|---|---|---|
+| `claude` | file_edit, tool_use, non_interactive | yes | yes | yes |
+| `codex` | file_edit, tool_use, non_interactive | yes | yes | yes |
+| `ollama` | non_interactive | **refused** | yes | yes |
+| `openrouter` | non_interactive | **refused** | yes | yes |
+
+An audit-only harness earns the implementer slot only by proving a
+`file_edit` + `tool_use` + `non_interactive` sandbox and updating its
+declaration in `config.worker_profiles.HARNESS_CAPABILITIES` (mirrored on
+the executor class). `dontpanic agent status` shows the effective per-role
+assignment and each holder's classification.
 
 ## Recommended low-cost topology
 
@@ -92,8 +109,11 @@ Reading the topology against the matrix:
 
 - **OpenCode** sits on the `can_operate` axis only: it plans, locks, and
   approves, and DontPanic never sends it work.
-- **Claude and Codex** are the two agents with `can_be_dispatched=true` —
-  the whole dispatched panel, until more harnesses land.
+- **Claude, Codex, OpenRouter, and Ollama** all carry
+  `can_be_dispatched=true`. Claude and Codex hold the coding roles in this
+  topology; OpenRouter (needs `OPENROUTER_API_KEY`) and Ollama (needs the
+  local `ollama` binary with a pulled model) are dispatchable audit-only
+  harnesses — `auditor` / `goal_auditor` slots, `implementer` refused.
 - **Gemini** participates through the operator: an operator (or OpenCode
   session) runs a Gemini goal/experience review and attaches the result as
   external evidence (path B1). When the `gemini_cli` harness ships (path B2,
@@ -168,7 +188,7 @@ Layer 2  MODEL CATALOG    (data + discovery)    ← high churn; never registry k
                                     ▼
 
 Layer 1  HARNESS REGISTRY (code, stable, few)   ← today's AGENT_REGISTRY
-         claude | codex | future: gemini_cli | openrouter | ollama | …
+         claude | codex | openrouter | ollama | future: gemini_cli | …
          = how to invoke (argv, auth, sandbox, output parsing)
 ```
 
@@ -176,18 +196,32 @@ The four concepts, one by one:
 
 1. **Harness** — the stable code adapter that knows how to invoke an agent
    runtime. `AGENT_REGISTRY` is the **harness adapter table**: its keys are
-   harnesses (`claude`, `codex` today; `gemini_cli`, `openrouter`, `ollama`
-   are planned), never model names. Dispatchability is earned by harness
+   harnesses (`claude`, `codex`, `openrouter`, `ollama` today; `gemini_cli`
+   is planned), never model names. Dispatchability is earned by harness
    capabilities, not by what model runs behind the harness.
 2. **Model** — data, not code: vendor model ids, `openrouter/…` slugs, Ollama
    tags, aliases. High churn; **a model id is a catalog entry, never a
    registry key**. Grok 4.5, the next Claude, or any OpenRouter OSS model
    arrive as catalog data — do not add model version strings to
    `AGENT_REGISTRY` (no Python change is involved in adopting a new model).
+   Inspect the catalog with `dontpanic models list --harness <id>` and the
+   alias table with `dontpanic models aliases` — see [Model catalog &
+   aliases](./CONFIGURATION.md#model-catalog--aliases-dontpanic-models).
 3. **Worker profile** — operator config binding a display name + harness +
    model + allowed roles (+ optional capability overrides). Profiles are the
-   Buzz-style agent cards of D2; until they ship, config names harnesses
-   directly.
+   Buzz-style agent cards of D2 (`worker_profiles.<id>`, managed with
+   `dontpanic workers add|set|list|show`); legacy config naming harnesses
+   directly stays valid. Optionally (D5/C6, off by default), buzz.json
+   `agent_bindings` maps a Buzz agent id or display name to a profile id so
+   status surfaces (`dontpanic workers buzz-bindings`) can show
+   **Buzz agent → profile → harness + model** without duplicating model
+   selection outside the profile. Bindings are display-only: Buzz stays
+   the membership/UX surface, DontPanic roles/profiles stay the dispatch
+   authority — a binding never confers dispatch (a Buzz name that happens
+   to equal a profile id dispatches via the profile table, never via the
+   binding), an unbound agent gains nothing, and Buzz-initiated runs
+   still require the confirm-gated caller
+   (`examples/buzz-caller/README.md`).
 4. **Role** — the slot a profile (or, today, a harness) holds:
    `implementer`, `auditor`, `goal_auditor` (see [Worker
    roles](#worker-roles)). **Capability flags gate which roles a

@@ -218,9 +218,11 @@ def test_allowlist_is_fixed_and_missing_paths_are_skipped(
     assert doc_drift.DOC_ALLOWLIST == (
         "README.md",
         "docs/AGENT_CAPABILITY_MATRIX.md",
+        "docs/CONFIGURATION.md",
     )
     (tmp_path / "README.md").write_text(PRE_F001_CHECKLIST, encoding="utf-8")
-    # docs/AGENT_CAPABILITY_MATRIX.md intentionally absent (lands with F003).
+    # Other allowlisted paths intentionally absent (matrix lands with F003;
+    # CONFIGURATION is optional for this fixture — missing paths are skipped).
     violations = doc_drift.scan_allowlisted_docs(tmp_path, registered=HISTORICAL_REGISTRY)
     assert violations
     assert {v.path for v in violations} == {"README.md"}

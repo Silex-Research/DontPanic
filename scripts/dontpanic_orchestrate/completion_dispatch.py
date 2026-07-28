@@ -761,7 +761,10 @@ def _dispatch_via_executor(auditor: str, prompt: str, *, plan_dir: Path) -> str:
     # F012 i1 (codex audit i0 high finding) — forward the configured
     # goal-audit model override; None keeps the harness CLI default.
     # F013: the profile-level model wins over the role-level override.
+    # F015 i1: config model_aliases resolve single-hop on the effective
+    # model, mirroring supervisor._run_round; freeform strings pass through.
     # Lazy import mirrors sufficiency_auditor's F006-package decoupling.
+    from dontpanic_orchestrate import model_catalog
     from dontpanic_orchestrate.config.resolvers import resolve_goal_audit_model
 
     plan_id = plan_dir.name
@@ -776,7 +779,10 @@ def _dispatch_via_executor(auditor: str, prompt: str, *, plan_dir: Path) -> str:
         iteration=0,
         extra_context={"prompt_override": prompt},
         permission_policy="auditor",
-        model=worker.model or resolve_goal_audit_model(plan_dir, harness=worker.harness),
+        model=model_catalog.resolve_alias(
+            worker.model or resolve_goal_audit_model(plan_dir, harness=worker.harness),
+            plan_dir,
+        ),
     )
     result = executor.dispatch(task)
     return result.raw_response or ""

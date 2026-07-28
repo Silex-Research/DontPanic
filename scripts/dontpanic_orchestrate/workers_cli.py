@@ -41,6 +41,11 @@ _USAGE = """dontpanic workers — named worker profiles (harness + model + allow
   show <id> [--project NAME|PATH] [--json]
       Show one profile: effective capabilities, holdable roles, and the
       role slots that currently resolve to it.
+  buzz-bindings [--project NAME|PATH] [--json]
+      Show the optional F016 Buzz agent → profile bindings from
+      buzz.json ``agent_bindings`` (off by default). Display-only:
+      Buzz agent → profile → harness + model. Bindings never grant
+      dispatch; unbound Buzz agents gain nothing.
 
 Assign a profile to a role slot with:  dontpanic roles set <role> <id>
 Legacy harness names (claude / codex) stay valid role values."""
@@ -294,8 +299,7 @@ def workers_main(argv: list[str]) -> int:
             return 2
         profiles = wp.load_profiles(scope.path)
         payloads = [
-            _profile_payload(pid, profile, scope)
-            for pid, profile in sorted(profiles.items())
+            _profile_payload(pid, profile, scope) for pid, profile in sorted(profiles.items())
         ]
         if args.as_json:
             print(json.dumps({"worker_profiles": payloads}, indent=2, ensure_ascii=False))
@@ -305,7 +309,9 @@ def workers_main(argv: list[str]) -> int:
         if not payloads:
             print("  (none defined)")
             print("")
-            print("Create one:  dontpanic workers add <id> --harness <claude|codex> [--model M] [--roles r1,r2]")
+            print(
+                "Create one:  dontpanic workers add <id> --harness <claude|codex> [--model M] [--roles r1,r2]"
+            )
         else:
             for payload in payloads:
                 for line in _render_profile_lines(payload):
@@ -337,6 +343,58 @@ def workers_main(argv: list[str]) -> int:
             print("")
             for line in _render_profile_lines(payload):
                 print(line)
+        return 0
+
+    if sub == "buzz-bindings":
+        from dontpanic_orchestrate import buzz_bindings as bb
+
+        parser = argparse.ArgumentParser(prog="dontpanic workers buzz-bindings", add_help=True)
+        parser.add_argument("--project", default=None)
+        parser.add_argument("--json", action="store_true", dest="as_json")
+        args = parser.parse_args(rest)
+        scope = _resolve_scope(args.project)
+        if scope is None:
+            print(
+                f"[workers buzz-bindings] could not resolve --project {args.project!r}",
+                file=sys.stderr,
+            )
+            return 2
+        rows = bb.resolve_agent_bindings(project_path=scope.path)
+        if args.as_json:
+            print(
+                json.dumps(
+                    {"agent_bindings": bb.binding_payloads(rows)},
+                    indent=2,
+                    ensure_ascii=False,
+                )
+            )
+            return 0
+        print("Buzz agent bindings (buzz.json agent_bindings)")
+        print("")
+        if not rows:
+            print("  (none configured — feature off by default)")
+            print("")
+            print(
+                f"Bind a Buzz agent to a worker profile by adding to {bb.bindings_config_path()}:"
+            )
+            print('  "agent_bindings": { "<buzz agent id or display name>": "<profile id>" }')
+        else:
+            for row in rows:
+                if row.bound:
+                    label = f" ({row.display_name})" if row.display_name else ""
+                    print(
+                        f"  - {row.buzz_agent} -> {row.profile_id}{label}  "
+                        f"harness={row.harness}, model={row.model or '(harness default)'}"
+                    )
+                else:
+                    print(f"  - {row.buzz_agent} -> {row.profile_id}  UNBOUND")
+                    print(f"      {row.problem}")
+        print("")
+        print(
+            "Display-only: bindings never grant dispatch — Buzz stays the membership/UX "
+            "surface, DontPanic roles/profiles stay the dispatch authority (F007 "
+            "confirm-gated caller required for any Buzz-initiated run)."
+        )
         return 0
 
     if sub == "add":

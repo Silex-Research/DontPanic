@@ -3,7 +3,7 @@ id: 2026-07-27-001-feat-buzz-integration-agent-taxonomy
 title: Buzz integration + agent taxonomy honesty (operators vs workers)
 type: feat
 tier: cross-cutting
-status: active
+status: completed
 date: "2026-07-27"
 goal_type: new_feature
 description: >

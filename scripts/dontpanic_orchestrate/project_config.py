@@ -145,6 +145,11 @@ class ProjectConfig(BaseModel):
     role/capability gates live in
     :mod:`dontpanic_orchestrate.worker_profiles`."""
 
+    model_aliases: dict[str, str] | None = None
+    """F015 (D4) — per-project model aliases, overlaid atop the global
+    ``model_aliases`` block per key (project wins). Resolved single-hop by
+    :func:`dontpanic_orchestrate.model_catalog.resolve_alias`."""
+
     runtime_evidence: RuntimeEvidenceConfig | None = None
     """Plan G F006 / D015 — project-scoped runtime evidence defaults
     (web base URL, iOS scheme, Android package, backend provider).
