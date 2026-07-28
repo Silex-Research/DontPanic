@@ -1038,6 +1038,45 @@ def check_agent_onboarding(skip_auth: bool = False) -> list[CheckResult]:
             parts.append(f"{agent_name}({'available' if avail else 'unavailable'})")
         results.append(_ok("agent:executors", f"registered worker executors: {', '.join(parts)}"))
 
+    # 3b. external goal-audit vendors (Plan 2026-07-27-001 F004, D001 B1):
+    # honest capability line for operator-only vendors like gemini — they are
+    # NOT dispatchable workers, but their goal/experience audits attach as
+    # first-class evidence via `dontpanic plan attach-goal-audit`. A vendor
+    # that later gains an executor (B2/F014) is reported on the dispatched
+    # path instead, so this line never contradicts agent:executors.
+    try:
+        sys.path.insert(0, str(REPO_ROOT / "scripts"))
+        try:
+            from dontpanic_orchestrate.external_goal_audit import (
+                KNOWN_EXTERNAL_AUDIT_VENDORS,
+            )
+        finally:
+            sys.path.pop(0)
+        external_only = [v for v in KNOWN_EXTERNAL_AUDIT_VENDORS if v not in AGENT_REGISTRY]
+        promoted = [v for v in KNOWN_EXTERNAL_AUDIT_VENDORS if v in AGENT_REGISTRY]
+        parts = []
+        if external_only:
+            parts.append(
+                f"{', '.join(external_only)}: operator-only, NOT dispatchable — attach "
+                "goal/experience audits via `dontpanic plan attach-goal-audit`"
+            )
+        if promoted:
+            parts.append(
+                f"{', '.join(promoted)}: now registered — dispatched path only "
+                "(external attach refuses)"
+            )
+        results.append(
+            _ok("agent:external-audit", "; ".join(parts) or "no external audit vendors declared")
+        )
+    except Exception as exc:  # noqa: BLE001 — capability line must never crash the doctor
+        results.append(
+            _warn(
+                "agent:external-audit",
+                f"could not resolve external goal-audit vendors: {exc}",
+                "check dontpanic_orchestrate.external_goal_audit imports",
+            )
+        )
+
     # 4. supported-command coverage: the manifest (or the default set) must
     # advertise the core dispatch command so an onboarded agent knows it can
     # orchestrate. Surface the full list for operator visibility.
@@ -1156,6 +1195,105 @@ def check_config_home() -> CheckResult:
         "split-brain between canonical (~/.dontpanic) and legacy (~/.jarvis) homes — " + "; ".join(parts),
         "run `dontpanic reconcile homes --dry-run` to preview, then `--confirm` to migrate legacy-only files",
     )
+
+
+# Plan 2026-07-27-001 F009: Buzz setup/doctor surface. Buzz (the operator's
+# PRIVATE notify/coordination community) is strongly recommended but never a
+# hard dependency, so every outcome here except a fully valid config is an
+# advisory WARN — the probe is stripped from both strict-exit computations.
+BUZZ_SKIP_ENV = "DONTPANIC_SKIP_BUZZ"
+BUZZ_CONFIG_FILENAME = "buzz.json"
+# reporter_key_ref is a REFERENCE (env var name / keychain item), never key
+# material — buzz.json must stay secret-free like the rest of ~/.dontpanic.
+# In Buzz the relay URL IS the community/workspace authority (the CLI has no
+# separate community flag) — relay_url must be the operator's PRIVATE
+# community relay. Keep this key set in lock-step with
+# notify_buzz.EXPECTED_KEYS.
+BUZZ_EXPECTED_KEYS = ("relay_url", "channels", "reporter_key_ref")
+_BUZZ_REMEDIATION = (
+    "create a PRIVATE Buzz community you own (first-hour checklist: "
+    "docs/GETTING_STARTED.md § 'Buzz (Strongly Recommended): Private Community "
+    "Setup'), then write ~/.dontpanic/buzz.json with keys: relay_url (your "
+    "private community's relay URL — the relay is the community authority; "
+    "public communities are support-only, never the notify default), "
+    "channels (channel UUIDs; the sink posts to the first entry), "
+    "reporter_key_ref (a key reference such as an env var name — never the "
+    "private key itself); CI/headless: "
+    f"set {BUZZ_SKIP_ENV}=1 to silence this advisory"
+)
+
+
+def _buzz_config_default_path() -> Path:
+    """``<canonical home>/buzz.json`` — same home resolution as the rest of
+    the config surface ($DONTPANIC_HOME → ~/.dontpanic)."""
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    try:
+        from dontpanic_orchestrate import home_reconcile as hr
+    finally:
+        sys.path.pop(0)
+    return hr.canonical_home() / BUZZ_CONFIG_FILENAME
+
+
+def _buzz_value_usable(key: str, value: object) -> bool:
+    """True when a buzz.json value is actually usable: channels must be a
+    non-empty list of non-empty strings; every other expected key must be a
+    non-empty (non-whitespace) string."""
+    if key == "channels":
+        return (
+            isinstance(value, list)
+            and len(value) > 0
+            and all(isinstance(c, str) and c.strip() for c in value)
+        )
+    return isinstance(value, str) and bool(value.strip())
+
+
+def check_buzz_config(config_path: Path | None = None) -> CheckResult:
+    """Advisory Buzz-configured probe. Read-only: never writes a config
+    template (and so never seeds a default public community URL), and never
+    echoes config VALUES — only key names — so secrets can't leak into
+    doctor output."""
+    if os.environ.get(BUZZ_SKIP_ENV, "").strip().lower() in ("1", "true", "yes"):
+        return _ok("buzz-config", f"check skipped ({BUZZ_SKIP_ENV} set — CI/headless)")
+    path = config_path if config_path is not None else _buzz_config_default_path()
+    if not path.is_file():
+        return _warn(
+            "buzz-config",
+            "Buzz notify surface not configured (~/.dontpanic/buzz.json missing) "
+            "— strongly recommended for multi-agent work, never required",
+            _BUZZ_REMEDIATION,
+        )
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        return _warn(
+            "buzz-config",
+            "~/.dontpanic/buzz.json exists but is not valid JSON",
+            _BUZZ_REMEDIATION,
+        )
+    if not isinstance(data, dict):
+        return _warn(
+            "buzz-config",
+            "~/.dontpanic/buzz.json must be a JSON object",
+            _BUZZ_REMEDIATION,
+        )
+    missing = [k for k in BUZZ_EXPECTED_KEYS if k not in data]
+    if missing:
+        return _warn(
+            "buzz-config",
+            f"~/.dontpanic/buzz.json missing keys: {', '.join(missing)}",
+            _BUZZ_REMEDIATION,
+        )
+    # i0 audit finding: key presence alone let a null-valued (unusable) config
+    # PASS as configured. Only key NAMES appear in output — never values.
+    unusable = [k for k in BUZZ_EXPECTED_KEYS if not _buzz_value_usable(k, data[k])]
+    if unusable:
+        return _warn(
+            "buzz-config",
+            "~/.dontpanic/buzz.json has empty or wrong-typed values for keys: "
+            f"{', '.join(unusable)}",
+            _BUZZ_REMEDIATION,
+        )
+    return _ok("buzz-config", "buzz configured (~/.dontpanic/buzz.json)")
 
 
 def check_project_onboarding(name_or_path: str) -> list[CheckResult]:
@@ -2843,6 +2981,10 @@ def run_all_checks(
     # computation in both CLI surfaces (a pending upgrade is guidance, never a
     # readiness blocker).
     results.append(check_upgrade_readiness(check_upstream=check_upstream))
+    # Plan 2026-07-27-001 F009: Buzz-configured probe. Advisory-only (Buzz is
+    # strongly recommended, never required) — stripped from both strict-exit
+    # computations so an install never fails solely because Buzz is absent.
+    results.append(check_buzz_config())
     return results
 
 
@@ -3278,12 +3420,15 @@ def main(argv: list[str] | None = None) -> int:
         # Plan 2026-06-21-001 F006: the upgrade-readiness probe is advisory —
         # a pending upgrade is guidance, not a readiness blocker — so it is
         # stripped here too (its WARN text + remediation still prints above).
+        # Plan 2026-07-27-001 F009: the buzz-config probe is advisory too —
+        # missing Buzz config is a strong recommendation, never a blocker.
         strict_inputs = [
             r
             for r in results
             if not r.name.startswith("dashboard-")
             and r.name != "skill-rubrics"
             and r.name != "upgrade-readiness"
+            and r.name != "buzz-config"
         ]
         return compute_strict_exit(strict_inputs)
     return 0 if all(r.ok for r in results) else 1
