@@ -2423,7 +2423,9 @@ def _calibrate_claude_main(argv: list[str]) -> int:
         type=float,
         required=True,
         help=(
-            "Current weekly% (rolling_7d) or session% (rolling_5h) shown on "
+            # Literal % must be doubled — argparse treats help as %-format
+            # (Python 3.14 validates this at add_argument time).
+            "Current weekly%% (rolling_7d) or session%% (rolling_5h) shown on "
             "claude.ai/settings/usage. Must be in (0, 100]."
         ),
     )
