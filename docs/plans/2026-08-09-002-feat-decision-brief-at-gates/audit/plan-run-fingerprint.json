@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-08-09T20:31:41Z",
+  "captured_at": "2026-08-09T21:07:15Z",
   "decision_lines": [
     "D001\u001f203ad1fa44fc15c0e4ab92c4a775c3a47e4c4cd59e62948d2a0c6d2afdc4aa0a",
     "D002\u001f0314967a3cb09fc51611a9b81d3d5271c2190421ff5db6595b0952bfcd9bafb6",
@@ -102,14 +102,14 @@
     ]
   },
   "file_hashes": {
-    "audit/gate-state.json": "f3add8552936ebea389f8b155b29cac910940db307710e7ae19d1190c1bf17d7",
+    "audit/gate-state.json": "1dbc29da1e340f964598b2d1fbbd66be453814d2a6c54ead77a17191a631bf6e",
     "decisions.jsonl": "b7c5881adc9d8f58f9e609946082872973de68646158253c7cce7f7a0fe7e7fb",
     "features.json": "fcf9151b96e5e62662883974b9757a668c7b15c900021e6d89cff94f462a722e",
     "objective_contract.json": null,
     "plan.md": "fafcd0227074c01c5fdf00fefaacfecc4644a8f7fa56dab2ec5c3d6707afc735"
   },
   "file_mtimes": {
-    "audit/gate-state.json": 1786307501.1622808,
+    "audit/gate-state.json": 1786309506.995439,
     "decisions.jsonl": 1786290777.0600455,
     "features.json": 1786306995.0478556,
     "objective_contract.json": null,
@@ -117,10 +117,12 @@
   },
   "gate_semantics": {
     "cleared_gates": [
-      "pre_impl"
+      "pre_impl",
+      "pre_merge"
     ],
     "completed_stages": [
-      "pre_impl"
+      "pre_impl",
+      "pre_merge"
     ]
   },
   "objective_hash": null,

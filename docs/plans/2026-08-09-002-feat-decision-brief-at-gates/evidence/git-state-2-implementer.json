@@ -18,6 +18,10 @@
       "status": "M"
     },
     {
+      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/codex-auditor-F001-i1.json",
+      "status": "M"
+    },
+    {
       "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/plan-run-fingerprint.json",
       "status": "M"
     },
@@ -32,9 +36,22 @@
     {
       "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/evidence/git-state-0-implementer.json",
       "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/evidence/git-state-1-auditor.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/evidence/git-state-1-implementer.json",
+      "status": "M"
     }
   ],
-  "untracked": [],
+  "untracked": [
+    "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/claude-implementer-F001-i2.json",
+    "docs/plans/2026-08-09-003-feat-sim-harness-multi-trial/",
+    "docs/plans/2026-08-09-004-feat-agent-graders-task-corpus/",
+    "docs/plans/2026-08-09-005-feat-eval-ci-capability-regression/"
+  ],
   "deleted_staged": [],
   "deleted_unstaged": []
 }
