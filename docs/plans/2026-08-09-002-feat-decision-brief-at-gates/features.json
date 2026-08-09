@@ -15,8 +15,30 @@
         "Scope stops at the definition. Version bump, subtree pull, and revalidation belong to F002"
       ],
       "acceptance": "(1) A fixture declaring audience 'none' with neither summary nor surfaces is accepted. (2) A fixture declaring audience 'none' that also carries a summary is rejected. (3) An end-user fixture missing its summary is rejected. (4) An end-user fixture whose summary is under 10 characters is rejected. (5) An end-user fixture with an empty surfaces array is rejected. (6) The JSON Schema and the Pydantic model return the same verdict on all five fixtures.",
-      "passes": false,
-      "depends_on": []
+      "passes": true,
+      "depends_on": [],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=signed_off_adjacent)"
+        },
+        {
+          "type": "test_output",
+          "uri": "evidence/f001-user-impact-contract-test.txt",
+          "note": "6 fixtures x 2 validators agree; 4 null cases rejected by both; surface enum in lockstep with plan.schema.json"
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F001-i0.json",
+          "note": "auditor verdict signed_off (iteration 0)"
+        }
+      ],
+      "verified_by": [
+        "operator",
+        "codex"
+      ],
+      "verified_at": "2026-08-09T22:17:15Z"
     },
     {
       "id": "F002",

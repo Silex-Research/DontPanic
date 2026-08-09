@@ -220,3 +220,201 @@ Evidence: `/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-08-09-002-
 </details>
 
 ===
+---
+timestamp: 2026-08-09T21:51:41Z
+event: volley_start
+plan_id: 2026-08-09-002-feat-decision-brief-at-gates
+feature_id: F001
+---
+
+impl=claude aud=codex cap=2 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-08-09T21:51:41Z
+event: volley_start
+plan_id: 2026-08-09-002-feat-decision-brief-at-gates
+feature_id: F001
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=2
+
+===
+---
+timestamp: 2026-08-09T21:57:49Z
+event: volley_terminal
+plan_id: 2026-08-09-002-feat-decision-brief-at-gates
+final_status: signed_off
+rounds: 1
+feature_id: F001
+---
+
+final_status: signed_off
+rounds: 1
+audits: ['claude-implementer-F001-i0.json', 'codex-auditor-F001-i0.json']
+reason: auditor signed off
+
+===
+<!-- rendered annotation 2026-08-09T21:57:50Z -->
+**AI work finished on 2026-08-09-002-feat-decision-brief-at-gates** _(band: ready)_
+
+Volley completed after 1 round(s) with `signed_off`. No action needed.
+
+Evidence: `/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-08-09-002-feat-decision-brief-at-gates/signoff.json`
+
+<details><summary>Technical details</summary>
+
+- `feature_id` = `F001`
+- `final_status` = `signed_off`
+- `inbox_event` = `volley_terminal`
+- `iteration_count` = `1`
+- `plan_id` = `2026-08-09-002-feat-decision-brief-at-gates`
+- `rounds` = `1`
+
+</details>
+
+===
+---
+timestamp: 2026-08-09T21:57:50Z
+event: breaker:patch_incomplete
+plan_id: 2026-08-09-002-feat-decision-brief-at-gates
+report_path: /Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/patch-completeness-0.json
+---
+
+Patch incomplete — signoff blocked.
+Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
+  unstaged_dirty_state | block | docs/plans/2026-08-09-002-feat-decision-brief-at-gates/INBOX.md,docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/claude-implementer-F001-i0.json,docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/plan-run-fingerprint.json | Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: docs/plans/2026-08-09-002-feat-decision-brief-at-gates/INBOX.md,docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/claude-implementer-F001-i0.json,docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/plan-run-fingerprint.json | Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch.
+
+===
+---
+timestamp: 2026-08-09T21:57:50Z
+event: volley_crash_caught
+plan_id: 2026-08-09-002-feat-decision-brief-at-gates
+feature_id: F001
+stage: post_iter
+exception_class: PatchCompletenessError
+---
+
+supervisor caught unhandled exception in iter loop (iteration=0, stage=post_iter): PatchCompletenessError: Patch incomplete — signoff blocked.
+Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
+  unstaged_dirty_state | block | docs/plans/2026-08-09-002-feat-decision-brief-at-gates/INBOX.md,docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/claude-implementer-F001-i0.json,docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/plan-run-fingerprint.json | Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: docs/plans/2026-08-09-002-feat-decision-brief-at-gates/INBOX.md,docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/claude-implementer-F001-i0.json,docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/plan-run-fingerprint.json | Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch.. F004 backstop (D025 root cause #2). Operator: read audit/terminal-state-iter0.json for the stage + last-good envelope pointers, then use `dontpanic close --operator-resolved` (F2 F004 CLI) to close this feature without a re-dispatch when the failure is not a real implementation defect.
+
+===
+---
+timestamp: 2026-08-09T21:57:50Z
+event: volley_terminal
+plan_id: 2026-08-09-002-feat-decision-brief-at-gates
+final_status: blocked
+rounds: 1
+feature_id: F001
+---
+
+final_status: blocked
+rounds: 1
+audits: ['claude-implementer-F001-i0.json', 'codex-auditor-F001-i0.json']
+reason: supervisor caught unhandled exception in iter loop (iteration=0, stage=post_iter): PatchCompletenessError: Patch incomplete — signoff blocked.
+Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
+  unstaged_dirty_state | block | docs/plans/2026-08-09-002-feat-decision-brief-at-gates/INBOX.md,docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/claude-implementer-F001-i0.json,docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/plan-run-fingerprint.json | Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: docs/plans/2026-08-09-002-feat-decision-brief-at-gates/INBOX.md,docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/claude-implementer-F001-i0.json,docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/plan-run-fingerprint.json | Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch.. F004 backstop (D025 root cause #2). Operator: read audit/terminal-state-iter0.json for the stage + last-good envelope pointers, then use `dontpanic close --operator-resolved` (F2 F004 CLI) to close this feature without a re-dispatch when the failure is not a real implementation defect.
+
+===
+<!-- rendered annotation 2026-08-09T21:57:50Z -->
+**Blocked work on 2026-08-09-002-feat-decision-brief-at-gates — blocked** _(band: needs_action)_
+
+Volley terminated after 1 round(s) with status `blocked`. Review the audit envelope before deciding next step.
+
+Run:
+
+```
+dontpanic resume 2026-08-09-002-feat-decision-brief-at-gates --all
+```
+
+Evidence: `/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-08-09-002-feat-decision-brief-at-gates/signoff.json`
+
+<details><summary>Technical details</summary>
+
+- `feature_id` = `F001`
+- `final_status` = `blocked`
+- `inbox_event` = `volley_terminal`
+- `iteration_count` = `1`
+- `plan_id` = `2026-08-09-002-feat-decision-brief-at-gates`
+- `rounds` = `1`
+
+</details>
+
+===
+---
+timestamp: 2026-08-09T22:01:06Z
+event: volley_start
+plan_id: 2026-08-09-002-feat-decision-brief-at-gates
+feature_id: F001
+---
+
+impl=claude aud=codex cap=2 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-08-09T22:01:06Z
+event: volley_start
+plan_id: 2026-08-09-002-feat-decision-brief-at-gates
+feature_id: F001
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=2
+
+===
+---
+timestamp: 2026-08-09T22:09:04Z
+event: volley_terminal
+plan_id: 2026-08-09-002-feat-decision-brief-at-gates
+final_status: signed_off
+rounds: 1
+feature_id: F001
+---
+
+final_status: signed_off
+rounds: 1
+audits: ['claude-implementer-F001-i0.json', 'codex-auditor-F001-i0.json']
+reason: auditor signed off
+
+===
+<!-- rendered annotation 2026-08-09T22:09:05Z -->
+**AI work finished on 2026-08-09-002-feat-decision-brief-at-gates** _(band: ready)_
+
+Volley completed after 1 round(s) with `signed_off`. No action needed.
+
+Evidence: `/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-08-09-002-feat-decision-brief-at-gates/signoff.json`
+
+<details><summary>Technical details</summary>
+
+- `feature_id` = `F001`
+- `final_status` = `signed_off`
+- `inbox_event` = `volley_terminal`
+- `iteration_count` = `1`
+- `plan_id` = `2026-08-09-002-feat-decision-brief-at-gates`
+- `rounds` = `1`
+
+</details>
+
+===
+---
+timestamp: 2026-08-09T22:17:15Z
+event: feature_operator_resolved
+plan_id: 2026-08-09-002-feat-decision-brief-at-gates
+feature_id: F001
+reason_class: signed_off_adjacent
+---
+
+Operator closed feature F001 as operator_resolved (class=signed_off_adjacent).
+
+Closeout memo: evidence/closeout-memo.md
+Signoff envelope: audit/signoff-2026-08-09-002-feat-decision-brief-at-gates.json
+breaker:no_progress cleared: False
+features.json passes flipped: True
+
+Edit the closeout memo's `Rationale` section before merging.
+
+===

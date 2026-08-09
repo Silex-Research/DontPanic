@@ -1,20 +1,32 @@
 {
   "schema_version": "1.0",
-  "status": "fail",
+  "status": "pass",
   "findings": [
     {
       "mode": "unstaged_dirty_state",
       "files": [
         "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/INBOX.md",
-        "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/gate-state.json"
+        "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/claude-implementer-F001-i0.json",
+        "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/codex-auditor-F001-i0.json",
+        "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/patch-completeness-0.json",
+        "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/plan-run-fingerprint.json",
+        "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/signoff-2026-08-09-002-feat-decision-brief-at-gates.json",
+        "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/transcript.md",
+        "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/evidence/git-state-0-auditor.json"
       ],
-      "reason": "Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: docs/plans/2026-08-09-002-feat-decision-brief-at-gates/INBOX.md,docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/gate-state.json",
-      "severity": "block",
-      "recommendation": "Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch."
+      "reason": "Unstaged modifications present. F003 will require an operator note when files fall outside touched_files.",
+      "severity": "info",
+      "recommendation": "Run: git add -u for files that should ride along; otherwise pass --unrelated-dirty-state-note <reason> at dispatch time."
     }
   ],
   "files": [
     "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/INBOX.md",
-    "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/gate-state.json"
+    "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/claude-implementer-F001-i0.json",
+    "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/codex-auditor-F001-i0.json",
+    "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/patch-completeness-0.json",
+    "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/plan-run-fingerprint.json",
+    "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/signoff-2026-08-09-002-feat-decision-brief-at-gates.json",
+    "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/transcript.md",
+    "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/evidence/git-state-0-auditor.json"
   ]
 }

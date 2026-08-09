@@ -1,0 +1,15 @@
+user_impact contract (plan 2026-08-09-002 F001)
+  ✓ none-bare: both validators accepted (agreement)
+  ✓ none-with-summary: both validators rejected (agreement)
+  ✓ end-user-missing-summary: both validators rejected (agreement)
+  ✓ end-user-short-summary: both validators rejected (agreement)
+  ✓ end-user-empty-surfaces: both validators rejected (agreement)
+  ✓ end-user-missing-hash: both validators rejected (agreement)
+  ✓ positive control: well-formed end_user block accepted by both
+  ✓ null parity [user_impact]: both reject null for the whole block
+  ✓ null parity [summary]: both reject null for a declared summary
+  ✓ null parity [surfaces]: both reject null for a declared surfaces array
+  ✓ null parity [description_hash]: both reject null for the staleness digest
+  ✓ surface enum parity: 11 values match plan.schema.json
+
+PASS: 6 fixtures × 2 validators agree, 4 null cases rejected by both, surface enum in lockstep
