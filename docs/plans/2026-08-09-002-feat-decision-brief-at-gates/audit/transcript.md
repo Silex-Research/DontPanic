@@ -37,3 +37,4 @@ Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
 
 **2026-08-09T22:09:04Z** — feature **F001** terminal: `signed_off` after 1 round(s) — auditor signed off
 
+| 2026-08-09T22:59:38Z | F002 | i1 | claude / implementer | blocked | — / — | [claude-implementer-F002-i1.json](audit/claude-implementer-F002-i1.json) |

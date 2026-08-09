@@ -418,3 +418,38 @@ features.json passes flipped: True
 Edit the closeout memo's `Rationale` section before merging.
 
 ===
+---
+timestamp: 2026-08-09T22:59:38Z
+event: error
+plan_id: 2026-08-09-002-feat-decision-brief-at-gates
+agent: claude
+role: implementer
+iteration: 1
+feature_id: F002
+---
+
+Executor claude (implementer) iteration 1 reported failure: timeout after 600s.
+Volley continues and the audit JSON below records the failure surface.
+
+===
+---
+timestamp: 2026-08-09T22:59:38Z
+event: plan_drift_detected
+plan_id: 2026-08-09-002-feat-decision-brief-at-gates
+feature_id: F002
+drift_class: context_refresh
+changed_files: features.json
+budget_protected: True
+stage: before_auditor_call
+---
+
+Plan 2026-08-09-002-feat-decision-brief-at-gates: context-refresh drift in features.json — paused before the next paid call; redispatch with refreshed context.
+
+Stage: before_auditor_call
+Changed files: features.json
+Budget protected (paused before next paid call): True
+
+Changes:
+  - [context_refresh] features.F001: feature F001 changed (acceptance / depends_on / roles) — refresh context before next call
+
+===
