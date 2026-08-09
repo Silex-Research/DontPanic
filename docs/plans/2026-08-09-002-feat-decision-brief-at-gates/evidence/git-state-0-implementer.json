@@ -1,0 +1,12 @@
+{
+  "staged": [],
+  "unstaged_modified": [],
+  "untracked": [
+    "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/INBOX.md",
+    "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/claude-implementer-F001-i0.json",
+    "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/gate-state.json",
+    "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/plan-run-fingerprint.json"
+  ],
+  "deleted_staged": [],
+  "deleted_unstaged": []
+}

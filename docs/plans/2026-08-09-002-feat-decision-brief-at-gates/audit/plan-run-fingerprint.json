@@ -1,0 +1,149 @@
+{
+  "captured_at": "2026-08-09T20:31:41Z",
+  "decision_lines": [
+    "D001\u001f203ad1fa44fc15c0e4ab92c4a775c3a47e4c4cd59e62948d2a0c6d2afdc4aa0a",
+    "D002\u001f0314967a3cb09fc51611a9b81d3d5271c2190421ff5db6595b0952bfcd9bafb6",
+    "D003\u001f096564863c37ef64b9542adcdd27e2de3bf0601b2d65249216c55ebb3a0a4d13",
+    "D004\u001f433bb23a9dbbe5b79bf205e747c6920b6c2e02288722cac0fe7772e9ecc42443",
+    "D005\u001fb887117665cc921e8933d06be7a0483bde46bbecf83460cc4c898aa55bfdc4e2",
+    "D006\u001f303e82192bfa21eace108479db24f620b7da85dc919b477cee8f0187a53019a5",
+    "D007\u001f697d41ec3b341cebe1c32be724abdaf12a338bf2a8820923340db95edf3e4178",
+    "D008\u001f46cba7d196b69caaf32cf1fb2705d19f7995eb128e41b756ebd56df11776edb0",
+    "D009\u001f54195e953b3fea663c842e3f24904b97af226708dac5d93103c3d33259e35b92",
+    "D010\u001f1628a72cf0dd0b141d4410bbc30cec40218f52b42dc1cbe1bc457ea2ce5294d3",
+    "D011\u001fd2329f8cfc875b2234f4e60a2de98a5cd2587a6acb0fcd554e06718ce42b0608",
+    "D012\u001fb7c47285b451c0db994b063e68f8c816806f518b7f25ad766e66c92a6fe4d388",
+    "D013\u001f12e2b46f2cab5da044b61ddda3c148169e3d78dc62a1e5fb1f0ec0653a821be3"
+  ],
+  "features_semantics": {
+    "by_id": {
+      "F001": {
+        "acceptance": "(1) A fixture declaring audience 'none' with neither summary nor surfaces is accepted. (2) A fixture declaring audience 'none' that also carries a summary is rejected. (3) An end-user fixture missing its summary is rejected. (4) An end-user fixture whose summary is under 10 characters is rejected. (5) An end-user fixture with an empty surfaces array is rejected. (6) The JSON Schema and the Pydantic model return the same verdict on all five fixtures.",
+        "agents_required": null,
+        "depends_on": [],
+        "passes": false
+      },
+      "F002": {
+        "acceptance": "(1) The validator exits 0 over every existing plan directory with no impact block present. (2) git status shows no existing plan file modified by this feature. (3) The subtree-pulled schema in DontPanic is byte-identical to the one committed in agent-conventions.",
+        "agents_required": null,
+        "depends_on": [
+          "F001"
+        ],
+        "passes": false
+      },
+      "F003": {
+        "acceptance": "(1) A pause emitted through the real supervisor path produces a NotifyEvent carrying a populated brief with no caller passing metadata arguments to render. (2) The attached dataclass is frozen and equality-comparable. (3) Status is declared when the recorded digest matches the current description. (4) Status is possibly-stale when the digests differ. (5) Status is undeclared when F001's impact block is absent. (6) pytest tests/test_decision_brief_delivery.py covers all five and passes.",
+        "agents_required": null,
+        "depends_on": [
+          "F002"
+        ],
+        "passes": false
+      },
+      "F004": {
+        "acceptance": "(1) RenderedEvent exposes the three new fields with None defaults and every existing template row still constructs. (2) Round-tripping a brief through render and into ActionItem preserves the decision-consequence element exactly, for each of three distinct briefs, so the mapping is proven rather than a single fixture matching. (3) For every renderable kind, plain_consequence differs from the rendered detail string \u2014 a regression asserting the current aliasing is gone across the whole table, not one example. (4) The reversible flag on an event-derived ActionItem tracks the brief across both True and False, rather than the hardcoded False it carries today. (5) pytest tests/test_event_copy_brief_fields.py covers all four and passes.",
+        "agents_required": null,
+        "depends_on": [
+          "F003"
+        ],
+        "passes": false
+      },
+      "F005": {
+        "acceptance": "(1) All 27 INBOX kinds still resolve to exactly one disposition and the existing totality test stays green. (2) Every kind that rendered before still renders. (3) Every renderable NEEDS_ACTION variant carries a brief. (4) Events with no feature in scope, and plan-level events, receive a distinct fallback rather than a feature-shaped one. (5) Rendered headlines for renderable NEEDS_ACTION kinds contain the impact line and do not open with the plan identifier. (6) A field-level diff against the pre-change render shows no previously-present fact absent. (7) Every exact command is byte-identical before and after. (8) pytest tests/test_event_copy_impact_first.py covers all seven and passes.",
+        "agents_required": null,
+        "depends_on": [
+          "F004"
+        ],
+        "passes": false
+      },
+      "F006": {
+        "acceptance": "(1) A gate on a feature with no impact block renders the exact undeclared sentence and no synthesized prose. (2) A stale declaration renders marked as stale rather than current. (3) The source-level non-generative assertion holds across every approval template. (4) plan lock on a fixture whose plan declares a user-facing surface and omits the impact block prints an advisory naming each such feature and exits 0. (5) plan lock on the same fixture with the impact block declared prints no advisory and exits 0. (6) pytest tests/test_event_copy_undeclared_impact.py covers all five and passes.",
+        "agents_required": null,
+        "depends_on": [
+          "F004"
+        ],
+        "passes": false
+      },
+      "F007": {
+        "acceptance": "(1) The approve prompt for a synthetic gate shows the same three brief elements as the INBOX entry for that gate. (2) Both read the single snapshot rather than recomputing, asserted by mutating the snapshot and observing both outputs change. (3) A summary exceeding the cap keeps its impact line and truncates supporting detail. (4) Secret scrubbing passes over both payloads with a token-shaped string planted in the summary. (5) pytest tests/test_brief_cli_inbox_parity.py covers all four and passes.",
+        "agents_required": null,
+        "depends_on": [
+          "F005",
+          "F006"
+        ],
+        "passes": false
+      },
+      "F008": {
+        "acceptance": "(1) The Discord payload, the terminal notification, and the dashboard card carry the same three brief elements for one synthetic gate, modulo declared truncation. (2) The dashboard rendering is unabridged while both notification sinks are capped. (3) Truncation preserves the impact line in every capped sink. (4) Secret scrubbing passes over all three payloads with a token-shaped string planted in the summary. (5) pytest tests/test_brief_sink_parity.py covers all four and passes.",
+        "agents_required": null,
+        "depends_on": [
+          "F007"
+        ],
+        "passes": false
+      },
+      "F009": {
+        "acceptance": "(1) evidence/ holds a before and an after rendering of the fixture gate. (2) The fixture header records what it was modelled on. (3) A reader given only the after rendering can state what changes, who feels it, and what approving does, without opening plan.md. (4) The authoring guidance exists and the plan-artifacts skill references it. (5) git status shows no file modified outside DontPanic and agent-conventions.",
+        "agents_required": null,
+        "depends_on": [
+          "F008"
+        ],
+        "passes": false
+      }
+    },
+    "feature_ids": [
+      "F001",
+      "F002",
+      "F003",
+      "F004",
+      "F005",
+      "F006",
+      "F007",
+      "F008",
+      "F009"
+    ]
+  },
+  "file_hashes": {
+    "audit/gate-state.json": "f3add8552936ebea389f8b155b29cac910940db307710e7ae19d1190c1bf17d7",
+    "decisions.jsonl": "b7c5881adc9d8f58f9e609946082872973de68646158253c7cce7f7a0fe7e7fb",
+    "features.json": "fcf9151b96e5e62662883974b9757a668c7b15c900021e6d89cff94f462a722e",
+    "objective_contract.json": null,
+    "plan.md": "fafcd0227074c01c5fdf00fefaacfecc4644a8f7fa56dab2ec5c3d6707afc735"
+  },
+  "file_mtimes": {
+    "audit/gate-state.json": 1786307501.1622808,
+    "decisions.jsonl": 1786290777.0600455,
+    "features.json": 1786306995.0478556,
+    "objective_contract.json": null,
+    "plan.md": 1786307384.7781343
+  },
+  "gate_semantics": {
+    "cleared_gates": [
+      "pre_impl"
+    ],
+    "completed_stages": [
+      "pre_impl"
+    ]
+  },
+  "objective_hash": null,
+  "plan_semantics": {
+    "agents_required": [
+      "claude",
+      "codex"
+    ],
+    "allowed_paths": null,
+    "dependencies": [
+      "2026-05-24-004-feat-event-messaging-v1",
+      "2026-06-02-001-feat-control-plane-action-spine"
+    ],
+    "forbidden_decisions": null,
+    "human_gates": [
+      "pre_impl",
+      "pre_merge"
+    ],
+    "loop_caps": {
+      "hard_stop": false,
+      "max_iterations": 2
+    },
+    "protected_paths": null,
+    "status": "active"
+  }
+}
