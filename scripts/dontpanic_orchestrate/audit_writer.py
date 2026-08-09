@@ -188,9 +188,26 @@ def _derive_status(
     return "signed_off"
 
 
+# An explicit "Verdict: X" declaration in the prose. Anchoring on it is
+# required, not cosmetic: bag-of-words scanning misclassifies any audit whose
+# SUBJECT's own vocabulary contains status words (QuantRE F003's dispositions
+# enum defines 'needs_changes', so four consecutive signed_off audits were
+# recorded needs_changes and tripped the global breaker, 2026-07-30).
+_VERDICT_DECLARATION_RE = re.compile(
+    r"(?:overall\s+)?verdict\s*[:—=]\s*\**\s*"
+    r"(redaction_required|needs[\s_]changes|signed[\s_]off|blocked|inconclusive)",
+    re.IGNORECASE,
+)
+
+
 def _extract_status_hint(summary: str) -> str | None:
     """Best-effort status parser for auditor prose."""
     text = summary.lower().replace("-", "_")
+    # The LAST explicit verdict declaration is authoritative (summaries often
+    # recap earlier iterations' verdicts before stating the final one).
+    declarations = _VERDICT_DECLARATION_RE.findall(text)
+    if declarations:
+        return declarations[-1].replace(" ", "_")
     for status in ("redaction_required", "needs_changes", "signed_off", "blocked", "inconclusive"):
         if status in text:
             return status
