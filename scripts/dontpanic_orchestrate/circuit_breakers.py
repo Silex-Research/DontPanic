@@ -1197,13 +1197,26 @@ def record_global_hit(plan_id: str, kind: BreakerKind) -> None:
         f.write(json.dumps(entry) + "\n")
 
 
+def _effective_global_threshold() -> int:
+    """JARVIS_GLOBAL_BREAKER_THRESHOLD sizes the global breaker for multi-plan
+    fleets; must be a positive integer, else the default applies."""
+    raw = os.environ.get("JARVIS_GLOBAL_BREAKER_THRESHOLD", "")
+    try:
+        value = int(raw)
+    except ValueError:
+        return GLOBAL_THRESHOLD_HITS
+    return value if value > 0 else GLOBAL_THRESHOLD_HITS
+
+
 def evaluate_global(
     *,
-    threshold: int = GLOBAL_THRESHOLD_HITS,
+    threshold: int | None = None,
     window_seconds: int = GLOBAL_WINDOW_SECONDS,
     counted_kinds: Iterable[BreakerKind] = (BreakerKind.ITERATION_CAP,),
 ) -> GlobalBreakerState:
     """True iff iteration_cap hits in the last window_seconds reach threshold."""
+    if threshold is None:
+        threshold = _effective_global_threshold()
     cutoff = _now() - dt.timedelta(seconds=window_seconds)
     counted_values = {k.value for k in counted_kinds}
     hits = 0
