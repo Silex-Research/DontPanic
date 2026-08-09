@@ -63,6 +63,38 @@ SELF_AUTHORED = [
 ]
 
 
+def test_production_call_shape_passes_plan_dir_as_repo_root(tmp_path: Path) -> None:
+    """Pin the REAL wiring: supervisor.py:1445 calls enforce(repo_root=plan_dir).
+
+    The first version of this fix derived its path prefix from
+    ``plan_dir.relative_to(repo_root)``, which is ``"."`` under that call shape,
+    so the exemption matched nothing and the fix was a silent no-op in
+    production while six unit tests passed. Those tests had constructed
+    ``plan_dir`` underneath ``tmp_path`` as repo_root — encoding an assumption
+    the supervisor does not share.
+
+    This test exists so the exemption can never again depend on a relationship
+    between plan_dir and repo_root that production does not have.
+    """
+    plan_dir = _plan_dir(tmp_path)
+
+    block = gate.enforce(
+        plan_dir,
+        plan_id="2026-08-09-002-feat-decision-brief-at-gates",
+        iteration=0,
+        role="implementer",
+        audit_paths=[],
+        affected_paths=[],
+        repo_root=plan_dir,  # <- exactly what the supervisor passes
+        git_state_override=_git_state(SELF_AUTHORED),
+    )
+
+    assert block is not None
+    assert block["status"] != "fail", (
+        "exemption did not apply under the production call shape: " f"{block!r}"
+    )
+
+
 def test_self_authored_run_telemetry_does_not_block_signoff(tmp_path: Path) -> None:
     """The reported bug. A run's own INBOX / audit / git-state must not block it."""
     plan_dir = _plan_dir(tmp_path)

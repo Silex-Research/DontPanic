@@ -151,33 +151,37 @@ def _iter_git_state_paths(git_state: dict) -> list[str]:
     return paths
 
 
-def self_authored_telemetry(
-    git_state: dict, *, plan_dir: Path, repo_root: Path
-) -> set[str]:
+def self_authored_telemetry(git_state: dict, *, plan_dir: Path) -> set[str]:
     """Paths in ``git_state`` that this very run wrote into its own plan dir.
 
-    Scoped to the DISPATCHING plan only: a sibling plan's dirty INBOX is
-    somebody else's uncommitted work and stays a finding. Returns exact path
-    strings so the caller can union them into ``touched_files`` without
-    changing how Mode 5 compares.
+    Anchored on the plan directory's own NAME — the plan id — rather than on a
+    path relationship with ``repo_root``. That is deliberate: the supervisor
+    calls :func:`enforce` with ``repo_root=plan_dir`` (supervisor.py:1445), so
+    any prefix derived from ``plan_dir.relative_to(repo_root)`` collapses to
+    ``"."`` and matches nothing. The plan id is unique per plan, which also
+    gives the scoping this needs for free: a SIBLING plan's dirty telemetry
+    carries a different id, does not match, and stays a finding.
+
+    Returns exact path strings so the caller can union them into
+    ``touched_files`` without changing how Mode 5 compares.
     """
-    try:
-        plan_rel = plan_dir.resolve().relative_to(repo_root.resolve()).as_posix()
-    except ValueError:
-        # Plan dir outside the repo being checked — exempt nothing.
+    plan_name = plan_dir.resolve().name
+    if not plan_name:
         return set()
 
-    prefix = f"{plan_rel}/"
     exempt: set[str] = set()
     for path in _iter_git_state_paths(git_state):
-        if not path.startswith(prefix):
+        if path.startswith(f"{plan_name}/"):
+            tail = path[len(plan_name) + 1 :]
+        elif f"/{plan_name}/" in path:
+            tail = path.split(f"/{plan_name}/", 1)[1]
+        else:
             continue
-        tail = path[len(prefix) :]
-        if tail in _SELF_AUTHORED_FILES:
-            exempt.add(path)
-        elif tail.startswith(_SELF_AUTHORED_DIRS):
-            exempt.add(path)
-        elif tail.startswith(_SELF_AUTHORED_EVIDENCE_PREFIX):
+        if (
+            tail in _SELF_AUTHORED_FILES
+            or tail.startswith(_SELF_AUTHORED_DIRS)
+            or tail.startswith(_SELF_AUTHORED_EVIDENCE_PREFIX)
+        ):
             exempt.add(path)
     return exempt
 
@@ -302,9 +306,7 @@ def enforce(
     # A run's own telemetry is touched by definition — it exists because this
     # dispatch wrote it. Without this the gate blocks every volley that reaches
     # signoff, since the implementer never declares supervisor-authored files.
-    touched_files |= self_authored_telemetry(
-        git_state, plan_dir=plan_dir, repo_root=repo_root
-    )
+    touched_files |= self_authored_telemetry(git_state, plan_dir=plan_dir)
     raw_report = patch_completeness.check(git_state, repo_root, touched_files)
     promoted_report, unrelated_dirty_files = _promote_mode5(
         raw_report,
