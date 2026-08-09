@@ -1,0 +1,102 @@
+{
+  "task_id": "2026-08-09-001-feat-repo-hygiene-actions",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "observability",
+      "phase": 0,
+      "description": "repo_hygiene observation module built on a single injected Git runner — working-tree state and branch state degrade independently, so a degenerate branch situation never suppresses dirty-work detection",
+      "steps": [
+        "Define one injected GitRunner used by repo_hygiene and by every helper it calls transitively. resolve_default_base() internally invokes `git remote`, which no source-string scan of repo_hygiene.py would ever reveal — the allowlist must live on the runner, not on this module's text (D011)",
+        "Allowlist on the runner: status, for-each-ref, rev-list, rev-parse, symbolic-ref, merge-base, remote, worktree list. Set GIT_OPTIONAL_LOCKS=0 on every invocation so `git status` cannot perform its optional index-refresh write",
+        "Return RepoObservation with independent optional sections: tree (from git_state.capture) and branches. A detached HEAD, zero-commit, or no-remote repo yields tree populated and branches=None — never a blanket None (D012)",
+        "Only a cwd that is not a git repository at all yields None for the whole observation",
+        "Cap the branch walk at MAX_BRANCHES and set branches_partial=True when the cap trips (D006)"
+      ],
+      "acceptance": "pytest tests/test_repo_hygiene_observe.py passes: 14+ temp-repo cases covering clean, dirty-tracked, dirty-untracked, ahead-of-remote, no-upstream, merged-into-default, detached HEAD, zero-commit, no-remote, and cap-tripped repos. Critically, the detached-HEAD, zero-commit, and no-remote cases each carry a populated tree section when the tree is dirty and branches=None — dirty work is reported in exactly the repos where branch analysis cannot run. Only a non-repo cwd returns None overall, and no case raises.",
+      "passes": false,
+      "depends_on": []
+    },
+    {
+      "id": "F002",
+      "category": "observability",
+      "phase": 0,
+      "description": "Closed finding vocabulary with explicit precedence and protected-branch exclusions — a branch can never be recommended for both publishing and deletion, and default / current / checked-out branches are never cleanup candidates",
+      "steps": [
+        "Define HYGIENE_KINDS as a frozenset: dirty_tree_unbound, branch_ahead_of_remote, branch_no_upstream, branch_merged_upstream_local, plan_status_drift, plan_unparseable, project_path_unusable",
+        "Implement classify(observation, *, bindings) as a pure function — no I/O, no clock, no git",
+        "Precedence (D013): branch_merged_upstream_local dominates — a branch classified merged emits no ahead/no-upstream finding, so publish and delete are never both recommended for one branch",
+        "Exclusions (D013): never emit any cleanup-shaped finding for the resolved default branch, the current branch, or a branch checked out in another worktree (read from `git worktree list`)",
+        "Suppress dirty_tree_unbound when the repo root is a registered worktree binding (D003); collapse same-kind branch findings above BRANCH_COLLAPSE_THRESHOLD (D004); carry the remote ref SHA on every merged finding (D005)"
+      ],
+      "acceptance": "pytest tests/test_repo_hygiene_classify.py passes: classify() is verified pure (monkeypatched subprocess.run and Path.write_text raise if touched); a branch that is both merged and ahead emits exactly one finding and it is the merged one; the default branch, the current branch, and a branch checked out in a second worktree each produce zero cleanup findings even when otherwise qualifying; binding suppression holds; the collapse threshold is exercised at N-1, N, and N+1.",
+      "passes": false,
+      "depends_on": ["F001"]
+    },
+    {
+      "id": "F003",
+      "category": "functional",
+      "phase": 1,
+      "description": "provide_repo_hygiene_actions() ActionItem provider with per-remedy reversibility and impact-first copy, plus clears_when predicates for every emitted shape",
+      "steps": [
+        "Add SOURCE_REPO_HYGIENE to _VALID_SOURCES with a _SOURCE_PRIORITY slot below architecture",
+        "Set reversible per remedy, not per source (D014): observing a condition is not the action being described. Pushing a branch, setting an upstream, and resolving a dirty tree are not uniformly undoable, so reversible is False wherever the remedy is unspecified or not safely re-runnable",
+        "Emit exact_command=None with explanation-only copy for every git remedy (D002)",
+        "Register a clears_when predicate for every emitted shape — repo_tree_clean, branch_pushed, branch_has_upstream, branch_absent_locally — and set resolution_class=RESOLUTION_OPERATOR_ATTESTED for the three branch kinds",
+        "Per D010, author every title impact-first — the consequence to the builder ('58 commits exist only on this laptop'), not the mechanism ('branch ahead of remote') — and populate plain_consequence on every item"
+      ],
+      "acceptance": "pytest tests/test_repo_hygiene_provider.py passes: every emitted item declares a clears_when in registered_predicates(); suppress_resolved() retires each kind once its predicate flips; no item has a non-None exact_command; no item asserts reversible=True without a named re-runnable remedy; ActionItem.__post_init__ accepts every item; aggregate() dedupes repeats; and per D010 every item has a non-None plain_consequence and no title leads with a git mechanism term (ahead, upstream, ref, HEAD, porcelain).",
+      "passes": false,
+      "depends_on": ["F002"]
+    },
+    {
+      "id": "F004",
+      "category": "functional",
+      "phase": 1,
+      "description": "Plan-status drift, restricted to states dontpanic plan close actually accepts — active plus all-features-passing is command-resolvable; every other non-terminal state gets a status-specific explanation-only item",
+      "steps": [
+        "Verify the constraint first: completion_gate.close_plan() raises unless status == 'active' (status == 'completed' returns an idempotent no-op). A rendered `dontpanic plan close` on a draft or blocked plan passes token validation and then fails at runtime — token-valid is not operationally honest (D015)",
+        "Emit exact_command='dontpanic plan close <plan-id>' ONLY for status == 'active' with every feature passing",
+        "For draft, ready_for_audit, in_audit, and blocked plans whose features all pass, emit status-specific explanation-only items (exact_command=None) naming the actual next step for that state",
+        "Treat completed and abandoned as terminal — no finding",
+        "Emit plan_unparseable as its own advisory naming plans whose frontmatter fails schema validation, rather than silently dropping them"
+      ],
+      "acceptance": "pytest tests/test_repo_hygiene_plan_status.py passes: a fixture tree containing an all-passing active plan, an all-passing draft plan, an all-passing blocked plan, an all-passing completed plan, a partially-passing active plan, and a schema-invalid plan yields exactly one command-resolvable item (the active one, whose exact_command both passes validate_command_tokens AND is accepted by close_plan in dry-run), two explanation-only status items (draft, blocked), zero for completed and partial, and one plan_unparseable advisory.",
+      "passes": false,
+      "depends_on": ["F002"]
+    },
+    {
+      "id": "F005",
+      "category": "functional",
+      "phase": 2,
+      "description": "CLI + dashboard wiring across repo and fleet scope, with unusable project paths surfaced through the existing uncertainty-card mechanism rather than as a bare invented item",
+      "steps": [
+        "Call provide_repo_hygiene_actions() from the next aggregation path and pass its output to aggregate()",
+        "In fleet scope, iterate projects.json and observe each registered project root, tagging items with project_name",
+        "Wire the same provider into the dashboard build payload so cards render without a second observation pass",
+        "Route project_path_unusable (missing path, not a git repo) through build_uncertainty_card / collapse_demoted_to_uncertainty — that is the existing home for a source the gate demoted, and it already carries the right semantics (D016)",
+        "Update dontpanic agent commands JSON guidance so the new source is discoverable by agents"
+      ],
+      "acceptance": "pytest tests/test_repo_hygiene_cli.py passes and behavioral evidence is captured: `dontpanic next --json` in a fixture repo with all four git conditions plus one status-drifted plan emits the expected items with correct bands and project scoping; a clean repo emits zero hygiene items; `dashboard build --project <name>` renders them scoped; a missing project path produces an uncertainty card rather than a traceback or a bespoke item shape.",
+      "passes": false,
+      "depends_on": ["F003", "F004"]
+    },
+    {
+      "id": "F006",
+      "category": "security",
+      "phase": 2,
+      "description": "Read-only proof at the filesystem level — assert the entire .git tree is byte-identical across observation, rather than scanning source strings in one module",
+      "steps": [
+        "Runner-level invariant: capture every argv the injected GitRunner issues across all F001 fixture repos and assert each subcommand is in the allowlist. This catches transitive calls like resolve_default_base()'s `git remote` that a source scan of repo_hygiene.py cannot (D011)",
+        "Filesystem invariant: hash the full .git tree (all files, sizes, mtimes) before and after observation and assert byte-identity — not merely that repo_hygiene.py contains no destructive verb strings",
+        "Include a deliberately stale-index repo in the fixture set, since that is the case where git status would otherwise rewrite the index; assert GIT_OPTIONAL_LOCKS=0 prevented it",
+        "Run _assert_no_secret_shapes over the rendered next payload with a branch named to resemble a token",
+        "Document the read-only contract in the module docstring in the shape git_state.py uses"
+      ],
+      "acceptance": "pytest tests/test_repo_hygiene_safety.py passes: the runner-level allowlist assertion holds across every F001 fixture (and fails if a transitive helper issues an unlisted subcommand); the .git tree hash is identical before and after observation on all fixtures including the stale-index repo; and a token-shaped branch name is scrubbed from the rendered payload.",
+      "passes": false,
+      "depends_on": ["F005"]
+    }
+  ]
+}

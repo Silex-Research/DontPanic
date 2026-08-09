@@ -1,0 +1,118 @@
+{
+  "task_id": "2026-08-09-002-feat-decision-brief-at-gates",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "schema",
+      "phase": 0,
+      "description": "Add an optional user_impact object to the feature contract in agent-conventions with conditional semantics on audience, plus a description_hash binding the declaration to the text it was written against",
+      "steps": [
+        "Add user_impact to features.schema.json: audience (enum end_user, operator, agent, none), summary (string), surfaces (reuse the plan-level surfaces enum), and description_hash (string)",
+        "Conditional semantics per D003: when audience is 'none', summary and surfaces MUST be absent or empty — a one-word declaration is the whole answer; when audience is any other value, summary (>=10 chars) and non-empty surfaces are required. Express as a JSON Schema if/then/else so both the JSON and Pydantic paths agree",
+        "description_hash is a digest of the feature description at the moment user_impact was authored — this is the staleness anchor, replacing the timestamp approach D005 originally proposed",
+        "Bump agent-conventions VERSION and commit in that repo",
+        "Subtree-pull the new version into DontPanic claude/shared/ and re-run validate.py over every existing DontPanic plan to prove the addition is backward-compatible"
+      ],
+      "acceptance": "validate.py passes on all existing DontPanic plans with no user_impact present (proving optionality); accepts audience:none carrying neither summary nor surfaces; rejects audience:none that also carries a summary; rejects audience:end_user missing summary, with a summary under 10 chars, or with empty surfaces; and accepts a well-formed end_user declaration including description_hash.",
+      "passes": false,
+      "depends_on": []
+    },
+    {
+      "id": "F002",
+      "category": "functional",
+      "phase": 1,
+      "description": "Metadata delivery — snapshot a typed DecisionBrief onto NotifyEvent at pause-emission time, because the live dispatcher calls render(event) with no plan_meta or feature_meta and would otherwise always report impact undeclared",
+      "steps": [
+        "Confirm the gap first: event_copy.render(event, plan_meta=None, feature_meta=None) is how notify_event.py invokes it — the optional metadata parameters are never supplied on the production path, so any feature reading them alone is dead code in practice",
+        "Define a frozen DecisionBrief dataclass carrying what_changes, user_impact, affected_audience, decision_consequence, reversible, and impact_status (declared, undeclared, possibly_stale)",
+        "Build the brief at the supervisor's pause-emission site where plan and feature data are in scope, and attach it to NotifyEvent as an immutable snapshot",
+        "One snapshot serves every sink — INBOX, notify, dashboard, and the CLI prompt all read the same frozen object rather than each re-deriving from plan artifacts at different times",
+        "Compute impact_status at snapshot time: possibly_stale when the feature description's current digest differs from user_impact.description_hash (D005)"
+      ],
+      "acceptance": "pytest tests/test_decision_brief_delivery.py passes: a pause emitted through the real supervisor path produces a NotifyEvent carrying a populated DecisionBrief without any caller passing plan_meta or feature_meta; the brief is frozen and identical across all four sinks for one event; impact_status is 'declared' for a matching description_hash, 'possibly_stale' for a mismatched one, and 'undeclared' when user_impact is absent.",
+      "passes": false,
+      "depends_on": ["F001"]
+    },
+    {
+      "id": "F003",
+      "category": "functional",
+      "phase": 1,
+      "description": "Widen the copy contract with four distinct fields — what_changes, user_impact, affected_audience, decision_consequence — keeping plain_consequence's existing meaning intact rather than repurposing it",
+      "steps": [
+        "Add what_changes, user_impact, and affected_audience to _Template and RenderedEvent, all defaulting to None so existing table rows keep compiling",
+        "Preserve plain_consequence for its documented meaning — 'what happens if I do this' — and populate it from DecisionBrief.decision_consequence, NOT from product impact",
+        "Correct the current aliasing: operator_console.py:1314 sets plain_consequence to rendered.detail, which fills the plain-language slot with orchestration prose. Replace that with the real decision consequence",
+        "Stop hardcoding reversible=False at operator_console.py:1314 for event-derived items; carry DecisionBrief.reversible through instead",
+        "Leave technical_metadata untouched — orchestration detail keeps its existing home"
+      ],
+      "acceptance": "pytest tests/test_event_copy_brief_fields.py passes: RenderedEvent carries all four new fields; plain_consequence on an event-derived ActionItem equals the brief's decision_consequence and is never equal to rendered.detail; reversible reflects the brief rather than a hardcoded False; a regression test asserts the pre-change aliasing does not return.",
+      "passes": false,
+      "depends_on": ["F002"]
+    },
+    {
+      "id": "F004",
+      "category": "functional",
+      "phase": 1,
+      "description": "Rewrite the renderable approval-class templates impact-first — product outcome leads, orchestration identifiers demote to a supporting reference line",
+      "steps": [
+        "Enumerate the renderable needs_action kinds — those whose disposition is LIVE or DASHBOARD_ACTION. INBOX_ONLY and AUDIT_ONLY kinds (error among them) never reach render() and are explicitly out of this feature's surface",
+        "Rewrite each renderable headline to lead with what changes and who feels it, falling back to the current copy shape when impact is undeclared",
+        "Move plan_label, gate, and stage to a supporting reference line per USER.md:15",
+        "Keep exact_command and the D008 honest-commands rule unchanged — this feature changes prose only",
+        "Preserve every fact the old copy carried; demotion means relocated, never dropped"
+      ],
+      "acceptance": "pytest tests/test_event_copy_impact_first.py passes: (a) all 27 INBOX kinds still resolve to exactly one disposition and the existing totality test is green; (b) every kind that rendered before still renders; (c) every renderable needs_action variant receives a brief; (d) events with no feature in scope, and plan-level events, get a distinct honest fallback rather than a feature-shaped one; (e) rendered headlines for renderable needs_action kinds contain the impact summary and do not lead with the plan id; (f) a field-level diff proves no previously-present fact is absent and exact_command values are byte-identical.",
+      "passes": false,
+      "depends_on": ["F003"]
+    },
+    {
+      "id": "F005",
+      "category": "functional",
+      "phase": 1,
+      "description": "Undeclared and stale impact honesty rules plus a non-blocking plan-lock advisory — the renderer states what it does not know and never synthesizes a claim",
+      "steps": [
+        "When impact_status is undeclared, render the literal fallback 'User impact not declared for this feature.' and no substitute prose",
+        "When impact_status is possibly_stale, render the declared summary explicitly marked as written against an earlier version of this feature — never present it as current",
+        "Add a source-level test asserting no approval template body is ever populated from model output at render time (D002)",
+        "Add an advisory lint at the plan lock path naming features whose plan declares ux, ios, web, or android surfaces but that carry no user_impact",
+        "The lint prints and exits 0 — it never refuses the lock (D004) — and includes the exact fix (edit features.json)"
+      ],
+      "acceptance": "pytest tests/test_event_copy_undeclared_impact.py passes: a gate on a feature with no user_impact renders the exact fallback string with no synthesized prose; a stale declaration renders marked as stale rather than current; the non-generative source assertion holds; `dontpanic plan lock` on a ux-surfaced fixture missing user_impact prints an advisory naming each feature and exits 0; the same plan with user_impact declared prints no advisory.",
+      "passes": false,
+      "depends_on": ["F003"]
+    },
+    {
+      "id": "F006",
+      "category": "functional",
+      "phase": 2,
+      "description": "Approval-surface parity — CLI approve, INBOX, notify (Discord + terminal), and the dashboard card all render the same brief from the single F002 snapshot",
+      "steps": [
+        "Thread the brief through the CLI approve/resume prompt so the operator sees it while deciding, not only in the notification that summoned them",
+        "Wire it into inbox.py, notify.py, notify_discord.py, and the dashboard ActionItem card, all reading the frozen DecisionBrief",
+        "Apply per-surface truncation from D006 — Discord and terminal-notifier abbreviate, the dashboard renders unabridged",
+        "Truncation preserves the impact line and shortens supporting detail, never the reverse",
+        "Confirm existing secret scrubbing runs over the new fields at every emit point"
+      ],
+      "acceptance": "pytest tests/test_brief_surface_parity.py passes: one synthetic gate rendered through all four surfaces yields identical what_changes / user_impact / affected_audience / decision_consequence values modulo declared truncation; a summary exceeding the Discord cap keeps the impact line and truncates supporting detail; _assert_no_secret_shapes passes over each surface's payload with a token-shaped string planted in user_impact.summary.",
+      "passes": false,
+      "depends_on": ["F004", "F005"]
+    },
+    {
+      "id": "F007",
+      "category": "doc",
+      "phase": 2,
+      "description": "Worked example on an in-repo fixture plus authoring guidance for writing a useful user_impact",
+      "steps": [
+        "Build the worked example as a DontPanic-owned fixture plan under tests/fixtures/, seeded from the shape of the Glam sticky-first gate with provenance recorded in the fixture header — this plan's Target is DontPanic and agent-conventions, and authoring into a third repo is outside its authority",
+        "Capture the fixture gate rendered under the old templates and under the new ones, side by side in evidence/",
+        "Write authoring guidance covering the four audience values, what separates a useful summary from a restated description, and worked examples of each",
+        "Add the guidance to the plan-artifacts skill so it reaches authors at plan-writing time",
+        "Record in USER.md that the builder-facing preference now has enforcement behind it, linking this plan"
+      ],
+      "acceptance": "evidence/ contains before.txt and after.txt for the in-repo fixture gate showing both renders, and the fixture header records what it was modelled on; the authoring guidance exists and is referenced from the plan-artifacts skill; a reviewer reading only after.txt can state what changes, who feels it, and what approving does without opening plan.md; no file outside DontPanic and agent-conventions is modified by this plan.",
+      "passes": false,
+      "depends_on": ["F006"]
+    }
+  ]
+}
