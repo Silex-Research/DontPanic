@@ -1,7 +1,8 @@
 {
   "plan_id": "2026-08-09-002-feat-decision-brief-at-gates",
   "cleared_gates": [
-    "pre_impl"
+    "pre_impl",
+    "pre_merge"
   ],
   "history": [
     {
@@ -27,6 +28,12 @@
         "pre_merge"
       ],
       "stage": "pre_merge"
+    },
+    {
+      "action": "approve",
+      "gate": "pre_merge",
+      "at": "2026-08-09T21:05:06Z",
+      "actor": "operator"
     }
   ],
   "gate_events": [
@@ -35,14 +42,16 @@
       "stage": "pre_impl",
       "cleared_at": "2026-08-09T20:31:41Z",
       "cleared_by": "supervisor:plan_status_active"
+    },
+    {
+      "gate": "pre_merge",
+      "stage": "pre_merge",
+      "cleared_at": "2026-08-09T21:05:06Z",
+      "cleared_by": "operator"
     }
   ],
   "completed_stages": [
-    "pre_impl"
-  ],
-  "paused_at": "2026-08-09T20:45:17Z",
-  "pause_gates": [
+    "pre_impl",
     "pre_merge"
-  ],
-  "pending_stage": "pre_merge"
+  ]
 }

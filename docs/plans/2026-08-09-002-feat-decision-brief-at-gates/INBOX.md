@@ -86,3 +86,13 @@ Evidence: `/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-08-09-002-
 </details>
 
 ===
+---
+timestamp: 2026-08-09T21:05:06Z
+event: gate_cleared
+plan_id: 2026-08-09-002-feat-decision-brief-at-gates
+gate: pre_merge
+---
+
+Operator cleared gate 'pre_merge' via 'approve'.
+
+===
