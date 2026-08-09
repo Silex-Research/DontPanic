@@ -1,32 +1,6 @@
 {
   "schema_version": "1.0",
-  "status": "fail",
-  "findings": [
-    {
-      "mode": "test_file_untracked",
-      "files": [
-        "scripts/dontpanic_orchestrate/tests/test_audit_writer_status_hint.py",
-        "scripts/dontpanic_orchestrate/tests/test_global_breaker_threshold_env.py"
-      ],
-      "reason": "A test file is untracked or unstaged_modified \u2014 pytest discovery on a fresh clone will not run it.",
-      "severity": "block",
-      "recommendation": "Run: git add scripts/dontpanic_orchestrate/tests/test_audit_writer_status_hint.py scripts/dontpanic_orchestrate/tests/test_global_breaker_threshold_env.py"
-    },
-    {
-      "mode": "unstaged_dirty_state",
-      "files": [
-        "scripts/dontpanic_orchestrate/audit_writer.py",
-        "scripts/dontpanic_orchestrate/circuit_breakers.py"
-      ],
-      "reason": "Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: scripts/dontpanic_orchestrate/audit_writer.py,scripts/dontpanic_orchestrate/circuit_breakers.py",
-      "severity": "block",
-      "recommendation": "Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch."
-    }
-  ],
-  "files": [
-    "scripts/dontpanic_orchestrate/tests/test_audit_writer_status_hint.py",
-    "scripts/dontpanic_orchestrate/tests/test_global_breaker_threshold_env.py",
-    "scripts/dontpanic_orchestrate/audit_writer.py",
-    "scripts/dontpanic_orchestrate/circuit_breakers.py"
-  ]
+  "status": "pass",
+  "findings": [],
+  "files": []
 }

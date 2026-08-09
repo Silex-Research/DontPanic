@@ -3,7 +3,7 @@ id: 2026-08-09-002-feat-decision-brief-at-gates
 title: Decision brief at gates — ask for approval in product terms, not orchestration terms
 type: feat
 tier: cross-cutting
-status: draft
+status: active
 date: "2026-08-09"
 description: >
   When DontPanic pauses for a human decision it asks the question in
@@ -56,7 +56,7 @@ target_project: none
 ```
 
 - **repo:** `DontPanic`, plus `agent-conventions` for the schema bump (F001).
-  No other repository may be written — F007 asserts this.
+  No other repository may be written — F009 asserts this.
 - **env:** local only. No cloud project, no deploy, no network. `target_env: dev`
   is the lowest rung the enum offers; nothing in this plan contacts a service.
 - **command:** `pytest`, `dontpanic approve --help`, `dontpanic next`,
@@ -116,7 +116,7 @@ Two structural obstacles, both verified against the code rather than assumed:
 `plan_meta` and `feature_meta`, but the production dispatcher in
 `notify_event.py` calls `render(event)` and supplies neither. Any feature that
 reads those parameters alone is dead code in practice, and every real gate
-would keep reporting "impact undeclared." F002 therefore snapshots a typed
+would keep reporting "impact undeclared." F003 therefore snapshots a typed
 `DecisionBrief` onto `NotifyEvent` at pause-emission time, where plan and
 feature data are genuinely in scope. One immutable snapshot then serves all
 four sinks instead of each re-deriving at a different moment.
@@ -129,13 +129,14 @@ hardcoded `False` for every event-derived item. Repurposing `plain_consequence`
 for product impact would leave no honest home for the decision consequence, so
 the brief keeps four distinct fields and `plain_consequence` keeps its meaning.
 
-The remaining features follow: **F004** rewrites the *renderable* approval-class
+The remaining features follow: **F005** rewrites the *renderable* approval-class
 templates impact-first (only LIVE and DASHBOARD_ACTION kinds reach `render()`
-at all); **F005** is the honesty rule — undeclared and stale impact are stated
+at all); **F006** is the honesty rule — undeclared and stale impact are stated
 plainly and **never synthesized**, because an LLM-invented UX claim inside an
 approval prompt is fabrication at the exact moment a human has stopped
-verifying and started trusting the text; **F006** enforces surface parity;
-**F007** captures the worked example.
+verifying and started trusting the text; **F007** and **F008** enforce surface
+parity across CLI/INBOX and the notification sinks; **F009** captures the worked
+example.
 
 ## Scope (in)
 
