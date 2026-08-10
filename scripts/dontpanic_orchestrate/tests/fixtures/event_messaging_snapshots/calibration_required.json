@@ -15,7 +15,7 @@
       "exact_command": "python -m dontpanic_orchestrate calibrate-claude --window 7d --dashboard-pct 0",
       "human_required_reason": "operator action surfaced by dispatch_event",
       "id": "supervisor:calibration_required:2026-05-24-004-feat-event-messaging-v1:F005",
-      "plain_consequence": "Calibration sample required for `claude.7d` so the breaker can convert local proxy units into percent-of-plan.",
+      "plain_consequence": null,
       "project_name": null,
       "reversible": false,
       "source": "supervisor",

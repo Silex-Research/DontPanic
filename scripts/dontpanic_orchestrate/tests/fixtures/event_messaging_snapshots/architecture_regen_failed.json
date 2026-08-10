@@ -15,7 +15,7 @@
       "exact_command": "dontpanic architecture regen",
       "human_required_reason": "operator action surfaced by dispatch_event",
       "id": "supervisor:architecture_regen_failed:2026-05-24-004-feat-event-messaging-v1:F005",
-      "plain_consequence": "Post-commit architecture regen failed (`GitInvocationError`). The volley terminal is unaffected; operator may re-run the regen.",
+      "plain_consequence": null,
       "project_name": null,
       "reversible": false,
       "source": "supervisor",

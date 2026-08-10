@@ -15,7 +15,7 @@
       "exact_command": "dontpanic approve 2026-05-24-004-feat-event-messaging-v1 breaker:patch_incomplete",
       "human_required_reason": "operator action surfaced by dispatch_event",
       "id": "supervisor:breaker:patch_incomplete:2026-05-24-004-feat-event-messaging-v1:F005",
-      "plain_consequence": "Circuit breaker `patch_incomplete` tripped. Operator clearance required before dispatch continues.",
+      "plain_consequence": null,
       "project_name": null,
       "reversible": false,
       "source": "supervisor",

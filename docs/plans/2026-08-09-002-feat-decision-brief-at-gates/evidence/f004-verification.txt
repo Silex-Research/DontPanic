@@ -1,0 +1,40 @@
+F004 — acceptance verification and regression attribution
+=========================================================
+
+ACCEPTANCE (verified against the real tables, not the auditor summary)
+  $ pytest tests/test_event_copy_brief_fields.py -q   -> 56 passed
+
+  AC1 three new fields default None; every translation row constructs
+      test_rendered_event_exposes_brief_copy_fields_defaulting_to_none
+      test_every_translation_row_still_constructs_without_brief_fields
+        iterates event_copy.TRANSLATION_TABLE (15 rows)
+
+  AC2 decision-consequence survives round trip for THREE distinct briefs
+      test_decision_consequence_survives_the_round_trip -> 3 parametrized cases
+      test_the_three_briefs_are_genuinely_distinct   (guards against 3 identical fixtures)
+      test_one_fixture_brief_is_actually_rewrite_sensitive (guards against a fixture
+        that would pass even if render() rewrote the slot)
+
+  AC3 plain_consequence differs from rendered detail for EVERY renderable kind
+      test_plain_consequence_is_never_the_rendered_detail -> 15 parametrized cases
+      kind list derived from event_copy.DISPOSITION_TABLE (27 entries; 15 renderable)
+      -> parametrized set confirmed non-empty and table-derived, not hardcoded
+
+REGRESSION ATTRIBUTION (identical scope: full scripts/dontpanic_orchestrate/tests/)
+  before F004 (F003 landed): 4 failed, 5480 passed
+  after  F004              : 4 failed, 5536 passed
+  delta = +56 passed, exactly F004's new tests. Zero regressions.
+
+  Identical failure set both runs, all pre-existing:
+    test_event_copy_f003_render::test_inbox_only_does_not_reach_live_sinks
+    test_f006_circuit_breakers::test_global_breaker_evaluates_before_executor_resolution
+    test_f006_circuit_breakers::test_active_breaker_preempts_executor_resolution
+    test_f014_harness_adapters::test_executor_class_declaration_matches_capability_table
+
+PATCH-COMPLETENESS BLOCK
+  Sole file outside touched_files: decisions.jsonl — the implementer's own D015 append.
+  The implementer staged everything else (event_copy.py, operator_console.py, 17
+  snapshot fixtures, and git-added the new test file), unlike F003.
+  At iteration 1 the DRIFT subsystem saw the same append, classified it "additive
+  ledger", and reconciled. Patch-completeness then blocked on it. Recorded as D013
+  on plan 2026-08-09-004.

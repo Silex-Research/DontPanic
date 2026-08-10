@@ -15,7 +15,7 @@
       "exact_command": null,
       "human_required_reason": "operator action surfaced by dispatch_event",
       "id": "supervisor:verdict_mismatch:2026-05-24-004-feat-event-messaging-v1:F005",
-      "plain_consequence": "Auditor narrative verdict (`signed_off`) disagrees with structured `audit_status` (`needs_changes`) on iteration 1. No automated re-audit command; open the audit envelope and reconcile manually.",
+      "plain_consequence": null,
       "project_name": null,
       "reversible": false,
       "source": "supervisor",

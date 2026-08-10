@@ -15,7 +15,7 @@
       "exact_command": "dontpanic approve 2026-05-24-004-feat-event-messaging-v1 breaker:no_progress",
       "human_required_reason": "operator action surfaced by dispatch_event",
       "id": "supervisor:breaker_tripped:2026-05-24-004-feat-event-messaging-v1:F005",
-      "plain_consequence": "Circuit breaker `no_progress` tripped. Operator clearance required before dispatch continues.",
+      "plain_consequence": null,
       "project_name": null,
       "reversible": false,
       "source": "supervisor",

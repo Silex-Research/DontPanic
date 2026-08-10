@@ -1311,8 +1311,15 @@ def _rendered_to_action_item_dict(
         # producer-set identity authority (== id for this producer).
         "audience": audience,
         "dedupe_key": item_id,
-        "reversible": False,
-        "plain_consequence": getattr(rendered, "detail", None),
+        # Plan 2026-08-09-002 F004. Both fields used to be constants here:
+        # ``reversible`` was hardcoded False regardless of what the operator
+        # was actually approving, and ``plain_consequence`` was aliased to
+        # ``rendered.detail`` — which filled the plain-language slot with
+        # orchestration prose. Both now carry the decision brief the renderer
+        # resolved, and stay at their conservative defaults when no brief was
+        # snapshotted rather than being back-filled from other copy.
+        "reversible": bool(getattr(rendered, "reversible", False)),
+        "plain_consequence": getattr(rendered, "plain_consequence", None),
         "dashboard_url": None,
     }
 

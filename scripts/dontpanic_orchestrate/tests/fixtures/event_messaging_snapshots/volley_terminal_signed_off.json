@@ -14,7 +14,7 @@
       "exact_command": null,
       "human_required_reason": null,
       "id": "supervisor:volley_terminal:2026-05-24-004-feat-event-messaging-v1:F005",
-      "plain_consequence": "Volley completed after 2 round(s) with `signed_off`. No action needed.",
+      "plain_consequence": null,
       "project_name": null,
       "reversible": false,
       "source": "supervisor",

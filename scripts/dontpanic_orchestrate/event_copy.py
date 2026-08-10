@@ -91,6 +91,16 @@ class RenderedEvent:
 
     The :attr:`headline` accessor returns the title — terminal-notifier
     consumes a single short line per ``plan.md`` § *Product Model* (Layer 1).
+
+    Plan ``2026-08-09-002`` F004 widened the contract with the decision-brief
+    slots. ``what_changes`` / ``user_impact`` / ``affected_audience`` are the
+    product-context fields (what the change is, who feels it, which audience);
+    ``plain_consequence`` and ``reversible`` mirror the same-named
+    :class:`operator_console.ActionItem` fields so the brief's
+    decision-consequence element survives the projection into an ActionItem
+    instead of that slot being aliased to the orchestration prose in
+    ``detail``. All five default to their empty value, so an event carrying no
+    brief renders exactly as before.
     """
 
     band: str
@@ -100,6 +110,14 @@ class RenderedEvent:
     evidence_uri: str | None
     disposition: Disposition
     technical_metadata: Mapping[str, Any] = dataclasses.field(default_factory=dict)
+    # F004 — decision-brief product context (element one + element two).
+    what_changes: str | None = None
+    user_impact: str | None = None
+    affected_audience: str | None = None
+    # F004 — decision-brief decision context (element three). Named to match
+    # ActionItem so the projection is a copy, not a reinterpretation.
+    plain_consequence: str | None = None
+    reversible: bool = False
 
     def __post_init__(self) -> None:
         if self.band not in _VALID_BAND_VALUES:
@@ -290,12 +308,22 @@ class _Template:
     ``band`` resolves to one of the four operator-console bands and is
     inlined here so disposition routing alone determines the band (rather
     than threading band through severity, which is closed at three values).
+
+    Plan ``2026-08-09-002`` F004 added the three decision-brief copy slots
+    (``what_changes`` / ``user_impact`` / ``affected_audience``). They default
+    to ``None`` so every row authored before this feature keeps constructing
+    unchanged, and they are only consulted when the event carries no
+    :class:`decision_brief.DecisionBrief` — a declared brief always wins over
+    table copy, because the brief is what the operator is actually deciding.
     """
 
     band: str
     headline: str
     why: str
     action: str | None
+    what_changes: str | None = None
+    user_impact: str | None = None
+    affected_audience: str | None = None
 
 
 _NEEDS_ACTION: Final[str] = "needs_action"
@@ -669,6 +697,51 @@ def _resolve_evidence_uri(event: Any) -> str | None:
     return getattr(event, "evidence_uri", None) or getattr(event, "action_link", None)
 
 
+def _brief_fields(
+    event: Any, template: _Template, fields: Mapping[str, Any]
+) -> dict[str, Any]:
+    """Plan 2026-08-09-002 F004 — resolve the five decision-brief slots.
+
+    The snapshot on ``NotifyEvent.decision_brief`` (F003) is authoritative:
+    it was taken where the plan and feature records were genuinely in scope,
+    so nothing here re-derives or substitutes for it. Table copy is a
+    fallback for events that carry no brief, and ``plain_consequence`` /
+    ``reversible`` come only from the brief — there is no table copy for
+    "what approving does", and inventing one would be the same mistake as
+    aliasing the slot to the orchestration prose.
+    """
+    brief = getattr(event, "decision_brief", None)
+    if brief is not None:
+        # Verbatim. D010's brand-drift rewrite is deliberately NOT applied to
+        # brief-sourced copy: the brief is a snapshot taken upstream, and F004
+        # AC2 requires the decision-consequence element to reach ActionItem
+        # byte-for-byte. Rewriting it here silently mutated operator-visible
+        # text (`Run jarvis approve F004.` arrived as `Run dontpanic approve
+        # F004.`) and broke that contract. Rewriting only some of the slots
+        # would additionally let one brief render in two brand spellings, so
+        # all four pass through untouched; the fallback copy below — authored
+        # in this repo's table, which is what D010 was written for — is still
+        # normalized.
+        return {
+            "what_changes": getattr(brief, "what_changes", None),
+            "user_impact": getattr(brief, "user_impact", None),
+            "affected_audience": getattr(brief, "affected_audience", None),
+            "plain_consequence": getattr(brief, "decision_consequence", None),
+            "reversible": bool(getattr(brief, "reversible", False)),
+        }
+
+    def _row(value: str | None) -> str | None:
+        return normalize_brand_drift(value.format(**fields)) if value else None
+
+    return {
+        "what_changes": _row(template.what_changes),
+        "user_impact": _row(template.user_impact),
+        "affected_audience": _row(template.affected_audience),
+        "plain_consequence": None,
+        "reversible": False,
+    }
+
+
 def render(
     event: Any,
     plan_meta: Mapping[str, Any] | None = None,
@@ -771,6 +844,8 @@ def render(
     # The plan_id is useful for sidecar consumers that don't have NotifyEvent.
     tech.setdefault("plan_id", getattr(event, "plan_id", None) or "")
 
+    brief_slots = _brief_fields(event, template, fields)
+
     return RenderedEvent(
         band=band,
         title=headline,
@@ -779,6 +854,13 @@ def render(
         evidence_uri=_resolve_evidence_uri(event),
         disposition=disposition,
         technical_metadata=tech,
+        # Already resolved by _brief_fields: brief-sourced slots verbatim,
+        # table-fallback copy normalized. Nothing is rewritten here.
+        what_changes=brief_slots["what_changes"],
+        user_impact=brief_slots["user_impact"],
+        affected_audience=brief_slots["affected_audience"],
+        plain_consequence=brief_slots["plain_consequence"],
+        reversible=brief_slots["reversible"],
     )
 
 

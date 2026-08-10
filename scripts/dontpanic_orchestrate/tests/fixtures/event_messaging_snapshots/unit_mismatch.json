@@ -15,7 +15,7 @@
       "exact_command": null,
       "human_required_reason": "operator action surfaced by dispatch_event",
       "id": "supervisor:unit_mismatch:2026-05-24-004-feat-event-messaging-v1:F005",
-      "plain_consequence": "Quota cap unit drift for `claude.7d`: cap.unit=`tokens` \u2260 observed=`messages`. Edit `~/.jarvis/quota_caps.json` so cap.unit matches what quota_check.py emits.",
+      "plain_consequence": null,
       "project_name": null,
       "reversible": false,
       "source": "supervisor",

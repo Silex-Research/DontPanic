@@ -6,30 +6,24 @@
       "mode": "unstaged_dirty_state",
       "files": [
         "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/INBOX.md",
-        "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/claude-implementer-F001-i0.json",
-        "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/claude-implementer-F001-i1.json",
-        "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/codex-auditor-F001-i0.json",
-        "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/codex-auditor-F001-i1.json",
         "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/plan-run-fingerprint.json",
         "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/transcript.md",
+        "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/decisions.jsonl",
         "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/evidence/git-state-0-auditor.json",
         "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/evidence/git-state-0-implementer.json",
         "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/evidence/git-state-1-auditor.json",
         "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/evidence/git-state-1-implementer.json"
       ],
-      "reason": "Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: docs/plans/2026-08-09-002-feat-decision-brief-at-gates/INBOX.md,docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/claude-implementer-F001-i0.json,docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/claude-implementer-F001-i1.json,docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/codex-auditor-F001-i0.json,docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/codex-auditor-F001-i1.json,docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/plan-run-fingerprint.json,docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/transcript.md,docs/plans/2026-08-09-002-feat-decision-brief-at-gates/evidence/git-state-0-auditor.json,docs/plans/2026-08-09-002-feat-decision-brief-at-gates/evidence/git-state-0-implementer.json,docs/plans/2026-08-09-002-feat-decision-brief-at-gates/evidence/git-state-1-auditor.json,docs/plans/2026-08-09-002-feat-decision-brief-at-gates/evidence/git-state-1-implementer.json",
+      "reason": "Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: docs/plans/2026-08-09-002-feat-decision-brief-at-gates/decisions.jsonl",
       "severity": "block",
       "recommendation": "Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch."
     }
   ],
   "files": [
     "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/INBOX.md",
-    "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/claude-implementer-F001-i0.json",
-    "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/claude-implementer-F001-i1.json",
-    "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/codex-auditor-F001-i0.json",
-    "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/codex-auditor-F001-i1.json",
     "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/plan-run-fingerprint.json",
     "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/transcript.md",
+    "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/decisions.jsonl",
     "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/evidence/git-state-0-auditor.json",
     "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/evidence/git-state-0-implementer.json",
     "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/evidence/git-state-1-auditor.json",

@@ -15,7 +15,7 @@
       "exact_command": null,
       "human_required_reason": "operator action surfaced by dispatch_event",
       "id": "supervisor:volley_start:2026-05-24-004-feat-event-messaging-v1:F005",
-      "plain_consequence": "Volley begins with implementer `claude` and auditor `codex` (cap 3).",
+      "plain_consequence": null,
       "project_name": null,
       "reversible": false,
       "source": "supervisor",

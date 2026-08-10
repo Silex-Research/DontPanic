@@ -15,7 +15,7 @@
       "exact_command": "python -m dontpanic_orchestrate quota-caps init",
       "human_required_reason": "operator action surfaced by dispatch_event",
       "id": "supervisor:config_required:2026-05-24-004-feat-event-messaging-v1:F005",
-      "plain_consequence": "Quota config required (`no_cap_for_signal`). Run `python -m dontpanic_orchestrate quota-caps init` to seed defaults, hand-edit `~/.jarvis/quota_caps.json` for `no_cap_for_signal`, or re-run `scripts/quota_check.py` for `missing_vendor_block`.",
+      "plain_consequence": null,
       "project_name": null,
       "reversible": false,
       "source": "supervisor",

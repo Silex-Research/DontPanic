@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-08-10T01:39:31Z",
+  "captured_at": "2026-08-10T04:25:58Z",
   "decision_lines": [
     "D001\u001f203ad1fa44fc15c0e4ab92c4a775c3a47e4c4cd59e62948d2a0c6d2afdc4aa0a",
     "D002\u001f0314967a3cb09fc51611a9b81d3d5271c2190421ff5db6595b0952bfcd9bafb6",
@@ -14,7 +14,8 @@
     "D011\u001fd2329f8cfc875b2234f4e60a2de98a5cd2587a6acb0fcd554e06718ce42b0608",
     "D012\u001fb7c47285b451c0db994b063e68f8c816806f518b7f25ad766e66c92a6fe4d388",
     "D013\u001f12e2b46f2cab5da044b61ddda3c148169e3d78dc62a1e5fb1f0ec0653a821be3",
-    "D014\u001f686c886f4d059f907fad084b8d61a74facd48b263e22f042626401515a007ad1"
+    "D014\u001f686c886f4d059f907fad084b8d61a74facd48b263e22f042626401515a007ad1",
+    "D015\u001fa4dbc2ddfbf46b9c8ea7cb8914fbf20f6fb032f02fc5d47f26b6b9cf32a4ee56"
   ],
   "features_semantics": {
     "by_id": {
@@ -38,7 +39,7 @@
         "depends_on": [
           "F002"
         ],
-        "passes": false
+        "passes": true
       },
       "F004": {
         "acceptance": "(1) RenderedEvent exposes the three new fields with None defaults and every existing template row still constructs. (2) Round-tripping a brief through render and into ActionItem preserves the decision-consequence element exactly, for each of three distinct briefs, so the mapping is proven rather than a single fixture matching. (3) For every renderable kind, plain_consequence differs from the rendered detail string \u2014 a regression asserting the current aliasing is gone across the whole table, not one example. (4) The reversible flag on an event-derived ActionItem tracks the brief across both True and False, rather than the hardcoded False it carries today. (5) pytest tests/test_event_copy_brief_fields.py covers all four and passes.",
@@ -104,15 +105,15 @@
   },
   "file_hashes": {
     "audit/gate-state.json": "1dbc29da1e340f964598b2d1fbbd66be453814d2a6c54ead77a17191a631bf6e",
-    "decisions.jsonl": "41e0e66daab50e66fd75dcea70df580c5b2955e5c29aa718c6bbdf1870f0b706",
-    "features.json": "0cc26179c5f58c8408b27b2df4a228a11cbbcb46e81175f6abf2ebbf8667fc52",
+    "decisions.jsonl": "c66dcdf1b97bc2e819e6d622881a7652b685cf91a5f5f15498fe355a6771e305",
+    "features.json": "b4448338c37659151cd08fd32729ea65c38ca945f0d22393a64da249e5fb5c36",
     "objective_contract.json": null,
     "plan.md": "fafcd0227074c01c5fdf00fefaacfecc4644a8f7fa56dab2ec5c3d6707afc735"
   },
   "file_mtimes": {
     "audit/gate-state.json": 1786309506.995439,
-    "decisions.jsonl": 1786324242.5080767,
-    "features.json": 1786324836.0889306,
+    "decisions.jsonl": 1786335927.2639587,
+    "features.json": 1786330158.5691285,
     "objective_contract.json": null,
     "plan.md": 1786307384.7781343
   },
