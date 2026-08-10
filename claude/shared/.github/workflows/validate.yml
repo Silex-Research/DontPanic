@@ -1,0 +1,72 @@
+name: validate
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  schemas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install jsonschema pydantic pyyaml
+
+      - name: Validate JSON schemas are well-formed
+        run: |
+          set -euo pipefail
+          for schema in schemas/v1.0/*.schema.json; do
+            echo "Validating $schema"
+            python -c "import json, jsonschema; \
+              schema = json.load(open('$schema')); \
+              jsonschema.Draft202012Validator.check_schema(schema); \
+              print('  OK:', '$schema')"
+          done
+
+      - name: Smoke-import Pydantic mirrors
+        run: |
+          set -euo pipefail
+          for model in schemas/v1.0/models/*_model.py; do
+            echo "Importing $model"
+            python -c "import importlib.util, sys; \
+              spec = importlib.util.spec_from_file_location('m', '$model'); \
+              mod = importlib.util.module_from_spec(spec); \
+              spec.loader.exec_module(mod); \
+              print('  OK:', '$model')"
+          done
+
+      - name: Run contract tests
+        run: |
+          set -euo pipefail
+          python scripts/test_validator_dispatch.py
+          python scripts/test_objective_contract.py
+          python scripts/test_user_impact_contract.py
+
+      - name: Run resolver validator
+        run: |
+          if [ -f resolver/validate.py ]; then
+            python resolver/validate.py --help > /dev/null
+            echo "  resolver/validate.py importable"
+          fi
+
+      - name: VERSION matches latest tag
+        run: |
+          VERSION=$(cat VERSION)
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          EXPECTED="v${VERSION}"
+          if [ "$LATEST_TAG" != "$EXPECTED" ]; then
+            echo "::warning::VERSION=${VERSION} but latest tag=${LATEST_TAG} (expected ${EXPECTED})"
+            echo "::warning::This is OK between releases; ensure a v${VERSION} tag exists before consumers subtree-pull."
+          else
+            echo "  VERSION ${VERSION} matches tag ${LATEST_TAG}"
+          fi

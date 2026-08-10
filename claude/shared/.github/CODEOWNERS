@@ -1,0 +1,19 @@
+# Public contract ownership.
+
+* @GodEquation
+
+/.github/ @GodEquation
+/SECURITY.md @GodEquation
+/CONTRIBUTING.md @GodEquation
+/LICENSE @GodEquation
+/README.md @GodEquation
+/CHANGELOG.md @GodEquation
+/VERSION @GodEquation
+
+/schemas/ @GodEquation
+/resolver/ @GodEquation
+/conventions/ @GodEquation
+/skill-standard/ @GodEquation
+/claude-md/ @GodEquation
+/scripts/ @GodEquation
+/tests/ @GodEquation

@@ -1,6 +1,19 @@
 # agent-conventions
 
-Shared conventions, resolver spec, and skill standards for Claude Code projects. Consumed via `git subtree` by Jarvis, Styln/Glam, SpinDine, and other iOS+Firebase projects.
+agent-conventions is a shared schema repository consumed via `git subtree` by downstream agent projects (DontPanic, Jarvis, Glam, SpinDineSwift). It defines the canonical schemas (plan, features, audit, environments, signoff, state-snapshot, objective-contract) and their Pydantic mirrors that those projects validate against, plus the resolver spec, conventions, and skill standards.
+
+**License:** MIT (see `LICENSE`). **Versioning:** tagged releases (v1.0.0+). Always pin subtrees to tags; never pull HEAD into production projects.
+
+## Known downstream consumers
+
+| Project | Subtree path | Notes |
+|---|---|---|
+| DontPanic | `claude/shared/` | Schema authority; defines canonical orchestration shapes |
+| Jarvis | `claude/shared/` | Legacy name; same shape as DontPanic |
+| Glam (Styln) | `.claude/shared/` | iOS + Firebase consumer |
+| SpinDineSwift | `.claude/shared/` | iOS + Firebase consumer |
+
+To register a new consumer: open a PR adding a row to the table above. Subtree path convention: `claude/shared/` (DontPanic-family) or `.claude/shared/` (Styln-family). Tag-pinned pulls only.
 
 ## What's Inside
 

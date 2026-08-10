@@ -48,6 +48,142 @@ class Type(Enum):
     file = 'file'
 
 
+class Audience(Enum):
+    end_user = 'end_user'
+    operator = 'operator'
+    agent = 'agent'
+    none = 'none'
+
+
+class ImpactSurface(Enum):
+    """Mirrors the plan-level `surfaces` enum in plan.schema.json.
+
+    Kept in lockstep with features.schema.json's `$defs/user_impact` — the two
+    JSON enums are asserted identical by scripts/test_user_impact_contract.py.
+    """
+
+    web = 'web'
+    ios = 'ios'
+    android = 'android'
+    backend = 'backend'
+    infra = 'infra'
+    security = 'security'
+    data = 'data'
+    ux = 'ux'
+    ml = 'ml'
+    docs = 'docs'
+    external_api_wrap = 'external-api-wrap'
+
+
+class UserImpact(BaseModel):
+    """Declared user impact — who feels this feature and how.
+
+    Hand-maintained mirror of the `if/then/else` in features.schema.json.
+    datamodel-codegen drops JSON Schema conditionals, so the conditional
+    semantics of D003 live in `_check_audience_conditional` below rather than
+    in generated field constraints.
+
+    The optional fields below are absent-or-typed, never explicitly null: the
+    JSON Schema types them `string`/`array` with no `"null"` member, so a
+    literal `null` is a schema violation. `_reject_explicit_nulls` keeps the
+    Pydantic side from silently coercing that null to a default and returning
+    the opposite verdict.
+    """
+
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    audience: Audience = Field(
+        ...,
+        description=(
+            "Who experiences the change. 'none' means genuinely internal work "
+            'with no external consequence, and is a complete declaration on '
+            'its own.'
+        ),
+    )
+    summary: str | None = Field(
+        None,
+        description=(
+            'One plain-language line naming what the audience experiences '
+            "differently. Required (>=10 chars) unless audience is 'none'."
+        ),
+    )
+    surfaces: list[ImpactSurface] | None = Field(
+        None,
+        description=(
+            'Where the impact lands. Required (non-empty) unless audience is '
+            "'none'."
+        ),
+    )
+    description_hash: constr(pattern=r'^[a-f0-9]{64}$') | None = Field(
+        None,
+        description=(
+            'SHA-256 hex digest of the UTF-8 encoded feature `description` '
+            'this declaration was written against. Staleness anchor per D005: '
+            'a mismatch marks the brief possibly-stale rather than presenting '
+            'an old claim as current. Required whenever the declaration '
+            "carries a claim (audience other than 'none'). Optional under "
+            "audience 'none', which asserts no external consequence and so "
+            'has no claim that can go stale.'
+        ),
+    )
+
+    @model_validator(mode='before')
+    @classmethod
+    def _reject_explicit_nulls(cls, data: object) -> object:
+        """Mirror the schema, which types these fields with no `null` member.
+
+        Pydantic would otherwise read an explicit `null` as "use the default"
+        and accept a document the JSON Schema rejects — the two validators must
+        return the same verdict, which is the whole point of the block.
+        """
+        if isinstance(data, dict):
+            for key in ('summary', 'surfaces', 'description_hash'):
+                if key in data and data[key] is None:
+                    raise ValueError(
+                        f'{key} must be omitted rather than set to null'
+                    )
+        return data
+
+    @model_validator(mode='after')
+    def _check_audience_conditional(self) -> UserImpact:
+        """D003 — 'none' is the whole declaration; anything else owes detail."""
+        if self.audience is Audience.none:
+            if self.summary:
+                raise ValueError(
+                    "audience 'none' is a complete declaration on its own — "
+                    'summary must be absent or empty'
+                )
+            if self.surfaces:
+                raise ValueError(
+                    "audience 'none' is a complete declaration on its own — "
+                    'surfaces must be absent or empty'
+                )
+        else:
+            if self.summary is None or len(self.summary) < 10:
+                raise ValueError(
+                    f"audience '{self.audience.value}' requires a summary of "
+                    'at least 10 characters'
+                )
+            if not self.surfaces:
+                raise ValueError(
+                    f"audience '{self.audience.value}' requires a non-empty "
+                    'surfaces array'
+                )
+            if not self.description_hash:
+                raise ValueError(
+                    f"audience '{self.audience.value}' requires a "
+                    'description_hash — D005 binds the claim to the '
+                    'description it was written against, and F003 has no '
+                    "'digest unknown' state to fall back to"
+                )
+
+        if self.surfaces is not None and len(set(self.surfaces)) != len(self.surfaces):
+            raise ValueError('surfaces must not contain duplicates')
+
+        return self
+
+
 class EvidenceRef(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
@@ -134,6 +270,30 @@ class Feature(BaseModel):
     tier_override: TierOverride | None = Field(
         None, description='Force different audit tier for this feature only'
     )
+    user_impact: UserImpact | None = Field(
+        None,
+        description=(
+            'Optional declared user impact — who feels this feature and how. '
+            'Consumed by the decision brief rendered at human approval gates. '
+            'Optional by design (D003): a feature that declares nothing '
+            "renders 'user impact not declared' rather than a synthesized "
+            'claim.'
+        ),
+    )
+
+    @model_validator(mode='before')
+    @classmethod
+    def _reject_explicit_null_user_impact(cls, data: object) -> object:
+        """`user_impact` is absent or an object — the schema gives it no null.
+
+        Scoped to `user_impact` because that is what this contract owns; the
+        legacy optional fields above predate it and are left as they were.
+        """
+        if isinstance(data, dict) and data.get('user_impact', ...) is None:
+            raise ValueError(
+                'user_impact must be omitted rather than set to null'
+            )
+        return data
 
 
 class Features(BaseModel):

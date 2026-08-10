@@ -5,6 +5,32 @@ canonical history lives in `agent-conventions` itself; entries here record what
 landed in the DontPanic subtree first (and that the operator subsequently
 pushed upstream out-of-band).
 
+## 1.16.0 — 2026-08-09
+
+### Added
+- `features.schema.json` + `models/features_model.py`: an OPTIONAL `user_impact`
+  block on a feature (`audience` / `summary` / `surfaces` / `description_hash`),
+  so the decision brief rendered at a human approval gate can lead with what an
+  audience experiences rather than with plan mechanics. `audience: none` is a
+  complete declaration on its own and must carry neither summary nor surfaces
+  (D003); any other audience owes a summary of at least 10 characters, a
+  non-empty `surfaces` array, and `description_hash` — a SHA-256 digest of the
+  feature `description` the claim was written against, so a consuming brief can
+  distinguish declared / possibly-stale / undeclared without inventing a fourth
+  "digest unknown" state (D005).
+- `scripts/test_user_impact_contract.py` + `tests/user_impact/`: the JSON Schema
+  and the Pydantic model are independent implementations of those rules, so this
+  asserts they cannot drift — six fixtures produce identical verdicts from both
+  validators, four null cases are rejected by both, and the 11-value `surfaces`
+  enum is asserted identical to the one in `plan.schema.json`. Wired into CI
+  alongside the two existing contract tests.
+
+### Backward compatibility
+- Purely additive. `user_impact` is optional and every plan already on disk
+  omits it, so existing `features.json` files validate untouched. Verified by
+  running the validator across all 117 plan directories under `docs/plans` in
+  DontPanic with no plan file modified.
+
 ## 1.15.0 — 2026-06-28
 
 ### Added
