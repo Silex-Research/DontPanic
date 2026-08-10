@@ -33,6 +33,7 @@ from dataclasses import dataclass, field
 from typing import Final
 
 from dontpanic_orchestrate import notify, notify_buzz, notify_discord
+from dontpanic_orchestrate.decision_brief import DecisionBrief
 
 SEVERITY_INFO: Final[str] = "info"
 SEVERITY_ACTION_REQUIRED: Final[str] = "action_required"
@@ -103,6 +104,15 @@ class NotifyEvent:
         volley_terminal's ``final_status``/``rounds``;
         gate_state_reconciliation_failed's ``persisted_state_path``;
         etc.). Empty dict by default.
+      decision_brief: plan 2026-08-09-002 F003 — immutable snapshot of what
+        the operator is being asked to decide (what changes / who feels it /
+        what approving does), taken at the emit site where the plan and
+        feature records are in scope. ``None`` for events emitted outside a
+        pause, and for any emit site that has not been threaded yet.
+        Necessary because :func:`event_copy.render` is called from
+        :func:`dispatch_event` below with the event alone — its ``plan_meta``
+        / ``feature_meta`` parameters are never populated on the production
+        path, so a renderer reading them would be dead code in practice.
     """
 
     kind: str
@@ -127,6 +137,7 @@ class NotifyEvent:
     technical_metadata: dict[str, str | int | bool | None] = field(
         default_factory=dict
     )
+    decision_brief: DecisionBrief | None = None
 
     def __post_init__(self) -> None:
         # D005 alias reconciliation: action_link and evidence_uri are two
@@ -400,6 +411,7 @@ def dispatch_event(
 
 __all__ = [
     "ALL_SINKS",
+    "DecisionBrief",
     "LEVEL_NORMAL",
     "LEVEL_QUIET",
     "LEVEL_VERBOSE",

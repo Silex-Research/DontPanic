@@ -6,23 +6,7 @@
       "status": "M"
     },
     {
-      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/claude-implementer-F001-i0.json",
-      "status": "M"
-    },
-    {
-      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/codex-auditor-F001-i0.json",
-      "status": "M"
-    },
-    {
-      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/patch-completeness-0.json",
-      "status": "M"
-    },
-    {
       "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/plan-run-fingerprint.json",
-      "status": "M"
-    },
-    {
-      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/signoff-2026-08-09-002-feat-decision-brief-at-gates.json",
       "status": "M"
     },
     {
@@ -30,16 +14,24 @@
       "status": "M"
     },
     {
-      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/evidence/git-state-0-auditor.json",
+      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/evidence/git-state-0-implementer.json",
       "status": "M"
     },
     {
-      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/evidence/git-state-0-implementer.json",
+      "path": "scripts/dontpanic_orchestrate/notify_event.py",
+      "status": "M"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/supervisor.py",
       "status": "M"
     }
   ],
   "untracked": [
-    "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/terminal-state-iter0.json"
+    ".claude/",
+    "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/claude-implementer-F003-i0.json",
+    "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/codex-auditor-F003-i0.json",
+    "scripts/dontpanic_orchestrate/decision_brief.py",
+    "scripts/dontpanic_orchestrate/tests/test_decision_brief_delivery.py"
   ],
   "deleted_staged": [],
   "deleted_unstaged": []

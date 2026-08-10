@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-08-09T22:01:06Z",
+  "captured_at": "2026-08-10T01:39:31Z",
   "decision_lines": [
     "D001\u001f203ad1fa44fc15c0e4ab92c4a775c3a47e4c4cd59e62948d2a0c6d2afdc4aa0a",
     "D002\u001f0314967a3cb09fc51611a9b81d3d5271c2190421ff5db6595b0952bfcd9bafb6",
@@ -13,7 +13,8 @@
     "D010\u001f1628a72cf0dd0b141d4410bbc30cec40218f52b42dc1cbe1bc457ea2ce5294d3",
     "D011\u001fd2329f8cfc875b2234f4e60a2de98a5cd2587a6acb0fcd554e06718ce42b0608",
     "D012\u001fb7c47285b451c0db994b063e68f8c816806f518b7f25ad766e66c92a6fe4d388",
-    "D013\u001f12e2b46f2cab5da044b61ddda3c148169e3d78dc62a1e5fb1f0ec0653a821be3"
+    "D013\u001f12e2b46f2cab5da044b61ddda3c148169e3d78dc62a1e5fb1f0ec0653a821be3",
+    "D014\u001f686c886f4d059f907fad084b8d61a74facd48b263e22f042626401515a007ad1"
   ],
   "features_semantics": {
     "by_id": {
@@ -21,15 +22,15 @@
         "acceptance": "(1) A fixture declaring audience 'none' with neither summary nor surfaces is accepted. (2) A fixture declaring audience 'none' that also carries a summary is rejected. (3) An end-user fixture missing its summary is rejected. (4) An end-user fixture whose summary is under 10 characters is rejected. (5) An end-user fixture with an empty surfaces array is rejected. (6) The JSON Schema and the Pydantic model return the same verdict on all five fixtures.",
         "agents_required": null,
         "depends_on": [],
-        "passes": false
+        "passes": true
       },
       "F002": {
-        "acceptance": "(1) The validator exits 0 over every existing plan directory with no impact block present. (2) git status shows no existing plan file modified by this feature. (3) The subtree-pulled schema in DontPanic is byte-identical to the one committed in agent-conventions.",
+        "acceptance": "(1) No plan directory's validation outcome changes: the same plan set validated against the pre-change and post-change schema yields an identical per-plan exit code. (2) git status shows no existing plan file modified by this feature. (3) The subtree-pulled schema in DontPanic is byte-identical to the one committed in agent-conventions.",
         "agents_required": null,
         "depends_on": [
           "F001"
         ],
-        "passes": false
+        "passes": true
       },
       "F003": {
         "acceptance": "(1) A pause emitted through the real supervisor path produces a NotifyEvent carrying a populated brief with no caller passing metadata arguments to render. (2) The attached dataclass is frozen and equality-comparable. (3) Status is declared when the recorded digest matches the current description. (4) Status is possibly-stale when the digests differ. (5) Status is undeclared when F001's impact block is absent. (6) pytest tests/test_decision_brief_delivery.py covers all five and passes.",
@@ -103,15 +104,15 @@
   },
   "file_hashes": {
     "audit/gate-state.json": "1dbc29da1e340f964598b2d1fbbd66be453814d2a6c54ead77a17191a631bf6e",
-    "decisions.jsonl": "b7c5881adc9d8f58f9e609946082872973de68646158253c7cce7f7a0fe7e7fb",
-    "features.json": "fcf9151b96e5e62662883974b9757a668c7b15c900021e6d89cff94f462a722e",
+    "decisions.jsonl": "41e0e66daab50e66fd75dcea70df580c5b2955e5c29aa718c6bbdf1870f0b706",
+    "features.json": "0cc26179c5f58c8408b27b2df4a228a11cbbcb46e81175f6abf2ebbf8667fc52",
     "objective_contract.json": null,
     "plan.md": "fafcd0227074c01c5fdf00fefaacfecc4644a8f7fa56dab2ec5c3d6707afc735"
   },
   "file_mtimes": {
     "audit/gate-state.json": 1786309506.995439,
-    "decisions.jsonl": 1786290777.0600455,
-    "features.json": 1786306995.0478556,
+    "decisions.jsonl": 1786324242.5080767,
+    "features.json": 1786324836.0889306,
     "objective_contract.json": null,
     "plan.md": 1786307384.7781343
   },

@@ -26,6 +26,7 @@ from dontpanic_orchestrate import (
     circuit_breakers,
     command_guard,
     completion_gate,
+    decision_brief,
     ec5_classifier,
     gate_pause,
     inbox,
@@ -412,6 +413,7 @@ def _emit_gate_paused_discord(
     stage: str = "general",
     target_env: str | None = None,
     target_project: str | None = None,
+    loaded: plan_loader.LoadedPlan | None = None,
 ) -> None:
     """Plan 2026-05-01-002 F003 — gate-pause notification emit.
 
@@ -427,7 +429,25 @@ def _emit_gate_paused_discord(
     operator-actionable). evidence_uri points at the plan's INBOX.md so
     operators can drill down. Populates ``inbox_event='gate_hit'`` (per
     F002) and threads ``subtype`` (stage), ``target_env``, ``target_project``
-    so the translation table can render structured copy."""
+    so the translation table can render structured copy.
+
+    Plan 2026-08-09-002 F003: this is the pause-emission site, and the only
+    place on the live path where the plan title and the feature's declared
+    ``user_impact`` are both in scope — ``dispatch_event`` calls
+    ``event_copy.render(event)`` with no metadata arguments. So the
+    DecisionBrief is snapshotted here and rides along on the event, immutable,
+    for every sink to read. ``loaded`` is optional so callers that have no
+    LoadedPlan (none today) still emit a working pause notification."""
+    brief = (
+        decision_brief.build_for_gate_pause(
+            loaded,
+            feature_id,
+            stage=stage,
+            pending_gates=list(pending_gates),
+        )
+        if loaded is not None
+        else None
+    )
     notify_event.dispatch_event(
         notify_event.NotifyEvent(
             kind="gate_paused",
@@ -446,6 +466,7 @@ def _emit_gate_paused_discord(
             subtype=stage,
             target_env=target_env,
             target_project=target_project,
+            decision_brief=brief,
         ),
         plan_dir=plan_dir,
     )
@@ -1205,6 +1226,7 @@ def dispatch_single_agent(
             stage="general",
             target_env=effective_env,
             target_project=effective_project,
+            loaded=loaded,
         )
         raise PausedOnGate(
             f"single-agent paused on gates {gate_check.unmet}; "
@@ -1904,6 +1926,7 @@ def dispatch_volley(
             stage="upfront",
             target_env=effective_env,
             target_project=effective_project,
+            loaded=loaded,
         )
         print(f"[volley] PAUSED on gates: {gate_check.unmet}")
         return VolleyResult(
@@ -2231,6 +2254,7 @@ def dispatch_volley(
                                 stage="pre_impl",
                                 target_env=effective_env,
                                 target_project=effective_project,
+                                loaded=loaded,
                             )
                             print(f"[volley] PAUSED on pre_impl gates: {pre_impl_info.pending}")
                             return VolleyResult(
@@ -2516,6 +2540,7 @@ def dispatch_volley(
                             stage="pre_merge",
                             target_env=effective_env,
                             target_project=effective_project,
+                            loaded=loaded,
                         )
                         print(f"[volley] PAUSED on pre_merge gates: {pre_merge_info.pending}")
                         return VolleyResult(
