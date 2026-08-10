@@ -761,3 +761,21 @@ Evidence: `/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-08-09-002-
 </details>
 
 ===
+---
+timestamp: 2026-08-10T14:14:38Z
+event: feature_operator_resolved
+plan_id: 2026-08-09-002-feat-decision-brief-at-gates
+feature_id: F004
+reason_class: signed_off_adjacent
+---
+
+Operator closed feature F004 as operator_resolved (class=signed_off_adjacent).
+
+Closeout memo: evidence/closeout-memo.md
+Signoff envelope: audit/signoff-2026-08-09-002-feat-decision-brief-at-gates.json
+breaker:no_progress cleared: False
+features.json passes flipped: True
+
+Edit the closeout memo's `Rationale` section before merging.
+
+===

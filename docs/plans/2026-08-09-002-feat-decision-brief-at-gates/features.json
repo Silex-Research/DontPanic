@@ -146,10 +146,37 @@
         "Leave technical_metadata untouched"
       ],
       "acceptance": "(1) RenderedEvent exposes the three new fields with None defaults and every existing template row still constructs. (2) Round-tripping a brief through render and into ActionItem preserves the decision-consequence element exactly, for each of three distinct briefs, so the mapping is proven rather than a single fixture matching. (3) For every renderable kind, plain_consequence differs from the rendered detail string \u2014 a regression asserting the current aliasing is gone across the whole table, not one example. (4) The reversible flag on an event-derived ActionItem tracks the brief across both True and False, rather than the hardcoded False it carries today. (5) pytest tests/test_event_copy_brief_fields.py covers all four and passes.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F003"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=signed_off_adjacent)"
+        },
+        {
+          "type": "test_output",
+          "uri": "evidence/f004-verification.txt",
+          "note": "56 tests; AC2 3 distinct briefs w/ distinctness+rewrite-sensitivity guards; AC3 15 table-derived kinds; zero regressions vs same-scope baseline"
+        },
+        {
+          "type": "commit",
+          "uri": "8285970",
+          "note": "event_copy + operator_console + 17 fixtures + new test + D015"
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F004-i2.json",
+          "note": "signed_off, no findings; auditor executed test bodies directly under sandbox"
+        }
+      ],
+      "verified_by": [
+        "operator",
+        "codex"
+      ],
+      "verified_at": "2026-08-10T14:14:38Z"
     },
     {
       "id": "F005",
