@@ -1,0 +1,44 @@
+F003 — regression attribution and fresh-checkout verification
+=============================================================
+
+ACCEPTANCE (AC6)
+  $ pytest scripts/dontpanic_orchestrate/tests/test_decision_brief_delivery.py -q
+  6 passed in 0.35s
+
+REGRESSION ATTRIBUTION (identical scope: full scripts/dontpanic_orchestrate/tests/)
+  with F003   : 4 failed, 5480 passed, 7 skipped   (499.68s)
+  baseline    : 4 failed, 5474 passed, 7 skipped   (354.32s)
+                (baseline = same tree with F003's 4 files stashed)
+
+  Identical failure set in both runs:
+    test_event_copy_f003_render.py::TestRoutingPerDisposition::test_inbox_only_does_not_reach_live_sinks
+    test_f006_circuit_breakers.py::test_global_breaker_evaluates_before_executor_resolution
+    test_f006_circuit_breakers.py::test_active_breaker_preempts_executor_resolution
+    test_f014_harness_adapters.py::test_executor_class_declaration_matches_capability_table
+
+  Delta = +6 passed, which are exactly F003's new tests.
+  RESULT: zero regressions introduced.
+
+  Method note: an earlier attribution attempt compared a 4-test selection at baseline
+  against the full suite with the change, and wrongly suggested F003 broke f014. That
+  comparison was invalid (different run scopes). Both numbers above are full-suite.
+  f014 and test_event_copy_f003_render are order/pollution-dependent within the full
+  suite and fail identically with and without this change.
+
+FRESH-CHECKOUT VERIFICATION (git archive HEAD -> clean tree)
+  files present : decision_brief.py, notify_event.py, supervisor.py,
+                  tests/test_decision_brief_delivery.py
+  imports OK    : dontpanic_orchestrate.decision_brief / notify_event / supervisor
+  DecisionBrief frozen                 : True
+  BriefStatus values                   : ['declared', 'possibly_stale', 'undeclared']
+  NotifyEvent has decision_brief field : True
+
+  This check exists because decision_brief.py was untracked when the volley ended and
+  the patch-completeness gate did not flag it. Committing only the cited files would
+  have left both importers referencing a module absent from the repo.
+
+AUDITOR LIMITATION
+  codex-auditor-F003-i0.json: "Independent pytest execution was prevented by the
+  read-only sandbox, though the implementer recorded 6 passing focused tests."
+  The signed_off verdict therefore reviewed claims, not executed behavior. Every
+  number above was produced by the operator independently.

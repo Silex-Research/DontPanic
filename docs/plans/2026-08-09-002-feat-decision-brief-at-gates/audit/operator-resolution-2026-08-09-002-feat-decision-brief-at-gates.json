@@ -1,10 +1,10 @@
 {
   "plan_id": "2026-08-09-002-feat-decision-brief-at-gates",
-  "feature_id": "F002",
-  "class": "operator_verified",
+  "feature_id": "F003",
+  "class": "signed_off_adjacent",
   "memo": "evidence/closeout-memo.md",
   "resolved": true,
-  "resolved_at": "2026-08-10T01:11:46Z",
-  "terminal_class": "operator_verified",
-  "note": "All three acceptance criteria verified directly against artifacts. AC1 (amended per D014): 117 plans validated against schema 1.15.0 and 1.16.0 produce identical per-plan exit codes — 23 non-zero under both, zero outcome changes (evidence/f002-validation-outcome-parity.txt). AC2: git status shows no existing plan file modified. AC3: cmp confirms claude/shared features.schema.json and features_model.py are byte-identical to agent-conventions; both read VERSION 1.16.0. The auditor's iter-0 needs_changes was correct at the time — the subtree pull and validation had not run. Both have since been completed by the operator (commits 2693583, f08bee0)."
+  "resolved_at": "2026-08-10T02:48:31Z",
+  "terminal_class": "signed_off_adjacent",
+  "note": "Auditor signed off at iter 0. Patch-completeness blocked only on undeclared/unstaged work, not on a defect: the test file was untracked and notify_event.py/supervisor.py fell outside touched_files. All staged and committed (54d54e2). Verified: pytest test_decision_brief_delivery.py 6 passed; full sweep 4 failed/5480 passed vs baseline 4 failed/5474 passed -- identical failure set, +6 are this feature's tests, zero regressions; fresh git-archive checkout imports decision_brief/notify_event/supervisor cleanly with frozen=True and the three BriefStatus values."
 }

@@ -101,10 +101,37 @@
         "This feature stops at the snapshot. Reading it in any sink belongs to F006 and F007"
       ],
       "acceptance": "(1) A pause emitted through the real supervisor path produces a NotifyEvent carrying a populated brief with no caller passing metadata arguments to render. (2) The attached dataclass is frozen and equality-comparable. (3) Status is declared when the recorded digest matches the current description. (4) Status is possibly-stale when the digests differ. (5) Status is undeclared when F001's impact block is absent. (6) pytest tests/test_decision_brief_delivery.py covers all five and passes.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F002"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=signed_off_adjacent)"
+        },
+        {
+          "type": "test_output",
+          "uri": "evidence/f003-regression-attribution.txt",
+          "note": "AC6 6/6; with-change vs baseline full sweep (zero regressions); fresh-checkout import verification"
+        },
+        {
+          "type": "commit",
+          "uri": "54d54e2",
+          "note": "decision_brief.py + test + notify_event.py + supervisor.py staged together"
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F003-i0.json",
+          "note": "verdict signed_off, no findings; sandbox prevented independent test execution"
+        }
+      ],
+      "verified_by": [
+        "operator",
+        "codex"
+      ],
+      "verified_at": "2026-08-10T02:48:31Z"
     },
     {
       "id": "F004",
