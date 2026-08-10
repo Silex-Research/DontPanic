@@ -1,0 +1,19 @@
+{
+  "task_id": "2026-08-09-002-feat-decision-brief-at-gates",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "functional",
+      "description": "Rewrite the closet tab empty state so first-run users see a guided prompt",
+      "acceptance": "Snapshot test covers the guided empty state",
+      "passes": false,
+      "user_impact": {
+        "audience": "end_user",
+        "summary": "First-run users land on a guided prompt instead of a blank closet",
+        "surfaces": [],
+        "description_hash": "7842cdf16ef0c9471dba82ce407cc62479cdc1105b005dd98acee6758d5ede87"
+      }
+    }
+  ]
+}

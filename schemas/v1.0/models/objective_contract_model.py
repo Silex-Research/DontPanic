@@ -5,19 +5,80 @@
 from __future__ import annotations
 
 from enum import Enum
+from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, constr, model_validator
 
 
 class GoalType(Enum):
     """
-    Must match Plan.goal_type at the parent plan when both are present. The four values that require an objective contract per Goal Governance V1 §4.
+    Must match Plan.goal_type at the parent plan when both are present. Expanded
+    from the original four (parity/new_feature/migration/incident) to the full
+    Plan goal_type set so the lite universal contract (delivers-only) can attach
+    to infra/refactor/mechanical plans at schema_version >= 1.1.
     """
 
+    mechanical = 'mechanical'
+    infra = 'infra'
+    refactor = 'refactor'
     parity = 'parity'
     new_feature = 'new_feature'
     migration = 'migration'
     incident = 'incident'
+
+
+class Audience(Enum):
+    """Who can now safely do something they couldn't before."""
+
+    end_user = 'end_user'
+    builder = 'builder'
+    operator = 'operator'
+    agent = 'agent'
+    auditor = 'auditor'
+    implementer = 'implementer'
+
+
+class Kind(Enum):
+    """The kind of capability delivered. 'No new screen' is not 'no capability'."""
+
+    product = 'product'
+    architecture = 'architecture'
+    infrastructure = 'infrastructure'
+    reliability = 'reliability'
+    safety = 'safety'
+    observability = 'observability'
+    security = 'security'
+    data = 'data'
+
+
+class ProofRef(BaseModel):
+    """Typed reference to the evidence that proves a delivered capability.
+
+    References a feature rather than restating its verdict, so proof can't drift
+    from features.json. `plan` is optional — absent means the same plan as this
+    contract; set it for cross-plan proof.
+    """
+
+    model_config = ConfigDict(extra='forbid')
+    type: Literal['feature']
+    id: constr(pattern=r'^F\d{3}$')
+    plan: constr(
+        pattern=r'^\d{4}-\d{2}-\d{2}-\d{3}-(feat|fix|refactor|migration|infra)-[a-z0-9-]+$'
+    ) | None = None
+
+
+class Delivers(BaseModel):
+    """One audience-first outcome: what becomes true, for whom, what kind, proof.
+
+    Required (non-empty list) at schema_version >= 1.1; advisory below that (the
+    plan-level validator warns inline rather than failing).
+    """
+
+    model_config = ConfigDict(extra='forbid')
+    audience: Audience
+    kind: Kind
+    capability: str = Field(..., min_length=10)
+    proof_refs: list[ProofRef] = Field(..., min_length=1)
 
 
 class UserJourney(BaseModel):
@@ -44,6 +105,35 @@ class UserJourney(BaseModel):
     """
     What the auditor should look for to confirm journey coverage. Optional but recommended.
     """
+    consumer: str | None = None
+    """
+    Experience Readiness (plan 2026-06-15-001 F001): the intended consumer family
+    — human | agent | both. REQUIRED for any journey asserting a consumer-facing
+    outcome (D030); optional for substrate-only journeys.
+    """
+    fixture_only: bool = False
+    """
+    F001 (D031): when true, seeded evidence satisfies a consumer-readiness claim
+    (the journey is explicitly a fixture/example, not a real-data assertion).
+    """
+
+    @model_validator(mode='after')
+    def _validate_consumer_surface(self) -> 'UserJourney':
+        # Only journeys that OPT IN by declaring `consumer` get consumer x
+        # surface validation (D026). Surfaces are journey tokens resolved to
+        # closed surface_classes; unknown tokens fail closed.
+        if self.consumer is None:
+            return self
+        try:
+            from experience_readiness import resolve_surface_token, validate_consumer_surface
+        except ImportError:  # pragma: no cover - import-path fallback
+            from models.experience_readiness import (
+                resolve_surface_token,
+                validate_consumer_surface,
+            )
+        surface_classes = [resolve_surface_token(t) for t in (self.surfaces or [])]
+        validate_consumer_surface(self.consumer, surface_classes)
+        return self
 
 
 class ObjectiveContract(BaseModel):
@@ -62,9 +152,9 @@ class ObjectiveContract(BaseModel):
     """
     Reference to the canonical source (PRD path, source-platform name for parity, incident report URL, prior plan id, etc.). Does NOT need to be a live repo URL; static curated references are valid.
     """
-    user_journeys: list[UserJourney] = Field(..., min_length=1)
+    user_journeys: list[UserJourney] | None = Field(None, min_length=1)
     """
-    User-facing flows the goal must satisfy end-to-end. The auditor walks these against the proposed features at pre-impl time and against shipped patches at post-impl time.
+    User-facing flows the goal must satisfy end-to-end. The auditor walks these against the proposed features at pre-impl time and against shipped patches at post-impl time. Optional as of the lite universal contract — a substrate/infra plan may carry delivers[] with no journeys. Non-empty when present.
     """
     required_evidence: list[str] | None = None
     """
@@ -77,6 +167,10 @@ class ObjectiveContract(BaseModel):
     completion_test: str = Field(..., min_length=10)
     """
     One-sentence prose answering 'how do we know this is done?'. The completion test is the operator's stake in the ground; the auditor checks the proposed features against it.
+    """
+    delivers: list[Delivers] | None = Field(None, min_length=1)
+    """
+    Audience-first outcome statements (what becomes true, for whom, what kind of capability, which features prove it). Required (non-empty) at plan schema_version >= 1.1, enforced by the plan-level validator; advisory below that. Complements user_journeys.
     """
     cluster_overrides: str | None = None
     """

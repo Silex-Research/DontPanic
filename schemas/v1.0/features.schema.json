@@ -55,7 +55,8 @@
         "tier_override": {
           "enum": ["trivial", "local", "cross-cutting", "architectural", "p0"],
           "description": "Force different audit tier for this feature only"
-        }
+        },
+        "user_impact": { "$ref": "#/$defs/user_impact" }
       },
       "allOf": [
         {
@@ -70,6 +71,54 @@
           }
         }
       ],
+      "additionalProperties": false
+    },
+    "user_impact": {
+      "type": "object",
+      "description": "Optional declared user impact — who feels this feature and how. Consumed by the decision brief rendered at human approval gates. Optional by design (D003): a feature that declares nothing renders 'user impact not declared' rather than a synthesized claim.",
+      "required": ["audience"],
+      "properties": {
+        "audience": {
+          "enum": ["end_user", "operator", "agent", "none"],
+          "description": "Who experiences the change. 'none' means genuinely internal work with no external consequence, and is a complete declaration on its own."
+        },
+        "summary": {
+          "type": "string",
+          "description": "One plain-language line naming what the audience experiences differently. Required (>=10 chars) unless audience is 'none'."
+        },
+        "surfaces": {
+          "type": "array",
+          "items": {
+            "enum": ["web", "ios", "android", "backend", "infra", "security", "data", "ux", "ml", "docs", "external-api-wrap"]
+          },
+          "uniqueItems": true,
+          "description": "Where the impact lands. Mirrors the plan-level `surfaces` enum in plan.schema.json — the two are kept in lockstep and asserted identical by scripts/test_user_impact_contract.py. Required (non-empty) unless audience is 'none'."
+        },
+        "description_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$",
+          "description": "SHA-256 hex digest of the UTF-8 encoded feature `description` this declaration was written against. Staleness anchor per D005: a mismatch marks the brief possibly-stale rather than presenting an old claim as current. Required whenever the declaration carries a claim (audience other than 'none') so the consuming brief in F003 never has to invent a fourth 'digest unknown' state alongside declared / possibly-stale / undeclared. Optional under audience 'none', which asserts no external consequence and so has no claim that can go stale."
+        }
+      },
+      "if": {
+        "properties": { "audience": { "const": "none" } },
+        "required": ["audience"]
+      },
+      "then": {
+        "description": "D003: 'none' is the entire declaration — summary and surfaces must be absent or empty.",
+        "properties": {
+          "summary": { "maxLength": 0 },
+          "surfaces": { "maxItems": 0 }
+        }
+      },
+      "else": {
+        "description": "Any audience other than 'none' owes a real summary, at least one surface, and the digest that binds the claim to the description it was written against.",
+        "required": ["summary", "surfaces", "description_hash"],
+        "properties": {
+          "summary": { "minLength": 10 },
+          "surfaces": { "minItems": 1 }
+        }
+      },
       "additionalProperties": false
     },
     "evidence_ref": {

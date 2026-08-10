@@ -1,0 +1,15 @@
+{
+  "goal_type": "infra",
+  "source_of_truth": "Curated fixture reference for the delivers validator test",
+  "completion_test": "The validator accepts this lite contract: a non-empty delivers[] with no user_journeys.",
+  "delivers": [
+    {
+      "audience": "operator",
+      "kind": "reliability",
+      "capability": "NAV history survives a process restart instead of evaporating with in-memory state.",
+      "proof_refs": [
+        { "type": "feature", "id": "F001" }
+      ]
+    }
+  ]
+}
