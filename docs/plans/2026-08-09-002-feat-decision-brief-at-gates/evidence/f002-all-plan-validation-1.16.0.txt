@@ -1,0 +1,176 @@
+schema VERSION: 1.16.0
+plan dirs scanned : 117
+exit 0            : 94
+non-zero          : 23
+plans declaring user_impact: 0 []
+
+--- NON-ZERO ---
+
+[2026-04-29-001-feat-changelog-skill] rc=1
+
+[plan] 2026-04-29-001-feat-changelog-skill
+  ✓ plan.md frontmatter
+  ✗ features.json — features.0.verified_by: Input should be a valid list
+  ✓ audit/claude-implementer-i0.json
+  ✓ audit/codex-auditor-i0.json
+  ⊘ audit/gate-state.json — auxiliary, skipped
+  ✓ audit/signoff-2026-04-29-001-feat-changelog-skill.json
+
+
+[2026-05-11-001-infra-state-projection-adapters-meta] rc=1
+
+[plan] 2026-05-11-001-infra-state-projection-adapters-meta
+  ✓ plan.md frontmatter
+  ✗ features.json — features.2.evidence_refs.0.type: Input should be 'screenshot', 'log', 'test_output', 'diff', 'audit_json', 'commit', 'url' or 'file'
+  ⊘ audit/gate-state.json — auxiliary, skipped
+
+
+[2026-06-04-001-feat-ledger-reconciliation-operator-actions] rc=2
+er
+  ✗ objective_contract — required by goal_type=new_feature but links.objective_contract is missing or empty
+  ✗ features.json — features.0.verified_by: Input should be a valid list; features.1.verified_by: Input should be a valid list; features.2.verified_by: Input should be a valid list; features.3.verified_by: Input should be a valid list; features.4.verified_by: Input should be a valid list
+
+
+[2026-06-04-002-feat-local-harness-adapter-runtime] rc=1
+
+[plan] 2026-06-04-002-feat-local-harness-adapter-runtime
+  ✓ plan.md frontmatter
+  ✗ objective_contract — required by goal_type=new_feature but links.objective_contract is missing or empty
+  ✓ features.json
+
+
+[2026-06-04-003-feat-integration-operator-actions] rc=1
+eat-integration-operator-actions
+  ✓ plan.md frontmatter
+  ✓ objective_contract (./objective_contract.json) — ⚠ no delivers[] (advisory; required at schema_version 1.1)
+  ✗ features.json — features.0.evidence: Extra inputs are not permitted; features.1.evidence: Extra inputs are not permitted; features.2.evidence: Extra inputs are not permitted; features.3.evidence: Extra inputs are not permitted
+
+
+[2026-06-04-004-feat-dashboard-state-fidelity] rc=2
+er
+  ✗ objective_contract — required by goal_type=new_feature but links.objective_contract is missing or empty
+  ✗ features.json — features.0.verified_by: Input should be a valid list; features.1.verified_by: Input should be a valid list; features.2.verified_by: Input should be a valid list; features.3.verified_by: Input should be a valid list; features.4.verified_by: Input should be a valid list
+
+
+[2026-06-04-005-feat-render-truth-scope-contract] rc=1
+
+[plan] 2026-06-04-005-feat-render-truth-scope-contract
+  ✓ plan.md frontmatter
+  ✗ objective_contract — required by goal_type=new_feature but links.objective_contract is missing or empty
+  ✓ features.json
+
+
+[2026-06-04-006-feat-dashboard-safe-repair-runner] rc=1
+
+[plan] 2026-06-04-006-feat-dashboard-safe-repair-runner
+  ✓ plan.md frontmatter
+  ✗ objective_contract — required by goal_type=new_feature but links.objective_contract is missing or empty
+  ✓ features.json
+
+
+[2026-06-05-001-fix-capability-card-setup-clarity] rc=1
+
+[plan] 2026-06-05-001-fix-capability-card-setup-clarity
+  ✓ plan.md frontmatter
+  ✗ objective_contract — required by goal_type=new_feature but links.objective_contract is missing or empty
+  ✓ features.json
+
+
+[2026-06-05-002-feat-dashboard-real-state-qa-contract-v0] rc=1
+
+[plan] 2026-06-05-002-feat-dashboard-real-state-qa-contract-v0
+  ✓ plan.md frontmatter
+  ✗ objective_contract — required by goal_type=new_feature but links.objective_contract is missing or empty
+  ✓ features.json
+
+
+[2026-06-05-003-feat-dashboard-design-system-v0] rc=1
+
+[plan] 2026-06-05-003-feat-dashboard-design-system-v0
+  ✓ plan.md frontmatter
+  ✗ objective_contract — required by goal_type=new_feature but links.objective_contract is missing or empty
+  ✓ features.json
+
+
+[2026-06-05-004-feat-applicable-conventions-disposition-gate-v0] rc=1
+
+[plan] 2026-06-05-004-feat-applicable-conventions-disposition-gate-v0
+  ✓ plan.md frontmatter
+  ✗ objective_contract — required by goal_type=new_feature but links.objective_contract is missing or empty
+  ✓ features.json
+
+
+[2026-06-06-007-feat-architecture-render] rc=1
+
+[plan] 2026-06-06-007-feat-architecture-render
+  ✓ plan.md frontmatter
+  ✓ objective_contract (./objective_contract.json) — ⚠ no delivers[] (advisory; required at schema_version 1.1)
+  ✗ features.json — features.0.verified_at: Input should have timezone info; features.1.verified_at: Input should have timezone info
+
+
+[2026-06-07-003-feat-operator-console-008-chrome-theming-state] rc=1
+
+[plan] 2026-06-07-003-feat-operator-console-008-chrome-theming-state
+  ✓ plan.md frontmatter
+  ✗ objective_contract — required by goal_type=new_feature but links.objective_contract is missing or empty
+  ✓ features.json
+
+
+[2026-06-08-001-feat-architecture-intent-extractor-plan-b] rc=1
+
+[plan] 2026-06-08-001-feat-architecture-intent-extractor-plan-b
+  ✓ plan.md frontmatter
+  ✗ objective_contract — required by goal_type=new_feature but links.objective_contract is missing or empty
+  ✓ features.json
+
+
+[2026-06-08-002-feat-architecture-js-extractor-plan-c] rc=1
+
+[plan] 2026-06-08-002-feat-architecture-js-extractor-plan-c
+  ✓ plan.md frontmatter
+  ✗ objective_contract — required by goal_type=new_feature but links.objective_contract is missing or empty
+  ✓ features.json
+
+
+[2026-06-08-003-fix-audit-findings] rc=1
+
+[plan] 2026-06-08-003-fix-audit-findings
+  ✓ plan.md frontmatter
+  ✗ objective_contract — required by goal_type=incident but links.objective_contract is missing or empty
+
+
+[2026-06-08-005-feat-architecture-ts-extractor-plan-c2] rc=1
+
+[plan] 2026-06-08-005-feat-architecture-ts-extractor-plan-c2
+  ✓ plan.md frontmatter
+  ✓ objective_contract (./objective_contract.json) — ⚠ no delivers[] (advisory; required at schema_version 1.1)
+  ✗ features.json — features.0.verified_by: Input should be a valid list; features.1.verified_by: Input should be a valid list
+
+
+[2026-06-09-001-feat-architecture-c0-weak-graph] rc=1
+ctionary or instance of EvidenceRef; features.0.evidence_refs.1: Input should be a valid dictionary or instance of EvidenceRef; features.0.evidence_refs.2: Input should be a valid dictionary or instance of EvidenceRef; features.1.evidence_refs.0: Input should be a valid dictionary or instance of EvidenceRef; features.1.evidence_refs.1: Input should be a valid dictionary or instance of EvidenceRef
+
+
+[2026-06-09-002-feat-sufficiency-gate-convergence] rc=1
+ctionary or instance of EvidenceRef; features.0.evidence_refs.1: Input should be a valid dictionary or instance of EvidenceRef; features.0.evidence_refs.2: Input should be a valid dictionary or instance of EvidenceRef; features.0.evidence_refs.3: Input should be a valid dictionary or instance of EvidenceRef; features.1.evidence_refs.0: Input should be a valid dictionary or instance of EvidenceRef
+
+
+[2026-06-10-001-feat-convergence-policy-v1-1] rc=1
+ctionary or instance of EvidenceRef; features.0.evidence_refs.1: Input should be a valid dictionary or instance of EvidenceRef; features.0.evidence_refs.2: Input should be a valid dictionary or instance of EvidenceRef; features.1.evidence_refs.0: Input should be a valid dictionary or instance of EvidenceRef; features.1.evidence_refs.1: Input should be a valid dictionary or instance of EvidenceRef
+
+
+[2026-06-11-001-feat-worktree-guard-hardening] rc=1
+
+[plan] 2026-06-11-001-feat-worktree-guard-hardening
+  ✓ plan.md frontmatter
+  ✓ objective_contract (./objective_contract.json) — ⚠ no delivers[] (advisory; required at schema_version 1.1)
+  ✗ features.json — features.0.verified_by: Input should be a valid list; features.1.verified_by: Input should be a valid list; features.2.verified_by: Input should be a valid list
+
+
+[2026-06-12-001-fix-audit-evidence-writer-hygiene] rc=1
+
+[plan] 2026-06-12-001-fix-audit-evidence-writer-hygiene
+  ✓ plan.md frontmatter
+  ✓ objective_contract (./objective_contract.json) — ⚠ no delivers[] (advisory; required at schema_version 1.1)
+  ✗ features.json — features.0.evidence: Extra inputs are not permitted; features.1.evidence: Extra inputs are not permitted
+
