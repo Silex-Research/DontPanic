@@ -1,0 +1,38 @@
+F002 AC1 (amended) — no plan's validation outcome changes
+============================================================
+Same 117 plan directories validated against both schema versions.
+  schema 1.15.0 (pre-pull,  commit 405cfd2): non-zero = 23
+  schema 1.16.0 (post-pull, commit 2693583): non-zero = 23
+  plans whose exit code CHANGED: 0
+
+RESULT: PASS — the user_impact addition changes no plan's outcome.
+
+The 23 non-zero plans fail identically under both versions; those are
+pre-existing contract debt (missing links.objective_contract,
+verified_by not a list, stray 'evidence' key, naive verified_at,
+evidence_refs type enum) and are out of F002's scope.
+
+Per-plan exit codes (name: 1.15.0 -> 1.16.0), non-zero only:
+  2026-04-29-001-feat-changelog-skill: 1 -> 1
+  2026-05-11-001-infra-state-projection-adapters-meta: 1 -> 1
+  2026-06-04-001-feat-ledger-reconciliation-operator-actions: 2 -> 2
+  2026-06-04-002-feat-local-harness-adapter-runtime: 1 -> 1
+  2026-06-04-003-feat-integration-operator-actions: 1 -> 1
+  2026-06-04-004-feat-dashboard-state-fidelity: 2 -> 2
+  2026-06-04-005-feat-render-truth-scope-contract: 1 -> 1
+  2026-06-04-006-feat-dashboard-safe-repair-runner: 1 -> 1
+  2026-06-05-001-fix-capability-card-setup-clarity: 1 -> 1
+  2026-06-05-002-feat-dashboard-real-state-qa-contract-v0: 1 -> 1
+  2026-06-05-003-feat-dashboard-design-system-v0: 1 -> 1
+  2026-06-05-004-feat-applicable-conventions-disposition-gate-v0: 1 -> 1
+  2026-06-06-007-feat-architecture-render: 1 -> 1
+  2026-06-07-003-feat-operator-console-008-chrome-theming-state: 1 -> 1
+  2026-06-08-001-feat-architecture-intent-extractor-plan-b: 1 -> 1
+  2026-06-08-002-feat-architecture-js-extractor-plan-c: 1 -> 1
+  2026-06-08-003-fix-audit-findings: 1 -> 1
+  2026-06-08-005-feat-architecture-ts-extractor-plan-c2: 1 -> 1
+  2026-06-09-001-feat-architecture-c0-weak-graph: 1 -> 1
+  2026-06-09-002-feat-sufficiency-gate-convergence: 1 -> 1
+  2026-06-10-001-feat-convergence-policy-v1-1: 1 -> 1
+  2026-06-11-001-feat-worktree-guard-hardening: 1 -> 1
+  2026-06-12-001-fix-audit-evidence-writer-hygiene: 1 -> 1

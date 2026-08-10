@@ -1,17 +1,17 @@
 ---
 status: operator_finished
-reason_class: signed_off_adjacent
+reason_class: operator_verified
 plan_id: 2026-08-09-002-feat-decision-brief-at-gates
-feature_id: F001
-closed_at: 2026-08-09T22:17:15Z
-latest_audit_status: signed_off
+feature_id: F002
+closed_at: 2026-08-10T01:11:46Z
+latest_audit_status: needs_changes
 ---
 
-# Closeout memo — 2026-08-09-002-feat-decision-brief-at-gates / F001
+# Closeout memo — 2026-08-09-002-feat-decision-brief-at-gates / F002
 
 ## Operator decision
 
-This feature was finished under terminal class `signed_off_adjacent` via the operator-finish close path (no re-dispatch, no breaker required). operator_finish (terminal=signed_off_adjacent): the auditor signed off; a downstream gate blocked the automated finalize. Operator accepted the feature as merge-ready. See evidence/closeout-memo.md. The close wrote the signoff envelope, recorded the terminal class in the operator-resolution sidecar, and flipped `features.json` `passes: true` for this feature.
+This feature was finished under terminal class `operator_verified` via the operator-finish close path (no re-dispatch, no breaker required). operator_finish (terminal=operator_verified): operator verified the feature out-of-band — All three acceptance criteria verified directly against artifacts. AC1 (amended per D014): 117 plans validated against schema 1.15.0 and 1.16.0 produce identical per-plan exit codes — 23 non-zero under both, zero outcome changes (evidence/f002-validation-outcome-parity.txt). AC2: git status shows no existing plan file modified. AC3: cmp confirms claude/shared features.schema.json and features_model.py are byte-identical to agent-conventions; both read VERSION 1.16.0. The auditor's iter-0 needs_changes was correct at the time — the subtree pull and validation had not run. Both have since been completed by the operator (commits 2693583, f08bee0).. See evidence/closeout-memo.md. The close wrote the signoff envelope, recorded the terminal class in the operator-resolution sidecar, and flipped `features.json` `passes: true` for this feature.
 
 ## Latest auditor envelope summary (lifted automatically)
 
@@ -19,54 +19,51 @@ This feature was finished under terminal class `signed_off_adjacent` via the ope
 - Repo: DontPanic
 - Env: dev
 - Project: (none)
-- Command: 10 (see structured target_context.commands_run)
+- Command: 7 (see structured target_context.commands_run)
 
-[F001] Repo: DontPanic  
+[F002] Repo: DontPanic  
 Env: dev  
 Project: (none)
 
-Overall verdict: **signed_off**. No findings. The implementer’s canonical declaration correctly names `DontPanic`, `dev`, and `(none)`; the later `agent-conventions` reference identifies the plan-authorized sibling repository containing F001. Structured target metadata agrees, and no forbidden command shapes were used. The schema, Pydantic model, conditional semantics, digest anchor, fixtures, and enum parity match the requirements. All five acceptance fixtures produced identical schema/model verdicts.
+Overall verdict: **needs_changes**. The implementer’s Repo/Env/Project declaration is correct, structured context matches, and the empty `commands_run` contains no forbidden command shapes.
 
-Checks run successfully:
-
-```text
-$ git status --short
-$ git diff --stat HEAD~1
-$ git diff HEAD~1
-$ git diff -...
+FINDING (high, correctness): F002 was not implemented. Evidence: `agent-conventions/VERSION` remains `1.10.0`, `claude/shared/VERSION` is `1.15.0`, `claude/shared` has no F002 changes, and the source/consumer feature-schema hashes differ (`2d9be9…` versus `77c96c…`; `cmp` exits 1). Recommendation: reconcile F001 onto the 1.15 sync baseline, bump and commit the next version, subtree-pull it into `claude/shared/`, then verify b...
 
 ## Rationale (operator)
 
-No re-dispatch is warranted because the work is done and independently verified. The
-auditor signed off at iteration 0, and the acceptance criteria were re-checked directly
-against the real artifacts in `agent-conventions`: `scripts/test_user_impact_contract.py`
-exits 0 with all six fixtures producing identical verdicts from the JSON Schema and the
-Pydantic model, plus four null-parity cases and an 11-value surface-enum lockstep check
-against `plan.schema.json`. That output is captured at
-`evidence/f001-user-impact-contract-test.txt` and cited on the feature's `evidence_refs`,
-so the flip rests on a reproducible check rather than on this memo alone.
+No re-dispatch is warranted because the auditor's finding was acted on rather than
+waived. Its recommendation was explicit — "reconcile F001 onto the 1.15 sync baseline,
+bump and commit the next version, subtree-pull it into `claude/shared/`, then verify" —
+and that is exactly the sequence that was executed: `b1ce20c` (v1.16.0 on the 1.15
+baseline), `2693583` (subtree pull), `f08bee0` (all-plan validation evidence). The
+finding is closed by the work, not by the close.
 
-One correction to the boilerplate above: on the run being closed, no downstream gate
-blocked anything. The earlier blocking dispatch was the patch-completeness
-self-authored-telemetry defect, fixed in `55c6919`; the subsequent dispatch reached
-`signed_off` cleanly. There is simply no automated path from a `signed_off` terminal to
-`features.json passes: true` — `closeout._flip_feature_passes` is reachable only through
-the `dontpanic close` CLI, so the flip is an operator step by design.
+The root cause was mine. I merged F001 into `agent-conventions` `master` at 1.10.0
+without checking which branch DontPanic's subtree actually tracks, which is
+`chore/sync-upstream-1.15.0`. The volley caught it. `master` now holds a stale parallel
+copy of the F001 work and should be reconciled or retired.
 
-Follow-up filed rather than fixed here (D011 on plan
-`2026-08-09-004-feat-agent-graders-task-corpus`): after this signed-off terminal, the two
-operator-facing surfaces disagreed and neither named the correct action. INBOX said "No
-action needed"; `dontpanic next` listed F001 as READY and recommended another **paid**
-`dispatch-from-plan`. The free, correct action — `dontpanic close --operator-resolved
---reason signed_off_adjacent` — appeared nowhere. Two smaller defects observed in the same
-pass: the INBOX `volley_terminal` evidence pointer names `signoff.json`, but the writer
-emits `audit/signoff-<plan-id>.json`; and this memo's own Evidence section renders
-`(latest auditor envelope not located)` directly beneath a successfully lifted summary of
-that envelope.
+AC1 was amended under D014 before being claimed. As originally written it asserted the
+validator exits 0 over every plan directory — a property of the baseline, not of this
+change, and one that was never true (23 of 117 fail on pre-existing contract debt). The
+amended criterion asserts what the feature actually owes: that no plan's validation
+outcome changes. Verified by running the same 117 plans against both schema versions —
+23 non-zero under each, zero outcome changes.
+
+Two follow-ups worth filing rather than fixing here. First, the 23 failing plans are
+real contract debt (missing `links.objective_contract`, `verified_by` not a list, stray
+`evidence` key, naive `verified_at`, bad `evidence_refs.type`) and deserve their own
+plan. Second, a process finding for the corpus: validating 117 plans by spawning one
+subprocess per plan exceeds ten minutes and reads as a hung agent — almost certainly
+what produced this auditor's "complete walks were stopped with exit 130." In a single
+process the same work takes seconds. The feature was not too large; the verification
+method was. Also recurring from D011: this memo again renders "(latest auditor envelope
+not located)" immediately below a successfully lifted summary of that envelope.
 
 ## Evidence references
 
 - `audit/signoff-2026-08-09-002-feat-decision-brief-at-gates.json`
-- `audit/codex-auditor-F001-i0.json` — auditor verdict `signed_off`
-- `evidence/f001-user-impact-contract-test.txt` — acceptance re-verified independently
+- `audit/codex-auditor-F002-i0.json` — auditor verdict `needs_changes`, since remediated
+- `evidence/f002-validation-outcome-parity.txt` — AC1, 117 plans × 2 schema versions
+- `evidence/f002-all-plan-validation-1.16.0.txt` — full post-pull validation run
 

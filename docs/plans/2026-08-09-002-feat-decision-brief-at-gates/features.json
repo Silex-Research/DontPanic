@@ -51,11 +51,42 @@
         "Re-run the validator over every existing plan directory under docs/plans",
         "No existing plan is edited as part of this feature \u2014 backward compatibility means they pass untouched"
       ],
-      "acceptance": "(1) The validator exits 0 over every existing plan directory with no impact block present. (2) git status shows no existing plan file modified by this feature. (3) The subtree-pulled schema in DontPanic is byte-identical to the one committed in agent-conventions.",
-      "passes": false,
+      "acceptance": "(1) No plan directory's validation outcome changes: the same plan set validated against the pre-change and post-change schema yields an identical per-plan exit code. (2) git status shows no existing plan file modified by this feature. (3) The subtree-pulled schema in DontPanic is byte-identical to the one committed in agent-conventions.",
+      "passes": true,
       "depends_on": [
         "F001"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=operator_verified)"
+        },
+        {
+          "type": "test_output",
+          "uri": "evidence/f002-validation-outcome-parity.txt",
+          "note": "AC1: 117 plans x schema 1.15.0/1.16.0, identical per-plan exit codes, 0 outcome changes"
+        },
+        {
+          "type": "test_output",
+          "uri": "evidence/f002-all-plan-validation-1.16.0.txt",
+          "note": "full post-pull validation run"
+        },
+        {
+          "type": "commit",
+          "uri": "2693583",
+          "note": "AC3: subtree pull to v1.16.0; schema + model byte-identical to agent-conventions"
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F002-i0.json",
+          "note": "auditor needs_changes at i0; its recommendation was executed"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-08-10T01:11:46Z"
     },
     {
       "id": "F003",

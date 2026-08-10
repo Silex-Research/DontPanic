@@ -1,10 +1,10 @@
 {
   "plan_id": "2026-08-09-002-feat-decision-brief-at-gates",
-  "feature_id": "F001",
-  "class": "signed_off_adjacent",
+  "feature_id": "F002",
+  "class": "operator_verified",
   "memo": "evidence/closeout-memo.md",
   "resolved": true,
-  "resolved_at": "2026-08-09T22:17:15Z",
-  "terminal_class": "signed_off_adjacent",
-  "note": "Auditor signed off F001 at iter=0 on the 2026-08-09 re-dispatch after the patch-completeness self-authored-telemetry fix (55c6919). No paid re-dispatch needed."
+  "resolved_at": "2026-08-10T01:11:46Z",
+  "terminal_class": "operator_verified",
+  "note": "All three acceptance criteria verified directly against artifacts. AC1 (amended per D014): 117 plans validated against schema 1.15.0 and 1.16.0 produce identical per-plan exit codes — 23 non-zero under both, zero outcome changes (evidence/f002-validation-outcome-parity.txt). AC2: git status shows no existing plan file modified. AC3: cmp confirms claude/shared features.schema.json and features_model.py are byte-identical to agent-conventions; both read VERSION 1.16.0. The auditor's iter-0 needs_changes was correct at the time — the subtree pull and validation had not run. Both have since been completed by the operator (commits 2693583, f08bee0)."
 }

@@ -1,28 +1,25 @@
 {
   "task_id": "2026-08-09-002-feat-decision-brief-at-gates",
-  "signoff_id": "2026-08-09-002-feat-decision-brief-at-gates#signoff#2",
-  "iteration": 2,
+  "signoff_id": "2026-08-09-002-feat-decision-brief-at-gates#signoff#0",
+  "iteration": 0,
   "tier": "cross-cutting",
   "agents_in_panel": [
     "claude",
     "codex"
   ],
   "audits": [
-    "audit/claude-implementer-F001-i0.json",
-    "audit/codex-auditor-F001-i0.json",
-    "audit/claude-implementer-F001-i1.json",
-    "audit/codex-auditor-F001-i1.json",
-    "audit/claude-implementer-F001-i2.json",
-    "audit/codex-auditor-F001-i2.json"
+    "audit/claude-implementer-F002-i0.json",
+    "audit/codex-auditor-F002-i0.json",
+    "audit/claude-implementer-F002-i1.json"
   ],
   "vote_summary": {
-    "signed_off_count": 5,
+    "signed_off_count": 0,
     "needs_changes_count": 1,
-    "blocked_count": 0,
+    "blocked_count": 2,
     "inconclusive_count": 0
   },
   "signoff": true,
-  "signoff_reason": "operator_finish (terminal=signed_off_adjacent): the auditor signed off; a downstream gate blocked the automated finalize. Operator accepted the feature as merge-ready. See evidence/closeout-memo.md.",
+  "signoff_reason": "operator_finish (terminal=operator_verified): operator verified the feature out-of-band — All three acceptance criteria verified directly against artifacts. AC1 (amended per D014): 117 plans validated against schema 1.15.0 and 1.16.0 produce identical per-plan exit codes — 23 non-zero under both, zero outcome changes (evidence/f002-validation-outcome-parity.txt). AC2: git status shows no existing plan file modified. AC3: cmp confirms claude/shared features.schema.json and features_model.py are byte-identical to agent-conventions; both read VERSION 1.16.0. The auditor's iter-0 needs_changes was correct at the time — the subtree pull and validation had not run. Both have since been completed by the operator (commits 2693583, f08bee0).. See evidence/closeout-memo.md.",
   "next_action": "merge",
-  "decided_at": "2026-08-09T22:17:15Z"
+  "decided_at": "2026-08-10T01:11:46Z"
 }

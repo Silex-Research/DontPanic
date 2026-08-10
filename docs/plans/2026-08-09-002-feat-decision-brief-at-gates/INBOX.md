@@ -453,3 +453,21 @@ Changes:
   - [context_refresh] features.F001: feature F001 changed (acceptance / depends_on / roles) — refresh context before next call
 
 ===
+---
+timestamp: 2026-08-10T01:11:46Z
+event: feature_operator_resolved
+plan_id: 2026-08-09-002-feat-decision-brief-at-gates
+feature_id: F002
+reason_class: operator_verified
+---
+
+Operator closed feature F002 as operator_resolved (class=operator_verified).
+
+Closeout memo: evidence/closeout-memo.md
+Signoff envelope: audit/signoff-2026-08-09-002-feat-decision-brief-at-gates.json
+breaker:no_progress cleared: False
+features.json passes flipped: True
+
+Edit the closeout memo's `Rationale` section before merging.
+
+===
