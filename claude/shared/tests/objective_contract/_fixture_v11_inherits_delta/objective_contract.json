@@ -1,0 +1,21 @@
+{
+  "goal_type": "infra",
+  "source_of_truth": "9999-12-31-008-infra-fixture-v11-with-delivers",
+  "completion_test": "The one changed slice is proven; the parent's outcome is inherited, not restated.",
+  "inherits": "9999-12-31-008-infra-fixture-v11-with-delivers",
+  "delivers": [
+    {
+      "audience": "operator",
+      "kind": "reliability",
+      "capability": "NAV history also survives an unclean kill, not just a graceful restart.",
+      "proof": {
+        "metric": "SIGKILL the process mid-write and the prior NAV row is still listed",
+        "method": "probe",
+        "surface": "backend"
+      },
+      "proof_refs": [
+        { "type": "feature", "id": "F001" }
+      ]
+    }
+  ]
+}

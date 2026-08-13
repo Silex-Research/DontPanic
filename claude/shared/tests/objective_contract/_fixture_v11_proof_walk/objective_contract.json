@@ -1,0 +1,20 @@
+{
+  "goal_type": "infra",
+  "source_of_truth": "Curated fixture reference for the delivers[].proof validator test",
+  "completion_test": "The validator accepts a delivers[] item carrying a cheap walk proof.",
+  "delivers": [
+    {
+      "audience": "operator",
+      "kind": "reliability",
+      "capability": "NAV history survives a process restart instead of evaporating with in-memory state.",
+      "proof": {
+        "metric": "restart the process and the prior NAV row is still listed",
+        "method": "walk",
+        "surface": "backend"
+      },
+      "proof_refs": [
+        { "type": "feature", "id": "F001" }
+      ]
+    }
+  ]
+}
