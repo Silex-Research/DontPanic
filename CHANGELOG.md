@@ -31,6 +31,13 @@ pushed upstream out-of-band).
   are rejected by both, and the 11-value `surfaces` enum is asserted identical
   across `objective_contract.schema.json`, `plan.schema.json` and the Pydantic
   `ProofSurface`. Wired into CI alongside the three existing contract tests.
+- `scripts/test_objective_contract.py` cases 13-14 + two plan-dir fixtures
+  (`_fixture_v11_proof_walk`, `_fixture_v11_inherits_delta`): the same two
+  fields carried END-TO-END through `validate.py` on a real plan directory, not
+  just through the schema. Case 14 is the load-bearing one — a fix plan with
+  `inherits` and a ONE-ITEM delta `delivers[]` must still satisfy the v1.1
+  non-empty rule, because `inherits` licenses omitting the parent's full set
+  rather than the block itself.
 
 ### Backward compatibility
 - Purely additive. Both `proof` and `inherits` are optional and no plan on disk
