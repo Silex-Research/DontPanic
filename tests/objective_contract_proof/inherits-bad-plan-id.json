@@ -1,0 +1,14 @@
+{
+  "goal_type": "refactor",
+  "source_of_truth": "2026-08-13-001-feat-lock-outcome-slices-proof",
+  "completion_test": "The one changed slice is proven; the parent's outcome is unchanged and not restated.",
+  "inherits": "the parent plan",
+  "delivers": [
+    {
+      "audience": "operator",
+      "kind": "reliability",
+      "capability": "Lock a one-line fix without restating the parent plan's full outcome set",
+      "proof_refs": [{ "type": "feature", "id": "F001" }]
+    }
+  ]
+}

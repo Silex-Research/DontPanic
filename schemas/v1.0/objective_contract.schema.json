@@ -89,6 +89,27 @@
             "minLength": 10,
             "description": "Plain-language statement of what this audience can now do. No feature IDs — those belong in proof_refs."
           },
+          "proof": {
+            "type": "object",
+            "description": "Optional cheap first-principle proof for THIS slice: the measurement that would show the capability is true, and how it is taken. Distinct from proof_refs — proof_refs point at features that were built, proof names what you would measure to falsify delivery. Optional at the schema layer by design: absence is valid here, and the lock/close scorer (plan 2026-08-13-001 F002) decides whether a missing proof is inferred, an accepted gap, or a close-time failure. If defining the proof is harder than the work, the proof is wrong.",
+            "required": ["metric", "method"],
+            "additionalProperties": false,
+            "properties": {
+              "metric": {
+                "type": "string",
+                "minLength": 10,
+                "description": "The cheap measurement that would show this capability is true — a threshold, a count, an observable state change. Substantive enough that a reader can tell whether it was met (hence the 10-character floor); not a KPI programme."
+              },
+              "method": {
+                "enum": ["walk", "request", "named_test", "probe"],
+                "description": "How the metric is taken. 'walk' — a human or agent walks the path end-to-end. 'request' — a single call against a running surface. 'named_test' — an existing or new test identified by name. 'probe' — a one-off script or query run against real state. Closed set on purpose: anything requiring a warehouse, a dashboard, or a quarter of data is not a cheap proof and does not belong in a lock."
+              },
+              "surface": {
+                "enum": ["web", "ios", "android", "backend", "infra", "security", "data", "ux", "ml", "docs", "external-api-wrap"],
+                "description": "Optional — where the proof is taken. Mirrors the plan-level `surfaces` enum in plan.schema.json; the two are kept in lockstep and asserted identical by scripts/test_objective_contract_proof.py. Singular because a cheap proof is taken in one place."
+              }
+            }
+          },
           "proof_refs": {
             "type": "array",
             "minItems": 1,
@@ -117,6 +138,12 @@
           }
         }
       }
+    },
+    "inherits": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}-\\d{3}-(feat|fix|refactor|migration|infra)-[a-z0-9-]+$",
+      "description": "Optional plan id this contract deltas from. Set it on a child or fix plan whose outcome is the parent's outcome: the parent names what becomes true, and this contract's delivers[] carries only the delta — one slice, not a restatement of the parent's full set. delivers[] stays required and non-empty at plan schema_version >= 1.1 (a delta IS a delivers[]); what inherits licenses is omitting the FULL set, not omitting the block. Resolution of the pointer (does the parent exist, does it carry an outcome) is a lock-time concern, not a schema one — see plan 2026-08-13-001 F002.",
+      "$comment": "Same plan-id grammar as delivers[].proof_refs[].plan; keep the two patterns in lockstep."
     },
     "cluster_overrides": {
       "type": "string",
