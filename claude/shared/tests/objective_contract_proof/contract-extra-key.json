@@ -1,0 +1,14 @@
+{
+  "goal_type": "new_feature",
+  "source_of_truth": "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/plan.md",
+  "completion_test": "A locked plan names its outcome, its slices, and a cheap proof per slice.",
+  "inherits_from": "2026-08-13-001-feat-lock-outcome-slices-proof",
+  "delivers": [
+    {
+      "audience": "operator",
+      "kind": "product",
+      "capability": "Name a cheap proof per slice at lock time without authoring a PRD",
+      "proof_refs": [{ "type": "feature", "id": "F001" }]
+    }
+  ]
+}

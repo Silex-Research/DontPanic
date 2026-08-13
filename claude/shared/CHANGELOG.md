@@ -5,6 +5,42 @@ canonical history lives in `agent-conventions` itself; entries here record what
 landed in the DontPanic subtree first (and that the operator subsequently
 pushed upstream out-of-band).
 
+## 1.17.0 — 2026-08-13
+
+### Added
+- `objective_contract.schema.json` + `models/objective_contract_model.py`: an
+  OPTIONAL `proof` object on each `delivers[]` item — `metric` (>=10 chars),
+  `method` (`walk` / `request` / `named_test` / `probe`), and an optional
+  `surface` drawn from the plan-level surfaces enum. `proof` names the cheap
+  first-principle measurement that would show a slice's capability is true;
+  `proof_refs` (unchanged) points at the features that were built. The method
+  enum is closed on purpose: a proof needing a warehouse, a dashboard, or a
+  quarter of data is not cheap and does not belong in a lock.
+- `objective_contract.schema.json` + model: an OPTIONAL contract-level
+  `inherits` — the plan id this contract deltas from — so a child or fix plan
+  carries ONE slice instead of restating the parent's outcome set. `delivers[]`
+  stays required and non-empty at plan `schema_version` >= 1.1: a delta IS a
+  `delivers[]`, and what `inherits` licenses is omitting the FULL set, not the
+  block. `inherits` reuses the plan-id grammar of `proof_refs[].plan`, asserted
+  identical by the test below. Whether the pointer resolves is a lock-time
+  question, deliberately left to plan 2026-08-13-001 F002.
+- `scripts/test_objective_contract_proof.py` + `tests/objective_contract_proof/`:
+  the JSON Schema and the Pydantic model are independent implementations, so
+  this asserts they cannot drift — ten fixtures produce identical verdicts from
+  both validators, all four cheap methods are accepted by both, five null cases
+  are rejected by both, and the 11-value `surfaces` enum is asserted identical
+  across `objective_contract.schema.json`, `plan.schema.json` and the Pydantic
+  `ProofSurface`. Wired into CI alongside the three existing contract tests.
+
+### Backward compatibility
+- Purely additive. Both `proof` and `inherits` are optional and no plan on disk
+  carries either, so existing contracts validate untouched. Absence of `proof`
+  stays valid at the schema layer by design — lock and close decide what a
+  missing proof costs (plan 2026-08-13-001 F002), not the schema. Verified by
+  running the validator across all 120 plan directories under `docs/plans` in
+  DontPanic before and after the subtree pull: identical per-plan exit codes
+  (97 pass / 23 pre-existing failures), no plan file modified.
+
 ## 1.16.0 — 2026-08-09
 
 ### Added

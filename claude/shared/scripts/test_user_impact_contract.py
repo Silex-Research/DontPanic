@@ -32,9 +32,10 @@ Each fixture is checked twice — once against the raw JSON Schema via
 verdicts must agree. Three further checks follow: a positive control, a
 null-parity matrix (the schema types these fields with no ``null`` member, so
 Pydantic must not read an explicit ``null`` as "use the default"), and an
-assertion that the ``surfaces`` enum in features.schema.json is identical to
-the plan-level enum in plan.schema.json, so "reuses the plan-level enum"
-stays a fact rather than an intention.
+assertion that the ``surfaces`` enum is identical across features.schema.json,
+plan.schema.json AND the Pydantic ``ImpactSurface``, so "reuses the plan-level
+enum" stays a fact rather than an intention — including on the model side,
+which a JSON-to-JSON comparison alone would leave free to drift.
 
 Usage:
 
@@ -60,7 +61,7 @@ sys.path.insert(0, str(SCHEMAS_DIR))
 import jsonschema  # noqa: E402
 from pydantic import ValidationError  # noqa: E402
 
-from models.features_model import Features  # noqa: E402
+from models.features_model import Features, ImpactSurface  # noqa: E402
 
 # fixture stem -> should the contract accept it?
 CASES: list[tuple[str, bool]] = [
@@ -204,7 +205,14 @@ def _run_null_parity(schema: dict) -> list[str]:
 
 
 def _run_surface_enum_parity(schema: dict) -> list[str]:
-    """features.schema.json's impact surfaces must mirror plan.schema.json's."""
+    """All THREE surface enums must agree: features.schema.json, plan.schema.json,
+    and the Pydantic ``ImpactSurface``.
+
+    Comparing only the two JSON enums would leave the Pydantic enum free to drift
+    while this check still reported parity — the exact hole the rest of this file
+    exists to close, since the JSON Schema and the model are independent
+    implementations. Raised by CodeRabbit on PR #2.
+    """
     plan_schema = json.loads(PLAN_SCHEMA.read_text())
     plan_enum = plan_schema["properties"]["surfaces"]["items"]["enum"]
 
@@ -221,7 +229,17 @@ def _run_surface_enum_parity(schema: dict) -> list[str]:
             f"plan-level enum — features={feature_enum}, plan={plan_enum}"
         ]
 
-    print(f"  ✓ surface enum parity: {len(plan_enum)} values match plan.schema.json")
+    pydantic_enum = [member.value for member in ImpactSurface]
+    if pydantic_enum != feature_enum:
+        return [
+            "surface enum parity: Pydantic ImpactSurface drifted from the JSON "
+            f"Schema enum — pydantic={pydantic_enum}, features={feature_enum}"
+        ]
+
+    print(
+        f"  ✓ surface enum parity: {len(plan_enum)} values match across "
+        "features.schema.json, plan.schema.json and ImpactSurface"
+    )
     return []
 
 
