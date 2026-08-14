@@ -1,6 +1,6 @@
 {
   "summary": {
-    "installed_commit": "b27beaa",
+    "installed_commit": "3d037ef",
     "latest_release_id": "2026-06-17-001-canonical-discovery",
     "last_seen_release": null,
     "last_seen_commit": null,
@@ -9,10 +9,10 @@
     "update_state": "up_to_date",
     "marker_state": "absent",
     "upstream": {
-      "fetched_upstream_commit": null,
-      "upstream_status": "unknown",
-      "remediation": "Upstream position unknown: this branch has no tracked upstream ref. Set one with `git branch --set-upstream-to=origin/<branch>` to enable behind/ahead detection.",
-      "upstream_ref": null
+      "fetched_upstream_commit": "6b07209",
+      "upstream_status": "ahead",
+      "remediation": "Your checkout has local commits not on the tracked upstream; push or open a PR.",
+      "upstream_ref": "origin/feat/audience-first-plan-contracts"
     }
   },
   "required": [],
