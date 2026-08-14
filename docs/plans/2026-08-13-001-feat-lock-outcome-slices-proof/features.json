@@ -157,7 +157,7 @@
         {
           "type": "file",
           "uri": "./evidence/closeout-memo-F004.md",
-          "note": "Operator close-out: the three identity defects fixed, and the memo-clobber defect found and repaired while closing."
+          "note": "Operator close-out: the three identity defects fixed, and the memo-clobber defect found and repaired while closing. Resolution sidecar preserved as audit/operator-resolution-F004.json before F005 clobbered the shared path (D012)."
         }
       ],
       "verified_by": [
@@ -178,7 +178,7 @@
         "Persist the score before the status flip, or leave the plan draft and exit nonzero."
       ],
       "acceptance": "(1) A plan locked before the sidecar artifact existed still closes as it does today (no surprise refuse). (2) A deleted or corrupt outcome-score.json on a plan that WAS locked with one is distinguishable from case 1 and behaves differently at close; the chosen semantics are recorded in decisions.jsonl. (3) Lock never exits zero while reporting that gaps were not recorded: either the score is persisted before the status flip, or status stays draft and the exit code is nonzero, proven by a write-failure test.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F004"
       ],
@@ -189,7 +189,28 @@
           "backend"
         ],
         "description_hash": "9392d16f1e965085fef0946b1871cf2bb8b047d55c6fc0888a0e829a9c0a5ed0"
-      }
+      },
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "./evidence/closeout-memo-F005.md",
+          "note": "Operator close as spec_ambiguity — auditor did not sign off; all three ACs verified independently."
+        },
+        {
+          "type": "audit_json",
+          "uri": "./audit/codex-auditor-F005-i2.json",
+          "note": "Final auditor round: zero high findings, two mediums (pre-receipt alteration, and environmental test-evidence)."
+        },
+        {
+          "type": "test_output",
+          "uri": "./evidence/F005-suite-run.txt",
+          "note": "46 tests pass, run outside the implementer sandbox which has no writable temp dir."
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-08-14T22:53:05Z"
     },
     {
       "id": "F003",

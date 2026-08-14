@@ -58,7 +58,43 @@ outcome-score.json``) and paid at close:
     ``proof_refs`` entry carrying ``plan`` is answered from THAT plan's
     ``features.json``, never from a same-numbered local feature.
 
-Three operator escapes, all in ``decisions.jsonl``:
+The sidecar is the lock's evidence, so its own loss is reportable (F005,
+D013). Writing it appends a **receipt** to ``decisions.jsonl`` — an
+append-only ledger the sidecar's deletion cannot reach — naming the artifact
+and the sha256 of the bytes written. Together the two artifacts separate the
+two cases the old code confused (:func:`read_lock_evidence`):
+
+  * no sidecar and no receipt → ``legacy``: a plan locked before the artifact
+    existed. Close reads the live contract, exactly as it did before, and
+    never meets a surprise refusal.
+  * sidecar present, readable, and shaped like THIS plan's score → ``intact``:
+    the obligation set is the locked one.
+  * receipt present, sidecar gone → ``missing``; sidecar present but
+    unreadable, or readable and NOT shaped like this plan's score
+    (:func:`score_payload_defect` — structure, per-slice records, and plan
+    identity) → ``corrupt``; readable but not the bytes the receipt names →
+    ``altered``. All three are destroyed lock evidence, NOT a legacy plan, and
+    close refuses until the loss is acknowledged.
+
+The structural check is drawn from what the close-time readers would otherwise
+absorb in silence, since silence is the failure mode: a slice record with no
+``index`` is dropped, a repeated ``index`` overwrites its twin, a ``proof_refs``
+that is not a list of ids reads as "this slice promised nothing", and a
+``plan_id`` naming another plan is never compared to anything. Each loses an
+obligation while the record still reports as healthy (D015).
+
+Two of those three need no receipt to be legible: a file that is present but
+unreadable, or present and not a score, proves by its own existence that a
+lock wrote something there. Only *deletion* needs the receipt, which is why
+:func:`backfill_lock_receipt` exists (D014): the first write-capable command
+to meet a sidecar with no receipt — ``dontpanic plan close`` — receipts it at
+its current bytes, so a plan locked before receipts existed becomes
+deletion-legible from that moment on. The one case that stays indistinguishable
+from ``legacy`` is a pre-receipt sidecar deleted before any command ever saw
+it: nothing on disk records that it existed, and inventing a refusal for it
+would refuse every genuinely grandfathered plan (D014, AC1).
+
+Four operator escapes, all in ``decisions.jsonl``:
 
   * ``{"kind": "proof_gap_accepted", "slice": ..., "reason": ...}`` — lock
     records the gap as *accepted* instead of inferring a method. Does NOT
@@ -66,6 +102,11 @@ Three operator escapes, all in ``decisions.jsonl``:
   * ``{"kind": "proof_gap_deferred", "slice": ..., "reason": ...}`` — close
     accepts the slice without a run proof.
   * ``proof_gap_waived`` — synonym of ``proof_gap_deferred``.
+  * ``{"kind": "lock_evidence_lost", "reason": ...}`` — close accepts that the
+    lock record is gone and falls back to the live contract (D013). Deliberately
+    an explicit, written act: it is the one way the proofs a lock recorded stop
+    being owed, so the ``reason`` is REQUIRED and an entry without one waives
+    nothing (:func:`loss_acknowledgement_defect`, D015).
 
 ``slice`` addresses a ``delivers[]`` item by 1-based index (``2``), by a
 feature id it lists in ``proof_refs`` (``"F003"``), or by ``"*"`` / ``"all"``.
@@ -81,12 +122,18 @@ Public surface::
     proof_defects(proof) -> tuple[str, ...]
     render_score_lines(score) -> list[str]
     write_score_sidecar(plan_dir, score) -> Path
+    read_lock_evidence(plan_dir) -> LockEvidence
+    score_payload_defect(data, *, plan_ids=()) -> str | None
+    backfill_lock_receipt(plan_dir) -> dict | None
+    lock_evidence_defect(plan_dir) -> str | None
+    loss_acknowledgement_defect(entry) -> str | None
     evaluate_close_proofs(plan_dir) -> list[str]
     OUTCOME_SCORE_ARTIFACT
 """
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 from collections.abc import Iterable
@@ -146,6 +193,27 @@ _METHOD_EVIDENCE_TYPES: dict[str, frozenset[str]] = {
 
 _ACCEPT_KINDS: frozenset[str] = frozenset({"proof_gap_accepted"})
 _DEFER_KINDS: frozenset[str] = frozenset({"proof_gap_deferred", "proof_gap_waived"})
+
+LOCK_RECEIPT_KIND = "outcome_score_recorded"
+"""``decisions.jsonl`` kind written when the lock-time sidecar lands. The
+ledger is append-only and lives outside ``evidence/``, so it survives the
+deletion of the artifact it describes — which is the whole point (D013)."""
+
+_LOSS_KINDS: frozenset[str] = frozenset({"lock_evidence_lost"})
+"""Operator acknowledgement that the lock record is gone for good. Close then
+falls back to the live contract instead of refusing."""
+
+LOCK_EVIDENCE_LEGACY = "legacy"
+LOCK_EVIDENCE_INTACT = "intact"
+LOCK_EVIDENCE_MISSING = "missing"
+LOCK_EVIDENCE_CORRUPT = "corrupt"
+LOCK_EVIDENCE_ALTERED = "altered"
+
+_LOCK_EVIDENCE_DESTROYED: frozenset[str] = frozenset(
+    {LOCK_EVIDENCE_MISSING, LOCK_EVIDENCE_CORRUPT, LOCK_EVIDENCE_ALTERED}
+)
+"""The three states that are NOT a legacy plan: this plan was locked with a
+score, and the score is no longer the one it was locked with."""
 
 _MIN_CAPABILITY_CHARS = 10
 """Mirrors ``objective_contract.schema.json``'s ``minLength`` on
@@ -997,24 +1065,503 @@ def score_payload(score: OutcomeScore) -> dict[str, Any]:
     }
 
 
+_SIDECAR_REQUIRED_KEYS: tuple[str, ...] = ("schema_version", "plan_id", "slice_scores")
+"""The keys :func:`score_payload` always writes and that every reader of a
+lock record depends on. Their absence is what tells a score sidecar apart from
+any other JSON object that happens to occupy the artifact's path."""
+
+_SLICE_TEXT_FIELDS: tuple[str, ...] = (
+    "audience",
+    "kind",
+    "capability",
+    "declared_method",
+    "method_checked_at_close",
+)
+"""Per-slice fields the close-time readers coerce with ``str()``. A non-string
+there is not a typo the reader can absorb — ``str({})`` is a label and an
+inferred method nobody wrote — so it is corruption, reported as such."""
+
+
+def _slice_record_defect(record: Any, position: int) -> str | None:
+    """Why this ``slice_scores[]`` entry is not a slice record; ``None`` = it is.
+
+    The readers downstream (:func:`_locked_slice_records`, :func:`_record_refs`)
+    are deliberately forgiving — they drop what they cannot use. That is right
+    for a *reader* and wrong for a *validator*: dropping a record drops the
+    obligation it carried, so ``slice_scores: [{}]`` read as "this plan was
+    locked owing nothing" and close fell back to the live contract while
+    reporting the lock record intact. Anything the reader would silently
+    discard must therefore be a defect here.
+
+    ``proof_refs`` is checked only when present: a sidecar written before slices
+    recorded their proving features carries none, and that record legitimately
+    holds the empty identity (see :func:`_pair_locked_with_live`). Present and
+    malformed is a different thing from absent, and only the first is damage.
+    """
+    if not isinstance(record, dict):
+        return f"slice_scores[{position}] is not a slice object (got {type(record).__name__})"
+    index = record.get("index")
+    if not isinstance(index, int) or isinstance(index, bool):
+        return (
+            f"slice_scores[{position}] carries no integer 'index' — that is the number "
+            "close holds the obligation under, and a record without one is dropped"
+        )
+    refs = record.get("proof_refs")
+    if refs is not None and (
+        not isinstance(refs, list)
+        or any(not isinstance(ref, str) or not ref.strip() for ref in refs)
+    ):
+        return (
+            f"slice {index} has a 'proof_refs' that is not a list of feature ids — the "
+            "features it promised to prove cannot be read, so the obligation cannot be "
+            "paired with the live contract"
+        )
+    for name in _SLICE_TEXT_FIELDS:
+        value = record.get(name)
+        if value is not None and not isinstance(value, str):
+            return f"slice {index} has a non-string '{name}' (got {type(value).__name__})"
+    return None
+
+
+def score_payload_defect(data: Any, *, plan_ids: Iterable[str] = ()) -> str | None:
+    """Why this JSON is not THIS plan's outcome-score sidecar; ``None`` = it is.
+
+    Structure and identity, never content: the point is to catch a file that
+    parses as JSON but says nothing about the obligations lock recorded — an
+    empty object, a hand-edited stub, half a file that happened to close its
+    braces, an unrelated artifact copied over the path, another plan's sidecar.
+    Without this check any receiptless ``{}`` read as ``intact`` and close held
+    the plan to zero obligations while reporting the record healthy, which is
+    exactly the "artifact confidently asserting something untrue about itself"
+    failure this feature exists to remove (D014, D015).
+
+    Every check is one the readers would otherwise absorb in silence, which is
+    the rule for what belongs here: a malformed slice entry is DROPPED by
+    :func:`_locked_slice_records`, a repeated ``index`` OVERWRITES its twin, and
+    a ``plan_id`` naming another plan is never compared to anything. Each of
+    those loses an obligation without saying so.
+
+    ``plan_ids`` is the set of names this plan answers to — its ``plan.md`` id
+    and its directory name. Empty (the default) skips the identity check, which
+    is what the caller wants when the bytes are already vouched for by a
+    receipt: those ARE what lock wrote, so a renamed plan is a rename and not a
+    corruption.
+
+    It is NOT a schema validator: an unknown ``schema_version`` or an extra key
+    is a newer writer, not a corruption, and refusing those would make every
+    forward-compatible change a fleet-wide close outage.
+    """
+    if not isinstance(data, dict):
+        return f"not a JSON object (got {type(data).__name__})"
+    missing = [key for key in _SIDECAR_REQUIRED_KEYS if key not in data]
+    if missing:
+        return "missing required key(s) " + ", ".join(missing)
+    version = data.get("schema_version")
+    if not isinstance(version, int) or isinstance(version, bool):
+        return "'schema_version' is not an integer"
+    plan_id = data.get("plan_id")
+    if not isinstance(plan_id, str) or not plan_id.strip():
+        return "'plan_id' is absent or empty"
+    scores = data.get("slice_scores")
+    if not isinstance(scores, list):
+        return "'slice_scores' is not a list of slice objects"
+    seen: dict[int, int] = {}
+    for position, record in enumerate(scores):
+        defect = _slice_record_defect(record, position)
+        if defect is not None:
+            return defect
+        index = record["index"]
+        if index in seen:
+            return (
+                f"slice_scores names index {index} twice (entries {seen[index]} and "
+                f"{position}) — one of the two obligations would be silently dropped"
+            )
+        seen[index] = position
+    wanted = {name.strip() for name in plan_ids if isinstance(name, str) and name.strip()}
+    if wanted and plan_id.strip() not in wanted:
+        return (
+            f"'plan_id' is {plan_id.strip()!r}, which is not this plan "
+            f"({' or '.join(sorted(wanted))}) — these are another plan's obligations"
+        )
+    return None
+
+
+def _plan_identity_tokens(plan_dir: Path) -> frozenset[str]:
+    """Every name this plan answers to: its ``plan.md`` id and its directory
+    name, exactly the pair :func:`score_plan` chooses between.
+
+    An unreadable ``plan.md`` falls back to the directory name alone rather
+    than raising: the caller is classifying a lock record, and a plan whose
+    ``plan.md`` is broken has a louder problem to report than its sidecar's
+    identity.
+    """
+    plan_dir = Path(plan_dir)
+    tokens = {plan_dir.name}
+    try:
+        data = _read_frontmatter(plan_dir / "plan.md")
+    except (OutcomeScoreError, OSError, yaml.YAMLError):
+        return frozenset(tokens)
+    declared = data.get("id")
+    if isinstance(declared, str) and declared.strip():
+        tokens.add(declared.strip())
+    return frozenset(tokens)
+
+
 def write_score_sidecar(plan_dir: Path, score: OutcomeScore) -> Path:
-    """Record the score — and every gap — under the pre_impl evidence dir.
+    """Record the score — and every gap — under the pre_impl evidence dir, and
+    receipt it in ``decisions.jsonl``.
 
     Written atomically (temp file + ``os.replace``): lock refuses when this
     write fails, so a half-written sidecar must never be mistaken for a
-    recorded gap set.
+    recorded gap set. Bytes, not text, so the sha256 in the receipt names
+    exactly what landed on disk regardless of platform newline translation.
+
+    The receipt is written second and is equally required (F005/D013): a lock
+    that cannot leave a trace of what it recorded is a lock whose record can
+    later be deleted with nothing to show it existed, which is the failure
+    this feature removes. Either write raising ``OSError`` refuses the lock,
+    so the plan stays draft.
     """
     path = goal_governance_evidence_path(Path(plan_dir), "pre_impl", OUTCOME_SCORE_ARTIFACT)
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = json.dumps(score_payload(score), indent=2, ensure_ascii=False) + "\n"
+    raw = payload.encode("utf-8")
     tmp = path.with_name(path.name + ".tmp")
     try:
-        tmp.write_text(payload, encoding="utf-8")
+        tmp.write_bytes(raw)
         os.replace(tmp, path)
     except OSError:
         tmp.unlink(missing_ok=True)
         raise
+    append_lock_receipt(
+        Path(plan_dir),
+        plan_id=score.plan_id,
+        digest=_digest(raw),
+        slice_count=len(score.slice_scores),
+    )
     return path
+
+
+# ─────────────────────────────  lock evidence (F005)  ─────────────────────────────
+
+
+def _digest(raw: bytes) -> str:
+    return hashlib.sha256(raw).hexdigest()
+
+
+def append_lock_receipt(
+    plan_dir: Path,
+    *,
+    plan_id: str,
+    digest: str,
+    slice_count: int,
+    backfilled: bool = False,
+) -> None:
+    """Append the ``outcome_score_recorded`` receipt to ``decisions.jsonl``.
+
+    Idempotent on content: re-locking a plan whose score has not changed adds
+    no second line, so the ledger records lock *events*, not lock *attempts*.
+
+    ``backfilled`` marks a receipt written by :func:`backfill_lock_receipt`
+    rather than by the lock itself. It is recorded because the two say
+    different things: a lock-time receipt names the bytes lock wrote, a
+    backfilled one names the bytes that were on disk when the plan was first
+    read by a command that could write. The second still catches a later
+    deletion or edit — which is its whole job — but cannot vouch for anything
+    that happened before it.
+    """
+    artifact = f"evidence/goal-governance/pre_impl/{OUTCOME_SCORE_ARTIFACT}"
+    if backfilled:
+        decision = (
+            f"Receipted an existing outcome score ({slice_count} slice "
+            "obligation(s)) that carried no lock-time receipt — the plan was "
+            "locked before receipts existed. The sha256 is of the bytes found on "
+            "disk at this reading, NOT of what lock wrote: any edit before this "
+            "point is invisible. From here on a deletion or alteration of the "
+            "artifact reads as destroyed lock evidence rather than as a plan "
+            "locked before the artifact existed (D014)."
+        )
+    else:
+        decision = (
+            f"Lock recorded the outcome score and its {slice_count} slice "
+            "obligation(s). This receipt outlives the artifact: if the score is "
+            "later deleted or altered, close reports destroyed lock evidence "
+            "rather than treating the plan as one locked before the artifact "
+            "existed (D013)."
+        )
+    receipt = {
+        "id": f"OSC-{'BF-' if backfilled else ''}{digest[:12]}",
+        "kind": LOCK_RECEIPT_KIND,
+        "plan_id": plan_id,
+        "artifact": artifact,
+        "sha256": digest,
+        "slice_count": slice_count,
+        "backfilled": backfilled,
+        "decision": decision,
+    }
+    existing = read_lock_receipt(plan_dir)
+    if existing is not None and existing.get("sha256") == digest:
+        return
+    with (Path(plan_dir) / "decisions.jsonl").open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(receipt, ensure_ascii=False) + "\n")
+
+
+def backfill_lock_receipt(plan_dir: Path) -> dict[str, Any] | None:
+    """Receipt a sidecar that has none, and return the receipt (else ``None``).
+
+    The migration for plans locked between the sidecar landing (F002) and the
+    receipt landing (F005). Their record is real but unreceipted, so deleting
+    it would read as ``legacy`` — a plan locked before the artifact existed —
+    and every proof it recorded would quietly stop being owed. Receipting it at
+    first sight bounds that hole: from the first write-capable command that
+    meets the plan, the deletion is legible.
+
+    Deliberately narrow, because a receipt is an assertion and a wrong one is
+    worse than none:
+
+      * a plan with a receipt already is left alone (``None``);
+      * an ABSENT sidecar is left alone. There is nothing on disk to say
+        whether one ever existed, and writing a receipt for a file we cannot
+        see would manufacture the very loss report AC1 forbids;
+      * an unreadable, non-score, or wrong-plan sidecar is left alone. Those
+        already read as ``corrupt`` on their own evidence, and receipting the
+        corrupt bytes would freeze the damage in as if it were what lock wrote.
+
+    Idempotent, and safe to call on every plan: the common case is a no-op.
+    ``OSError`` propagates — a caller that cannot write the ledger should hear
+    about it rather than silently skip the migration.
+    """
+    plan_dir = Path(plan_dir)
+    if read_lock_receipt(plan_dir) is not None:
+        return None
+    path = goal_governance_evidence_path(plan_dir, "pre_impl", OUTCOME_SCORE_ARTIFACT)
+    if not path.is_file():
+        return None
+    try:
+        raw = path.read_bytes()
+        data = json.loads(raw.decode("utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    if score_payload_defect(data, plan_ids=_plan_identity_tokens(plan_dir)) is not None:
+        return None
+    append_lock_receipt(
+        plan_dir,
+        plan_id=str(data.get("plan_id") or plan_dir.name),
+        digest=_digest(raw),
+        slice_count=len(data.get("slice_scores") or []),
+        backfilled=True,
+    )
+    return read_lock_receipt(plan_dir)
+
+
+def read_lock_receipt(plan_dir: Path) -> dict[str, Any] | None:
+    """The LATEST lock receipt in ``decisions.jsonl``, or ``None``.
+
+    Latest, because a re-lock supersedes: the plan is held to the score it was
+    most recently locked with.
+    """
+    receipts = [
+        entry
+        for entry in read_decision_entries(Path(plan_dir))
+        if entry.get("kind") == LOCK_RECEIPT_KIND
+    ]
+    return receipts[-1] if receipts else None
+
+
+@dataclass(frozen=True)
+class LockEvidence:
+    """What the plan can still show of what it was locked with.
+
+    ``payload`` is the lock-time score, and is populated for exactly one
+    state — ``intact``. Every other state either has no score to read or has
+    one close must not trust, and close falls back to the live contract in
+    both cases; the difference is that ``legacy`` is silent and the three
+    destroyed states are reported.
+    """
+
+    state: str
+    payload: dict[str, Any] | None
+    receipt: dict[str, Any] | None
+    detail: str | None  # operator-facing, set for the destroyed states only
+
+    @property
+    def is_destroyed(self) -> bool:
+        return self.state in _LOCK_EVIDENCE_DESTROYED
+
+
+def read_lock_evidence(plan_dir: Path) -> LockEvidence:
+    """Classify the lock record: legacy absence, intact, or destroyed.
+
+    The distinction this function exists to make (F005 AC2) is between a plan
+    locked BEFORE the sidecar existed and a plan locked WITH one that has
+    since been deleted or corrupted. Two independent artifacts answer it:
+
+      * the sidecar itself — its mere presence proves a lock wrote one, so an
+        unreadable file is destroyed evidence and needs no receipt to say so;
+      * the ``decisions.jsonl`` receipt — append-only and outside
+        ``evidence/``, so deleting the sidecar (or the whole pre_impl dir)
+        cannot erase the fact that one was written.
+
+    Neither present is the only honest reading of "grandfathered", and it is
+    the one state that behaves exactly as it did before this function existed.
+    """
+    plan_dir = Path(plan_dir)
+    path = goal_governance_evidence_path(plan_dir, "pre_impl", OUTCOME_SCORE_ARTIFACT)
+    receipt = read_lock_receipt(plan_dir)
+    relpath = f"evidence/goal-governance/pre_impl/{OUTCOME_SCORE_ARTIFACT}"
+
+    if not path.is_file():
+        if receipt is None:
+            return LockEvidence(LOCK_EVIDENCE_LEGACY, None, None, None)
+        return LockEvidence(
+            LOCK_EVIDENCE_MISSING,
+            None,
+            receipt,
+            f"the lock record {relpath} is gone. {plan_dir.name} WAS locked with "
+            f"one — decisions.jsonl entry {receipt.get('id')} receipts "
+            f"{receipt.get('slice_count')} slice obligation(s) at sha256 "
+            f"{str(receipt.get('sha256'))[:12]} — so this is a deleted record, not "
+            "a plan locked before the artifact existed. Restore the file from "
+            "version control, re-lock the plan, or record "
+            '{"kind": "lock_evidence_lost", "reason": ...} in decisions.jsonl to '
+            "close against the live contract instead",
+        )
+
+    try:
+        raw = path.read_bytes()
+        data = json.loads(raw.decode("utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        return LockEvidence(
+            LOCK_EVIDENCE_CORRUPT,
+            None,
+            receipt,
+            f"the lock record {relpath} is unreadable ({exc}). The file exists, so "
+            "the plan was locked with a score; a corrupt one is not the same as "
+            "never having had one, and its obligations cannot be read. Restore it, "
+            're-lock, or record {"kind": "lock_evidence_lost", "reason": ...} in '
+            "decisions.jsonl to close against the live contract instead",
+        )
+    if not isinstance(data, dict):
+        return LockEvidence(
+            LOCK_EVIDENCE_CORRUPT,
+            None,
+            receipt,
+            f"the lock record {relpath} is not a JSON object, so it carries no "
+            "slice obligations to hold close to. Restore it, re-lock, or record "
+            '{"kind": "lock_evidence_lost", "reason": ...} in decisions.jsonl',
+        )
+
+    expected = receipt.get("sha256") if receipt else None
+    actual = _digest(raw)
+    vouched = isinstance(expected, str) and bool(expected) and expected == actual
+    if isinstance(expected, str) and expected and expected != actual:
+        return LockEvidence(
+            LOCK_EVIDENCE_ALTERED,
+            None,
+            receipt,
+            f"the lock record {relpath} is not the one this plan was locked with: "
+            f"decisions.jsonl entry {receipt.get('id') if receipt else '?'} receipts "
+            f"sha256 {expected[:12]} and the file on disk is {actual[:12]}. The "
+            "obligations it now states are not the ones the operator was shown at "
+            "lock. Restore it, re-lock, or record "
+            '{"kind": "lock_evidence_lost", "reason": ...} in decisions.jsonl',
+        )
+    # Identity is checked only where the bytes are NOT vouched for by a receipt.
+    # A file whose sha256 the receipt names IS what lock wrote, so a plan_id
+    # that no longer matches the directory is a renamed plan, not a corrupted
+    # record — and refusing it would be the manufactured refusal AC1 forbids.
+    defect = score_payload_defect(data, plan_ids=() if vouched else _plan_identity_tokens(plan_dir))
+    if defect is not None:
+        return LockEvidence(
+            LOCK_EVIDENCE_CORRUPT,
+            None,
+            receipt,
+            f"the lock record {relpath} parses as JSON but is not an outcome "
+            f"score for this plan: {defect}. The file exists, so a lock wrote one there; what "
+            "is there now states no obligations, and reading it as an empty set "
+            "would retire every proof the lock recorded. Restore it, re-lock, or "
+            'record {"kind": "lock_evidence_lost", "reason": ...} in '
+            "decisions.jsonl to close against the live contract instead",
+        )
+
+    # No receipt and a readable, well-shaped file: a plan locked between the
+    # sidecar landing and the receipt landing. The sidecar IS the record, so it
+    # is intact — and backfill_lock_receipt() is what makes its LATER deletion
+    # legible, since nothing else would.
+    return LockEvidence(LOCK_EVIDENCE_INTACT, data, receipt, None)
+
+
+def loss_acknowledgement_defect(entry: Any) -> str | None:
+    """Why this ``lock_evidence_lost`` entry does not acknowledge anything;
+    ``None`` = it does.
+
+    The one required field is ``reason``, and requiring it is the whole point of
+    the escape hatch. ``lock_evidence_lost`` is the single way the proofs a lock
+    recorded stop being owed, so an entry that names no reason is a kind string
+    that waives them and says nothing — the operator who reads the ledger a
+    month later learns only that somebody wanted the refusal gone (D013, D015).
+
+    Deliberately its own validator rather than the generic gap matcher, which
+    checks ``kind`` and target only: a deferral says which proof is being put
+    off and can be reconstructed from the contract, while a loss is unrecoverable
+    and the reason is the only trace of why.
+    """
+    if not isinstance(entry, dict):
+        return f"not a JSON object (got {type(entry).__name__})"
+    reason = entry.get("reason")
+    if not isinstance(reason, str) or not reason.strip():
+        return (
+            "states no 'reason' — this is the one entry that retires proofs a lock "
+            "recorded, so it must say why the record is gone for good"
+        )
+    return None
+
+
+def _loss_acknowledgements(plan_dir: Path) -> tuple[dict[str, Any] | None, list[dict[str, Any]]]:
+    """``(the entry that waives the loss, the entries that tried and failed)``.
+
+    One valid acknowledgement is enough; the rejects are carried back so the
+    refusal can name them rather than reading as though nobody wrote anything.
+    """
+    rejected: list[dict[str, Any]] = []
+    for entry in read_decision_entries(Path(plan_dir)):
+        kind = entry.get("kind")
+        if not isinstance(kind, str) or kind not in _LOSS_KINDS:
+            continue
+        if not _entry_matches(entry, 0, ()):
+            continue
+        if loss_acknowledgement_defect(entry) is None:
+            return entry, rejected
+        rejected.append(entry)
+    return None, rejected
+
+
+def lock_evidence_defect(plan_dir: Path) -> str | None:
+    """One close-refusal reason when the lock record was destroyed after the
+    lock and the loss is not acknowledged; ``None`` otherwise.
+
+    ``{"kind": "lock_evidence_lost", "reason": ...}`` in ``decisions.jsonl`` is
+    the escape, and it is deliberately a written act rather than a flag: it is
+    the only way the proofs a lock recorded stop being owed, so it should read
+    back later as a decision somebody made, with the reason they made it (D013,
+    D015). An entry missing the reason does not waive the loss — it is named in
+    the refusal instead, so the operator fixes the entry rather than wondering
+    why theirs had no effect.
+    """
+    evidence = read_lock_evidence(plan_dir)
+    if not evidence.is_destroyed:
+        return None
+    accepted, rejected = _loss_acknowledgements(plan_dir)
+    if accepted is not None:
+        return None
+    reason = f"plan lock evidence ({evidence.state}): {evidence.detail}"
+    if rejected:
+        ids = ", ".join(str(entry.get("id") or "?") for entry in rejected)
+        reason += (
+            f". decisions.jsonl entry {ids} records kind 'lock_evidence_lost' but "
+            f"{loss_acknowledgement_defect(rejected[0])}, so it does not waive the loss"
+        )
+    return reason
 
 
 # ──────────────────────────────  close-time proof check  ──────────────────────────────
@@ -1105,25 +1652,27 @@ class ProofObligation:
 
 
 def read_score_sidecar(plan_dir: Path) -> dict[str, Any] | None:
-    """The lock-time score, or ``None`` when there is none to read.
+    """The lock-time score when it is the one the plan was locked with, else
+    ``None``.
 
-    Unreadable is treated as absent: close then falls back to the live
-    contract, which is exactly the pre-sidecar behaviour and never turns a
-    corrupt artifact into an unclosable plan.
+    ``None`` no longer means one thing. It means "there are no locked
+    obligations to read", which covers both a plan locked before the artifact
+    existed and one whose record was destroyed — two cases that close must
+    tell apart. :func:`read_lock_evidence` is the function that does; this one
+    stays narrow because every caller of it wants the payload or nothing.
     """
-    path = goal_governance_evidence_path(Path(plan_dir), "pre_impl", OUTCOME_SCORE_ARTIFACT)
-    if not path.is_file():
-        return None
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
-        return None
-    return data if isinstance(data, dict) else None
+    return read_lock_evidence(plan_dir).payload
 
 
 def _locked_slice_records(plan_dir: Path) -> dict[int, dict[str, Any]] | None:
-    """Lock-time slice records by index, or ``None`` when no usable sidecar
-    exists (a plan locked before this artifact, or a corrupt one)."""
+    """Lock-time slice records by index, or ``None`` when no trustworthy
+    sidecar exists.
+
+    ``None`` sends close to the live contract. That is right for a legacy plan
+    and it is right for an acknowledged loss; for an unacknowledged one it is
+    :func:`lock_evidence_defect` that refuses the close, so the fallback is
+    never reached silently.
+    """
     payload = read_score_sidecar(plan_dir)
     if payload is None:
         return None
@@ -1365,11 +1914,17 @@ def close_obligations(plan_dir: Path, score: OutcomeScore) -> list[ProofObligati
 
 def evaluate_close_proofs(plan_dir: Path) -> list[str]:
     """Step 4 — one reason per obligation whose proof is neither run nor
-    deferred.
+    deferred, preceded by one for destroyed lock evidence.
 
     Empty list means close may proceed. Silent (empty) for every plan that
     declares no slices and locked none, which is every plan authored before
-    this contract.
+    this contract — including one locked before the sidecar existed, whose
+    absent record is a legacy absence and not a loss (F005 AC1).
+
+    The lock-evidence reason comes first and stands on its own: a plan whose
+    record was deleted or corrupted after the lock may well have every live
+    proof run, and closing it on that basis would be closing against a
+    contract the operator never locked.
     """
     plan_dir = Path(plan_dir).resolve()
     try:
@@ -1377,13 +1932,14 @@ def evaluate_close_proofs(plan_dir: Path) -> list[str]:
     except OutcomeScoreError:
         return []  # unreadable plan.md is the caller's error to report, not ours
 
+    defect = lock_evidence_defect(plan_dir)
     obligations = close_obligations(plan_dir, score)
     if not obligations:
-        return []
+        return [defect] if defect else []
 
     entries = read_decision_entries(plan_dir)
     lookup = _feature_evidence_resolver(plan_dir, score.plan_id)
-    reasons: list[str] = []
+    reasons: list[str] = [defect] if defect else []
 
     for obligation in obligations:
         deferral = _gap_entry(
@@ -1432,6 +1988,12 @@ def evaluate_close_proofs(plan_dir: Path) -> list[str]:
 
 
 __all__ = [
+    "LOCK_EVIDENCE_ALTERED",
+    "LOCK_EVIDENCE_CORRUPT",
+    "LOCK_EVIDENCE_INTACT",
+    "LOCK_EVIDENCE_LEGACY",
+    "LOCK_EVIDENCE_MISSING",
+    "LOCK_RECEIPT_KIND",
     "OUTCOME_INHERITED",
     "OUTCOME_MISSING",
     "OUTCOME_PRESENT",
@@ -1446,20 +2008,28 @@ __all__ = [
     "SLICES_SINGLE",
     "SLICE_FROM_DELIVERS",
     "SLICE_FROM_FEATURE",
+    "LockEvidence",
     "OutcomeScore",
     "OutcomeScoreError",
     "ProofObligation",
     "SliceScore",
+    "append_lock_receipt",
+    "backfill_lock_receipt",
     "close_obligations",
     "evaluate_close_proofs",
     "evidence_ref_runs_method",
     "feature_proof_method",
+    "lock_evidence_defect",
+    "loss_acknowledgement_defect",
     "proof_defects",
     "read_decision_entries",
     "read_feature_records",
+    "read_lock_evidence",
+    "read_lock_receipt",
     "read_score_sidecar",
     "render_score_lines",
     "score_payload",
+    "score_payload_defect",
     "score_plan",
     "slice_defects",
     "write_score_sidecar",

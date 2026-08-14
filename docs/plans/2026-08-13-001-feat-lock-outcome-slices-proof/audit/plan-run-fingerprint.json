@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-08-14T17:17:32Z",
+  "captured_at": "2026-08-14T21:32:01Z",
   "decision_lines": [
     "D001\u001f848c28019d5bd7fcd43f8522a69f2142b538a1af365b4e62cdab352233fd8244",
     "D002\u001fec5e427422e16b9aafcd4ce79a59a39eec47b22a28c1beda20e836f5a403f9d7",
@@ -11,7 +11,11 @@
     "D008\u001f2ad490f4110087dfc5ae6f8c402cb0e99ec58ded5bf0c1625263ea8d10b800d2",
     "D009\u001f7239ab9b638dd06fccd74258b43a1e62d2033604f3c16504062808b8f362190e",
     "D010\u001f719da007edeecb4bd8cb4055a34a15cb197238ca548d2ab9b37e06b9b743653a",
-    "D011\u001f572c0545d3a0eb0acc296f73eedb134c469b2e95fbe22b11add0b488c5c97cc5"
+    "D011\u001f572c0545d3a0eb0acc296f73eedb134c469b2e95fbe22b11add0b488c5c97cc5",
+    "D012\u001fbc4278d9952f3da40fe18db84cb6c5356131a2c7805386d4ce3b3b31f62f4f18",
+    "D013\u001f50ee011b61f2ecf0b8c981cb33e2051c918eecbfd00abbec48b4c1bc5b5a3ef4",
+    "D014\u001f4ae7c09a9eb0fad13d86ff0b4af44f9b9fda49619301bc4d7b6a9e4805584cc2",
+    "D015\u001fb6cf1f2651126e8728ae4dee35fe2489ae0cf01a7ad94601a7498a3d004029cd"
   ],
   "features_semantics": {
     "by_id": {
@@ -43,7 +47,7 @@
         "depends_on": [
           "F002"
         ],
-        "passes": false
+        "passes": true
       },
       "F005": {
         "acceptance": "(1) A plan locked before the sidecar artifact existed still closes as it does today (no surprise refuse). (2) A deleted or corrupt outcome-score.json on a plan that WAS locked with one is distinguishable from case 1 and behaves differently at close; the chosen semantics are recorded in decisions.jsonl. (3) Lock never exits zero while reporting that gaps were not recorded: either the score is persisted before the status flip, or status stays draft and the exit code is nonzero, proven by a write-failure test.",
@@ -64,15 +68,15 @@
   },
   "file_hashes": {
     "audit/gate-state.json": "dafdfe8d322a9664c63daf700b8704dde78d3225078c7c36d84d1d6929574753",
-    "decisions.jsonl": "67f974a8a258e58189cca347809b385b474effcc80517209276651f5d4763c46",
-    "features.json": "9d236f0edd469b915ea82ece9dc4e43e1b0b57d5f72c060e854d6cfa14077923",
+    "decisions.jsonl": "ca98714fae8d7531314c6ddf36d4840032d7ff45152e14fd3cdbd2901aebf48a",
+    "features.json": "3d7fc828dd44ffbd20c27c45441e4ffc71457b1f1f0bfebe6ad40236a1256efe",
     "objective_contract.json": null,
     "plan.md": "d2fdd2600a280f28a7aaf3766b3c8f78c3fa877f90b5ede902a40b0a6fc20371"
   },
   "file_mtimes": {
     "audit/gate-state.json": 1786727573.6086903,
-    "decisions.jsonl": 1786727572.8345342,
-    "features.json": 1786727500.2557087,
+    "decisions.jsonl": 1786742873.4903948,
+    "features.json": 1786736946.975669,
     "objective_contract.json": null,
     "plan.md": 1786636533.3646326
   },

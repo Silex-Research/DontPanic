@@ -1,0 +1,10 @@
+{
+  "plan_id": "2026-08-13-001-feat-lock-outcome-slices-proof",
+  "feature_id": "F004",
+  "class": "signed_off_adjacent",
+  "memo": "evidence/closeout-memo.md",
+  "resolved": true,
+  "resolved_at": "2026-08-14T19:45:22Z",
+  "terminal_class": "signed_off_adjacent",
+  "note": "Auditor signed off at iteration 1 (audit/codex-auditor-F004-i1.json, audit_status=signed_off, one advisory about envelope hygiene, no correctness findings). Terminal was 'blocked' on the same patch_completeness catch-22 that closed F002: the check fails on untracked OR unstaged_modified, and the implementer necessarily writes its test file during the volley. Staged by hand afterwards; 99 tests pass across the F002 and F004 suites. Three prior rounds under the old contract found real, progressively deeper defects — partial overlap of multi-feature slices, a positional fallback surviving for legacy records, and duplicate identities producing false drift on reorder. All three are fixed: _pair_locked_with_live now matches exactly, never consults the numeric index, and disambiguates same-identity slices by capability text. See D011."
+}

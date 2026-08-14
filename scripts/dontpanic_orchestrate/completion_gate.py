@@ -989,6 +989,23 @@ def close_plan(
             f"{plan_md}: refusing to close — current status={status!r}, expected 'active'"
         )
 
+    # Plan 2026-08-13-001 F005/D014 — receipt a lock record that has none
+    # before reading it. A plan locked between the sidecar landing and the
+    # receipt landing carries a real record that nothing vouches for, so
+    # deleting it would read as "locked before the artifact existed" and every
+    # proof it recorded would stop being owed with no trace. This is the one
+    # command that meets such a plan and may write, so it is where the
+    # migration runs. A no-op for every plan that already has a receipt, has no
+    # sidecar, or whose sidecar is already unreadable. Skipped under dry_run,
+    # which this function promises is read-only; the next real close does it.
+    if not dry_run:
+        backfilled = outcome_score.backfill_lock_receipt(plan_dir)
+        if backfilled is not None:
+            print(
+                f"[outcome-score] receipted the pre-existing lock record as "
+                f"{backfilled.get('id')} — its deletion is now reportable"
+            )
+
     # Plan 2026-08-13-001 F002 — the proof gaps lock accepted are paid here.
     # Universal by design: it runs for gated and exempt goal_types alike,
     # because the outcome contract applies to every plan a user locks. Silent

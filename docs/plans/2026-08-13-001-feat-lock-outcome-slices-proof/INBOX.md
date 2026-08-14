@@ -855,3 +855,227 @@ features.json passes flipped: True
 Edit the closeout memo's `Rationale` section before merging.
 
 ===
+---
+timestamp: 2026-08-14T20:54:02Z
+event: volley_start
+plan_id: 2026-08-13-001-feat-lock-outcome-slices-proof
+feature_id: F005
+---
+
+impl=claude aud=codex cap=2 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-08-14T20:54:02Z
+event: volley_start
+plan_id: 2026-08-13-001-feat-lock-outcome-slices-proof
+feature_id: F005
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=2
+
+===
+---
+timestamp: 2026-08-14T21:04:03Z
+event: error
+plan_id: 2026-08-13-001-feat-lock-outcome-slices-proof
+agent: claude
+role: implementer
+iteration: 0
+feature_id: F005
+---
+
+Executor claude (implementer) iteration 0 reported failure: timeout after 600s.
+Volley continues and the audit JSON below records the failure surface.
+
+===
+---
+timestamp: 2026-08-14T21:04:03Z
+event: plan_drift_reconciled
+plan_id: 2026-08-13-001-feat-lock-outcome-slices-proof
+feature_id: F005
+drift_class: additive_ledger
+changed_files: decisions.jsonl
+budget_protected: False
+stage: before_auditor_call
+---
+
+Plan 2026-08-13-001-feat-lock-outcome-slices-proof: additive decisions.jsonl note detected (decisions.jsonl) — reconciled without stopping.
+
+Stage: before_auditor_call
+Changed files: decisions.jsonl
+Budget protected (paused before next paid call): False
+
+Changes:
+  - [additive_ledger] decisions: appended 1 decision(s): D013
+
+===
+---
+timestamp: 2026-08-14T21:18:36Z
+event: error
+plan_id: 2026-08-13-001-feat-lock-outcome-slices-proof
+agent: claude
+role: implementer
+iteration: 1
+feature_id: F005
+---
+
+Executor claude (implementer) iteration 1 reported failure: timeout after 600s.
+Volley continues and the audit JSON below records the failure surface.
+
+===
+---
+timestamp: 2026-08-14T21:18:36Z
+event: plan_drift_reconciled
+plan_id: 2026-08-13-001-feat-lock-outcome-slices-proof
+feature_id: F005
+drift_class: additive_ledger
+changed_files: decisions.jsonl
+budget_protected: False
+stage: before_auditor_call
+---
+
+Plan 2026-08-13-001-feat-lock-outcome-slices-proof: additive decisions.jsonl note detected (decisions.jsonl) — reconciled without stopping.
+
+Stage: before_auditor_call
+Changed files: decisions.jsonl
+Budget protected (paused before next paid call): False
+
+Changes:
+  - [additive_ledger] decisions: appended 1 decision(s): D014
+
+===
+---
+timestamp: 2026-08-14T21:32:01Z
+event: error
+plan_id: 2026-08-13-001-feat-lock-outcome-slices-proof
+agent: claude
+role: implementer
+iteration: 2
+feature_id: F005
+---
+
+Executor claude (implementer) iteration 2 reported failure: timeout after 600s.
+Volley continues and the audit JSON below records the failure surface.
+
+===
+---
+timestamp: 2026-08-14T21:32:01Z
+event: plan_drift_reconciled
+plan_id: 2026-08-13-001-feat-lock-outcome-slices-proof
+feature_id: F005
+drift_class: additive_ledger
+changed_files: decisions.jsonl
+budget_protected: False
+stage: before_auditor_call
+---
+
+Plan 2026-08-13-001-feat-lock-outcome-slices-proof: additive decisions.jsonl note detected (decisions.jsonl) — reconciled without stopping.
+
+Stage: before_auditor_call
+Changed files: decisions.jsonl
+Budget protected (paused before next paid call): False
+
+Changes:
+  - [additive_ledger] decisions: appended 1 decision(s): D015
+
+===
+---
+timestamp: 2026-08-14T21:36:21Z
+event: breaker_tripped
+plan_id: 2026-08-13-001-feat-lock-outcome-slices-proof
+breaker_kind: iteration_cap
+feature_id: F005
+approval_required: true
+---
+
+Circuit breaker tripped: iteration_cap
+
+Reason: max_iterations=2 reached without signoff
+
+Operator clearance required: `jarvis approve 2026-08-13-001-feat-lock-outcome-slices-proof breaker:iteration_cap` or `jarvis resume 2026-08-13-001-feat-lock-outcome-slices-proof --all`.
+
+===
+<!-- rendered annotation 2026-08-14T21:36:22Z -->
+**Operators: Deleting the lock record no longer quietly erases the proofs close was holding you to — Blocked work: breaker `iteration_cap` tripped** _(band: needs_action)_
+
+Circuit breaker `iteration_cap` tripped. Operator clearance required before dispatch continues. Reference: plan `2026-08-13-001-feat-lock-outcome-slices-proof`, feature `F005`.
+
+Run:
+
+```
+dontpanic approve 2026-08-13-001-feat-lock-outcome-slices-proof breaker:iteration_cap
+```
+
+Evidence: `/Users/bayesian/Code/DontPanic/docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/INBOX.md`
+
+<details><summary>Technical details</summary>
+
+- `breaker_kind` = `iteration_cap`
+- `feature_id` = `F005`
+- `inbox_event` = `breaker_tripped`
+- `plan_id` = `2026-08-13-001-feat-lock-outcome-slices-proof`
+
+</details>
+
+===
+---
+timestamp: 2026-08-14T21:36:22Z
+event: volley_terminal
+plan_id: 2026-08-13-001-feat-lock-outcome-slices-proof
+final_status: stopped_cap
+rounds: 3
+feature_id: F005
+---
+
+final_status: stopped_cap
+rounds: 3
+audits: ['claude-implementer-F005-i0.json', 'codex-auditor-F005-i0.json', 'claude-implementer-F005-i1.json', 'codex-auditor-F005-i1.json', 'claude-implementer-F005-i2.json', 'codex-auditor-F005-i2.json']
+reason: max_iterations=2 reached without signoff
+
+===
+<!-- rendered annotation 2026-08-14T21:36:23Z -->
+**Operators: Deleting the lock record no longer quietly erases the proofs close was holding you to — Blocked work: stopped cap** _(band: needs_action)_
+
+Volley terminated after 3 round(s) with status `stopped_cap`. Review the audit envelope before deciding next step. Reference: plan `2026-08-13-001-feat-lock-outcome-slices-proof`, feature `F005`.
+
+Run:
+
+```
+dontpanic resume 2026-08-13-001-feat-lock-outcome-slices-proof --all
+```
+
+Evidence: `/Users/bayesian/Code/DontPanic/docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/signoff.json`
+
+<details><summary>Technical details</summary>
+
+- `feature_id` = `F005`
+- `final_status` = `stopped_cap`
+- `inbox_event` = `volley_terminal`
+- `iteration_count` = `3`
+- `plan_id` = `2026-08-13-001-feat-lock-outcome-slices-proof`
+- `rounds` = `3`
+
+</details>
+
+===
+---
+timestamp: 2026-08-14T22:53:05Z
+event: feature_operator_resolved
+plan_id: 2026-08-13-001-feat-lock-outcome-slices-proof
+feature_id: F005
+reason_class: spec_ambiguity
+---
+
+Operator closed feature F005 as operator_resolved (class=spec_ambiguity).
+
+Closeout memo: evidence/closeout-memo.md
+Signoff envelope: audit/signoff-2026-08-13-001-feat-lock-outcome-slices-proof.json
+breaker:no_progress cleared: False
+features.json passes flipped: True
+
+Edit the closeout memo's `Rationale` section before merging.
+
+===

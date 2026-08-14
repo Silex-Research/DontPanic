@@ -126,12 +126,26 @@ def _sidecar_path(plan_dir: Path) -> Path:
 
 def _strip_proof_refs_from_sidecar(plan_dir: Path) -> None:
     """Rewrite the lock-time sidecar into the pre-``proof_refs`` shape — a
-    record that names no feature at all, which is all a legacy sidecar has."""
+    record that names no feature at all, which is all a legacy sidecar has.
+
+    The receipt goes too (F005): a sidecar old enough to predate ``proof_refs``
+    predates the ``decisions.jsonl`` receipt as well, so leaving one behind
+    would model a plan that never existed — and would read, correctly, as an
+    ALTERED record rather than the legacy one this fixture is for.
+    """
     path = _sidecar_path(plan_dir)
     payload = json.loads(path.read_text())
     for record in payload["slice_scores"]:
         record.pop("proof_refs", None)
     path.write_text(json.dumps(payload, indent=2) + "\n")
+    decisions = plan_dir / "decisions.jsonl"
+    if decisions.is_file():
+        kept = [
+            line
+            for line in decisions.read_text(encoding="utf-8").splitlines(keepends=True)
+            if outcome_score.LOCK_RECEIPT_KIND not in line
+        ]
+        decisions.write_text("".join(kept), encoding="utf-8")
 
 
 def _obligations(plan_dir: Path) -> list[outcome_score.ProofObligation]:

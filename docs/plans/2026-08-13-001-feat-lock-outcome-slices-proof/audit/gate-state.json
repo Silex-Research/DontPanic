@@ -60,6 +60,13 @@
       "gate": "breaker:iteration_cap",
       "at": "2026-08-14T17:12:53Z",
       "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:iteration_cap",
+      "at": "2026-08-14T21:36:21Z",
+      "actor": "supervisor",
+      "reason": "max_iterations=2 reached without signoff"
     }
   ],
   "gate_events": [
@@ -79,5 +86,8 @@
   "completed_stages": [
     "pre_impl",
     "pre_merge"
+  ],
+  "active_breakers": [
+    "breaker:iteration_cap"
   ]
 }

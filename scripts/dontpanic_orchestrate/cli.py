@@ -3685,8 +3685,9 @@ def _run_outcome_score_gate(plan_dir: Path) -> int | None:
         score = _outcome_score.score_plan(plan_dir)
     except Exception as exc:  # noqa: BLE001 — advisory scorer must not block
         print(
-            f"[outcome-score] WARN: could not score the plan ({exc!r}); "
-            "lock proceeds unscored",
+            f"[outcome-score] WARN: could not score the plan ({exc!r}); no score "
+            "is printed here. The lock is not waved through: the recording step "
+            "below meets the same failure and refuses it (F005 AC3).",
             file=sys.stderr,
         )
         return None
@@ -3710,24 +3711,42 @@ def _record_outcome_score_before_flip(plan_dir: Path) -> int | None:
     the lock — the plan stays draft — instead of leaving an active plan whose
     accepted gaps were never persisted.
 
-    Returns ``3`` on a write failure, ``None`` to proceed. A scorer failure is
-    still only a warning: nothing was scored, so there are no gaps to lose,
-    and the score was never a reason to fail a lock.
+    F005/D013 extends the same rule to the ``decisions.jsonl`` receipt written
+    alongside the sidecar: it is what later distinguishes a deleted lock record
+    from a plan locked before the artifact existed, so a lock that cannot leave
+    it is refused too. Both writes happen inside ``write_score_sidecar`` and
+    both raise ``OSError``, which the single handler below turns into a refusal.
+
+    A **scorer** failure refuses the lock too (F005 AC3, D014). It used to warn
+    "lock proceeds unrecorded" and return success, which is precisely the shape
+    the criterion forbids: an exit-zero lock that has just said its gaps were
+    not recorded. There is no third answer available here — a plan that cannot
+    be scored has no obligation set to hold close to, so the honest outcomes are
+    "recorded and active" or "unrecorded and still draft". The plan is left
+    draft, which is the recoverable state: fix what the scorer could not read
+    and lock again.
+
+    Returns ``3`` when the score could not be computed or could not be
+    persisted, ``None`` to proceed.
     """
     from dontpanic_orchestrate import outcome_score as _outcome_score
 
     try:
         plan_data = _outcome_score._read_frontmatter(Path(plan_dir) / "plan.md")
+        # A non-draft plan is not being locked here; the status refusal belongs
+        # to lock_plan, and there is nothing to record. Not a scorer failure.
         if plan_data.get("status") != "draft":
             return None
         score = _outcome_score.score_plan(plan_dir)
-    except Exception as exc:  # noqa: BLE001 — advisory scorer must not block
+    except Exception as exc:  # noqa: BLE001 — any scorer failure is a refusal
         print(
-            f"[outcome-score] WARN: could not score the plan ({exc!r}); "
-            "lock proceeds unrecorded",
+            f"[plan lock] REFUSED (outcome-score): could not score the plan "
+            f"({exc!r}), so its proof gaps cannot be recorded. The plan stays "
+            "draft — a lock that reports success while its gaps went unrecorded "
+            "is a lock close cannot honour.",
             file=sys.stderr,
         )
-        return None
+        return 3
 
     try:
         path = _outcome_score.write_score_sidecar(Path(plan_dir), score)
