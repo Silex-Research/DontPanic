@@ -63,3 +63,40 @@ Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
 Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
   unstaged_dirty_state | block | docs/plans/2026-08-09-002-feat-decision-brief-at-gates/INBOX.md,docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/plan-run-fingerprint.json,docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/transcript.md,docs/plans/2026-08-09-002-feat-decision-brief-at-gates/decisions.jsonl,docs/plans/2026-08-09-002-feat-decision-brief-at-gates/evidence/git-state-0-auditor.json,docs/plans/2026-08-09-002-feat-decision-brief-at-gates/evidence/git-state-0-implementer.json,docs/plans/2026-08-09-002-feat-decision-brief-at-gates/evidence/git-state-1-auditor.json,docs/plans/2026-08-09-002-feat-decision-brief-at-gates/evidence/git-state-1-implementer.json | Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: docs/plans/2026-08-09-002-feat-decision-brief-at-gates/decisions.jsonl | Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch.. F004 backstop (D025 root cause #2). Operator: read audit/terminal-state-iter2.json for the stage + last-good envelope pointers, then use `dontpanic close --operator-resolved` (F2 F004 CLI) to close this feature without a re-dispatch when the failure is not a real implementation defect.
 
+| 2026-08-10T22:43:56Z | F005 | i0 | claude / implementer | blocked | — / — | [claude-implementer-F005-i0.json](audit/claude-implementer-F005-i0.json) |
+| 2026-08-10T22:47:56Z | F005 | i0 | codex / auditor | needs_changes | 1,784,084 / 18,071 | [codex-auditor-F005-i0.json](audit/codex-auditor-F005-i0.json) |
+| 2026-08-10T22:52:15Z | F005 | i1 | claude / implementer | signed_off | 1,819,004 / 20,087 | [claude-implementer-F005-i1.json](audit/claude-implementer-F005-i1.json) |
+| 2026-08-10T22:56:14Z | F005 | i1 | codex / auditor | needs_changes | 3,414,167 / 21,655 | [codex-auditor-F005-i1.json](audit/codex-auditor-F005-i1.json) |
+| 2026-08-10T23:06:14Z | F005 | i2 | claude / implementer | blocked | — / — | [claude-implementer-F005-i2.json](audit/claude-implementer-F005-i2.json) |
+| 2026-08-10T23:11:03Z | F005 | i2 | codex / auditor | needs_changes | 3,296,928 / 20,492 | [codex-auditor-F005-i2.json](audit/codex-auditor-F005-i2.json) |
+
+**2026-08-10T23:11:03Z** — feature **F005** terminal: `stopped_cap` after 3 round(s) — max_iterations=2 reached without signoff
+
+| 2026-08-11T03:31:45Z | F005 | i0 | claude / implementer | blocked | — / — | [claude-implementer-F005-i0.json](audit/claude-implementer-F005-i0.json) |
+| 2026-08-11T03:35:37Z | F005 | i0 | codex / auditor | needs_changes | 2,666,258 / 18,770 | [codex-auditor-F005-i0.json](audit/codex-auditor-F005-i0.json) |
+| 2026-08-11T03:43:53Z | F005 | i1 | claude / implementer | signed_off | 4,458,692 / 31,422 | [claude-implementer-F005-i1.json](audit/claude-implementer-F005-i1.json) |
+| 2026-08-11T03:47:27Z | F005 | i1 | codex / auditor | needs_changes | 2,244,743 / 18,489 | [codex-auditor-F005-i1.json](audit/codex-auditor-F005-i1.json) |
+| 2026-08-11T03:54:12Z | F005 | i2 | claude / implementer | signed_off | 4,837,329 / 31,082 | [claude-implementer-F005-i2.json](audit/claude-implementer-F005-i2.json) |
+| 2026-08-11T03:57:52Z | F005 | i2 | codex / auditor | signed_off | 2,533,692 / 17,958 | [codex-auditor-F005-i2.json](audit/codex-auditor-F005-i2.json) |
+
+**2026-08-11T03:57:52Z** — feature **F005** terminal: `signed_off` after 3 round(s) — auditor signed off
+
+
+**2026-08-11T03:57:52Z** — feature **F005** terminal: `blocked` after 3 round(s) — supervisor caught unhandled exception in iter loop (iteration=2, stage=post_iter): PatchCompletenessError: Patch incomplete — signoff blocked.
+Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
+  test_file_untracked | block | scripts/dontpanic_orchestrate/tests/test_event_copy_impact_first.py | A test file is untracked or unstaged_modified — pytest discovery on a fresh clone will not run it. | Run: git add scripts/dontpanic_orchestrate/tests/test_event_copy_impact_first.py. F004 backstop (D025 root cause #2). Operator: read audit/terminal-state-iter2.json for the stage + last-good envelope pointers, then use `dontpanic close --operator-resolved` (F2 F004 CLI) to close this feature without a re-dispatch when the failure is not a real implementation defect.
+
+| 2026-08-13T03:07:04Z | F006 | i0 | claude / implementer | blocked | — / — | [claude-implementer-F006-i0.json](audit/claude-implementer-F006-i0.json) |
+| 2026-08-13T03:12:05Z | F006 | i0 | codex / auditor | needs_changes | 3,519,401 / 20,018 | [codex-auditor-F006-i0.json](audit/codex-auditor-F006-i0.json) |
+| 2026-08-13T03:22:06Z | F006 | i1 | claude / implementer | blocked | — / — | [claude-implementer-F006-i1.json](audit/claude-implementer-F006-i1.json) |
+| 2026-08-13T03:25:53Z | F006 | i1 | codex / auditor | needs_changes | 2,244,852 / 16,369 | [codex-auditor-F006-i1.json](audit/codex-auditor-F006-i1.json) |
+| 2026-08-13T03:35:54Z | F006 | i2 | claude / implementer | blocked | — / — | [claude-implementer-F006-i2.json](audit/claude-implementer-F006-i2.json) |
+| 2026-08-13T03:40:04Z | F006 | i2 | codex / auditor | needs_changes | 2,846,086 / 17,908 | [codex-auditor-F006-i2.json](audit/codex-auditor-F006-i2.json) |
+
+**2026-08-13T03:40:04Z** — feature **F006** terminal: `stopped_cap` after 3 round(s) — max_iterations=2 reached without signoff
+
+| 2026-08-13T05:11:49Z | F006 | i0 | claude / implementer | blocked | — / — | [claude-implementer-F006-i0.json](audit/claude-implementer-F006-i0.json) |
+| 2026-08-13T05:16:22Z | F006 | i0 | codex / auditor | needs_changes | 3,555,511 / 17,924 | [codex-auditor-F006-i0.json](audit/codex-auditor-F006-i0.json) |
+
+**2026-08-13T05:16:24Z** — feature **F006** terminal: `stopped_environmental_blocker` after 1 round(s) — environmental blocker — round 1 auditor findings classify as environmental_reproduction_failure (advisory, non-blocking); recommended: Re-run the cited verification locally on a host that has the missing tool/auth/sandbox capability. If the verification passes locally, attach the evidence and close the volley as operator-verified; if it fails, that becomes a real defect.
+

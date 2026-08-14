@@ -285,12 +285,43 @@ def _sync_pre_impl_for_active_plan(
     )
 
 
+def _attention_brief(
+    loaded: plan_loader.LoadedPlan | None,
+    feature_id: str | None,
+    *,
+    inbox_event: str,
+    pending_gates: list[str] | None = None,
+) -> decision_brief.DecisionBrief | None:
+    """Plan 2026-08-09-002 F005 — the brief for a non-gate attention event.
+
+    Every renderable ``needs_action`` event the supervisor emits goes through
+    here, so the impact-first copy is live on the production path rather than
+    only under a test that hands ``render()`` a brief. Returns ``None`` when
+    no ``LoadedPlan`` is in scope: a brief built from nothing would report the
+    plan id as "what changes", which is worse than the pre-existing copy the
+    renderer falls back to. Never raises — these notifications are advisory by
+    contract and must not take a dispatch down.
+    """
+    if loaded is None:
+        return None
+    try:
+        return decision_brief.build_for_attention(
+            loaded,
+            feature_id,
+            inbox_event=inbox_event,
+            pending_gates=pending_gates or [],
+        )
+    except Exception:  # noqa: BLE001 — advisory copy, never fatal
+        return None
+
+
 def _reconcile_gate_state_or_raise(
     plan_dir: Path,
     *,
     plan_id: str,
     declared_gates: list[Any],
     feature_id: str | None = None,
+    loaded: plan_loader.LoadedPlan | None = None,
 ) -> None:
     """Plan 2026-05-08-003 F001 — fail-loud gate-state reconciliation entry
     point. Wraps :func:`gate_pause.reconcile_gate_state` so every dispatch path
@@ -343,6 +374,9 @@ def _reconcile_gate_state_or_raise(
                     "stage": exc.stage or "",
                     "persisted_state_path": str(exc.persisted_state_path),
                 },
+                decision_brief=_attention_brief(
+                    loaded, feature_id, inbox_event="gate_state_reconciliation_failed"
+                ),
             ),
             plan_dir=plan_dir,
         )
@@ -355,6 +389,7 @@ def _trip_breaker(
     feature_id: str,
     kind: circuit_breakers.BreakerKind,
     reason: str,
+    loaded: plan_loader.LoadedPlan | None = None,
 ) -> None:
     """F006 — record the breaker hit. The 6 approval-required kinds add a
     synthetic gate; all 7 (including the global hard-stop) record an INBOX
@@ -399,6 +434,20 @@ def _trip_breaker(
             timestamp=dt.datetime.now(dt.timezone.utc),
             inbox_event="breaker_tripped",
             breaker_kind=kind.value,
+            # The six approval breakers name the gate the operator would
+            # clear; the global hard stop deliberately names none, and the
+            # brief then says so rather than promising a clearance that does
+            # not exist.
+            decision_brief=_attention_brief(
+                loaded,
+                feature_id,
+                inbox_event="breaker_tripped",
+                pending_gates=(
+                    [circuit_breakers.gate_name(kind)]
+                    if kind in circuit_breakers.APPROVAL_BREAKERS
+                    else []
+                ),
+            ),
         ),
         plan_dir=plan_dir,
     )
@@ -448,6 +497,40 @@ def _emit_gate_paused_discord(
         if loaded is not None
         else None
     )
+    # Plan 2026-08-09-002 F005 (audit i2 finding 2): until now the only
+    # structured orchestration fact this emitter published was ``subtype``
+    # (the *stage*). F005 moves the plan label, gate and stage out of the
+    # headline and into a supporting reference line — and a fact the event
+    # never carried cannot be relocated, so the pause was rendering
+    # "stage `implement`" and silently dropping the gate the operator is being
+    # asked to clear.
+    #
+    # The gate is published under ``pending_gates`` rather than ``gate`` on
+    # purpose. ``event_copy._reference_gate_stage`` reads ``pending_gates``
+    # first, so the reference line now names the real gate; but
+    # ``event_copy._gather_fields`` derives the ``{gate}`` format field from
+    # ``gate`` / ``subtype`` only, so the rendered approval command still
+    # resolves through the subtype alias and stays byte-identical. That
+    # matters: F005 is prose-only and its acceptance 7 forbids moving any
+    # exact command (audit i0 finding 1 caught an earlier revision of this
+    # feature doing exactly that by publishing ``gate``). The approval command
+    # naming the stage rather than the gate remains a real defect, owned by
+    # plan 2026-08-10-001 F001/F002 which changes it on purpose and carries
+    # the before/after evidence. ``tests/tools/f005_emitter_command_probe.py``
+    # drives this emitter and pins the command against the pre-change capture
+    # in ``tests/fixtures/f005_prechange_emitter_commands.json``.
+    #
+    # Empty values are omitted rather than published as empty strings: a pause
+    # with no unmet gate has no gate to name, and the reference line stays
+    # quiet instead of printing an empty pair of backticks.
+    gate_reference = {
+        key: value
+        for key, value in (
+            ("pending_gates", ", ".join(pending_gates)),
+            ("stage", stage),
+        )
+        if value
+    }
     notify_event.dispatch_event(
         notify_event.NotifyEvent(
             kind="gate_paused",
@@ -466,6 +549,7 @@ def _emit_gate_paused_discord(
             subtype=stage,
             target_env=target_env,
             target_project=target_project,
+            technical_metadata=gate_reference,
             decision_brief=brief,
         ),
         plan_dir=plan_dir,
@@ -681,6 +765,7 @@ def _emit_budget_kind_specific_event(
     plan_id: str,
     bd_result: circuit_breakers.BudgetCeilingResult,
     feature_id: str,
+    loaded: plan_loader.LoadedPlan | None = None,
 ) -> None:
     """F006b fix#1: emit a kind-specific INBOX event BEFORE the generic
     breaker_tripped event from _trip_breaker. Keeps the F008 gate-pause
@@ -737,6 +822,9 @@ def _emit_budget_kind_specific_event(
                     "agent": bd_result.agent or "",
                     "window": bd_result.window or "",
                 },
+                decision_brief=_attention_brief(
+                    loaded, feature_id, inbox_event="calibration_required"
+                ),
             ),
             plan_dir=plan_dir,
         )
@@ -773,6 +861,9 @@ def _emit_budget_kind_specific_event(
                     "cap_unit": bd_result.cap_unit or "",
                     "observed_unit": bd_result.observed_unit or "",
                 },
+                decision_brief=_attention_brief(
+                    loaded, feature_id, inbox_event="unit_mismatch"
+                ),
             ),
             plan_dir=plan_dir,
         )
@@ -805,6 +896,9 @@ def _emit_budget_kind_specific_event(
                 timestamp=dt.datetime.now(dt.timezone.utc),
                 inbox_event="config_required",
                 technical_metadata={"cause": cause},
+                decision_brief=_attention_brief(
+                    loaded, feature_id, inbox_event="config_required"
+                ),
             ),
             plan_dir=plan_dir,
         )
@@ -1109,6 +1203,7 @@ def dispatch_single_agent(
         plan_id=loaded.plan_id,
         declared_gates=list(loaded.plan.human_gates or []),
         feature_id=feature_id,
+        loaded=loaded,
     )
     # Plan 2026-05-09-002 F002 — post-reconcile sync: when plan.status is
     # `active`, treat the lock D-entry + status flip as the authorizing
@@ -1442,6 +1537,9 @@ def _emit_volley_terminal(
                 "final_status": result.final_status,
                 "rounds": result.rounds,
             },
+            decision_brief=_attention_brief(
+                loaded, feature_id, inbox_event="volley_terminal"
+            ),
         ),
         plan_dir=plan_dir,
     )
@@ -1685,6 +1783,7 @@ def dispatch_volley(
         plan_id=loaded.plan_id,
         declared_gates=list(loaded.plan.human_gates or []),
         feature_id=feature_id,
+        loaded=loaded,
     )
     # Plan 2026-05-09-002 F002 — same post-reconcile sync as
     # dispatch_single_agent so a status=active plan dispatched via the
@@ -1787,6 +1886,7 @@ def dispatch_volley(
             feature_id,
             circuit_breakers.BreakerKind.GLOBAL_CIRCUIT_BREAKER,
             reason,
+            loaded=loaded,
         )
         return _emit_volley_terminal(
             VolleyResult(
@@ -2040,7 +2140,9 @@ def dispatch_volley(
         def _trip_and_return(
             kind: circuit_breakers.BreakerKind, reason: str, rounds: int
         ) -> VolleyResult:
-            _trip_breaker(loaded.plan_dir, loaded.plan_id, feature_id, kind, reason)
+            _trip_breaker(
+                loaded.plan_dir, loaded.plan_id, feature_id, kind, reason, loaded=loaded
+            )
             return _emit_volley_terminal(
                 VolleyResult(circuit_breakers.TERMINAL_STATUS[kind], rounds, reason, audit_paths),
                 loaded=loaded,
@@ -2167,6 +2269,7 @@ def dispatch_volley(
                         loaded.plan_id,
                         bd_result,
                         feature_id,
+                        loaded=loaded,
                     )
                     return _trip_and_return(
                         circuit_breakers.BreakerKind.BUDGET_CEILING,
@@ -2473,6 +2576,9 @@ def dispatch_volley(
                                 "audit_path": str(mismatch.audit_path),
                                 "iteration": iteration,
                             },
+                            decision_brief=_attention_brief(
+                                loaded, feature_id, inbox_event="verdict_mismatch"
+                            ),
                         ),
                         plan_dir=loaded.plan_dir,
                     )
@@ -2794,6 +2900,16 @@ def dispatch_volley(
                                 technical_metadata={
                                     "original_verdict": "blocked",
                                 },
+                                decision_brief=_attention_brief(
+                                    loaded,
+                                    feature_id,
+                                    inbox_event="verdict_blocked_reconciled",
+                                    pending_gates=[
+                                        circuit_breakers.gate_name(
+                                            circuit_breakers.BreakerKind.ENVIRONMENTAL_BLOCKER
+                                        )
+                                    ],
+                                ),
                             ),
                             plan_dir=loaded.plan_dir,
                         )
@@ -2905,6 +3021,16 @@ def dispatch_volley(
                                 blocking=bool(env_classification.blocking),
                                 iteration_count=iteration + 1,
                                 feature_display_name=_eb_display_name,
+                                decision_brief=_attention_brief(
+                                    loaded,
+                                    feature_id,
+                                    inbox_event="environmental_blocker_short_circuit",
+                                    pending_gates=[
+                                        circuit_breakers.gate_name(
+                                            circuit_breakers.BreakerKind.ENVIRONMENTAL_BLOCKER
+                                        )
+                                    ],
+                                ),
                             ),
                             plan_dir=loaded.plan_dir,
                         )
@@ -3058,6 +3184,11 @@ def dispatch_volley(
                             aggregate_class=classification.aggregate.value,
                             blocking=bool(classification.blocking),
                             feature_display_name=_np_display_name,
+                            decision_brief=_attention_brief(
+                                loaded,
+                                feature_id,
+                                inbox_event="no_progress_classification",
+                            ),
                         ),
                         plan_dir=loaded.plan_dir,
                     )

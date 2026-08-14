@@ -1,0 +1,140 @@
+F005 iteration 2 — audit i1 finding 4 (baseline procedure not reproducible)
+                    audit i2 finding 2 (live gate-pause dropped its gate)
+
+Captured 2026-08-10 on branch feat/audience-first-plan-contracts, HEAD=3d037ef.
+Supersedes evidence/F005-i1-emitter-command-parity.txt, whose command log elided
+paths and described the mutant step narratively. Every command below is recorded
+byte-exact and was actually run, in this order, from the repo root
+(/Users/bayesian/Code/DontPanic). No step is reconstructed from memory.
+
+Interpreter is pinned because the repo-default `python3` is a different
+installation without pytest; `$PY` below expands to
+/Users/bayesian/.pyenv/versions/3.10.13/bin/python.
+
+
+== 0. Why this evidence exists ==
+
+Acceptance 7 says every exact command is byte-identical before and after F005.
+The render-level baseline (fixtures/f005_prechange_render.json) cannot prove it
+alone: it re-renders events the *test module* builds, whose technical_metadata
+supplies more than production does, so a change made at an emit site moves the
+live command while that baseline stays put. Audit i0 caught exactly that.
+
+fixtures/f005_prechange_emitter_commands.json closes the hole by driving the
+real emitters. This file proves three things about it: that it is a genuine
+pre-change capture (A), that the post-change tree still matches it (B), and
+that it would fail if the command did move (C).
+
+
+== 1. Setup — a worktree of the pre-change tree ==
+
+The probe is a new, uncommitted file, and so is its parent directory, so the
+detached worktree does not contain either. The i1 log omitted the mkdir, which
+is why re-running it failed; it is recorded here.
+
+$ git worktree add --detach /tmp/f005-before HEAD
+Preparing worktree (detached HEAD 3d037ef)
+HEAD is now at 3d037ef chore(plans): remove two sync-artifact duplicates from version control
+
+$ mkdir -p /tmp/f005-before/scripts/dontpanic_orchestrate/tests/tools
+
+$ cp scripts/dontpanic_orchestrate/tests/tools/f005_emitter_command_probe.py /tmp/f005-before/scripts/dontpanic_orchestrate/tests/tools/f005_emitter_command_probe.py
+
+The probe imports only production modules and calls the emitters with their
+pre-change signatures (no `loaded=`), so the identical file runs in both trees.
+
+
+== A. The fixture is a genuine pre-change capture ==
+
+$ /Users/bayesian/.pyenv/versions/3.10.13/bin/python /tmp/f005-before/scripts/dontpanic_orchestrate/tests/tools/f005_emitter_command_probe.py --write /tmp/f005-before-capture.json
+wrote /tmp/f005-before-capture.json
+
+$ diff /tmp/f005-before-capture.json scripts/dontpanic_orchestrate/tests/fixtures/f005_prechange_emitter_commands.json
+(no output)
+
+Empty diff: the committed fixture is byte-identical to what the pre-change tree
+produces today. It was not regenerated against the post-change tree, which would
+have made acceptance 7 vacuous.
+
+
+== B. Acceptance 7 holds after the i2 gate-metadata fix ==
+
+The i2 fix publishes the pending gate on the pause event so the reference line
+can name it. It is published as `pending_gates`, never as `gate`, precisely so
+the {gate} format field — and therefore the approval command — does not move.
+
+$ /Users/bayesian/.pyenv/versions/3.10.13/bin/python scripts/dontpanic_orchestrate/tests/tools/f005_emitter_command_probe.py --write /tmp/f005-after-capture.json
+wrote /tmp/f005-after-capture.json
+
+$ diff /tmp/f005-after-capture.json scripts/dontpanic_orchestrate/tests/fixtures/f005_prechange_emitter_commands.json
+(no output)
+
+Empty diff across all 8 live emit sites, including the three gate-pause shapes
+(one gate, two gates, default stage).
+
+
+== C. Non-vacuity — the check fails when the command really moves ==
+
+Mutant: the exact i0 regression, reintroduced on top of the current tree. One
+line added to the `gate_reference` dict in supervisor._emit_gate_paused_discord:
+
+    ("pending_gates", ", ".join(pending_gates)),
++   ("gate", pending_gates[0] if pending_gates else ""),
+    ("stage", stage),
+
+$ /Users/bayesian/.pyenv/versions/3.10.13/bin/python scripts/dontpanic_orchestrate/tests/tools/f005_emitter_command_probe.py --write /tmp/f005-mutant-capture.json
+
+$ diff /tmp/f005-mutant-capture.json scripts/dontpanic_orchestrate/tests/fixtures/f005_prechange_emitter_commands.json
+17c17
+<       "exact_command": "dontpanic approve 2026-08-09-002-feat-decision-brief-at-gates pre_merge",
+---
+>       "exact_command": "dontpanic approve 2026-08-09-002-feat-decision-brief-at-gates general",
+21c21
+<       "exact_command": "dontpanic approve 2026-08-09-002-feat-decision-brief-at-gates pre_merge",
+---
+>       "exact_command": "dontpanic approve 2026-08-09-002-feat-decision-brief-at-gates implement",
+25c25
+<       "exact_command": "dontpanic approve 2026-08-09-002-feat-decision-brief-at-gates pre_impl",
+---
+>       "exact_command": "dontpanic approve 2026-08-09-002-feat-decision-brief-at-gates implement",
+
+Three diverging lines — the approval command moves from the stage to the pending
+gate at all three gate-pause shapes. The test suite catches the same mutant:
+
+$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts /Users/bayesian/.pyenv/versions/3.10.13/bin/python -m pytest --noconftest -p no:cacheprovider -q scripts/dontpanic_orchestrate/tests/test_event_copy_impact_first.py
+FAILED test_the_live_gate_pause_relocates_both_its_gate_and_its_stage
+FAILED test_a_multi_gate_reference_names_every_pending_gate
+FAILED test_the_live_emitters_render_the_same_commands_as_before
+3 failed, 528 passed in 0.56s
+
+This is the change plan 2026-08-10-001 F001/F002 owns: it moves the command on
+purpose and carries its own before/after evidence. F005 is prose-only and may
+not make it.
+
+
+== D. Mutant reverted, tree restored ==
+
+The added line was removed, restoring the dict to the two entries in section C's
+"before" state.
+
+$ /Users/bayesian/.pyenv/versions/3.10.13/bin/python scripts/dontpanic_orchestrate/tests/tools/f005_emitter_command_probe.py --write /tmp/f005-reverted-capture.json
+
+$ diff /tmp/f005-reverted-capture.json scripts/dontpanic_orchestrate/tests/fixtures/f005_prechange_emitter_commands.json
+(no output)
+
+$ git worktree remove /tmp/f005-before --force
+
+
+== E. Test suites run ==
+
+$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts /Users/bayesian/.pyenv/versions/3.10.13/bin/python -m pytest --noconftest -p no:cacheprovider -q scripts/dontpanic_orchestrate/tests/test_event_copy_impact_first.py
+531 passed in 0.52s
+
+Broader render + notify regression set (12 modules): 879 passed, 1 failed.
+The single failure is test_event_copy_f003_render.py::TestRoutingPerDisposition
+::test_inbox_only_does_not_reach_live_sinks, which asserts dispatch_event returns
+a 4-key dict while notify_event returns 5 (it grew a `buzz` sink). Pre-existing
+and unrelated to F005: `buzz` is present at HEAD (notify_event.py:212, 251, 337)
+and neither notify_event.py nor that test file is touched by this branch —
+`git diff HEAD --stat -- scripts/dontpanic_orchestrate/notify_event.py
+scripts/dontpanic_orchestrate/tests/test_event_copy_f003_render.py` is empty.

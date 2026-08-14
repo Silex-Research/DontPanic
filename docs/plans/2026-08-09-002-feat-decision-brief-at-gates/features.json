@@ -49,7 +49,7 @@
         "Bump the agent-conventions VERSION and commit in that repo",
         "Subtree-pull the new version into DontPanic claude/shared/",
         "Re-run the validator over every existing plan directory under docs/plans",
-        "No existing plan is edited as part of this feature \u2014 backward compatibility means they pass untouched"
+        "No existing plan is edited as part of this feature — backward compatibility means they pass untouched"
       ],
       "acceptance": "(1) No plan directory's validation outcome changes: the same plan set validated against the pre-change and post-change schema yields an identical per-plan exit code. (2) git status shows no existing plan file modified by this feature. (3) The subtree-pulled schema in DontPanic is byte-identical to the one committed in agent-conventions.",
       "passes": true,
@@ -145,7 +145,7 @@
         "Stop hardcoding the reversible flag to False for event-derived items; carry the brief's value instead",
         "Leave technical_metadata untouched"
       ],
-      "acceptance": "(1) RenderedEvent exposes the three new fields with None defaults and every existing template row still constructs. (2) Round-tripping a brief through render and into ActionItem preserves the decision-consequence element exactly, for each of three distinct briefs, so the mapping is proven rather than a single fixture matching. (3) For every renderable kind, plain_consequence differs from the rendered detail string \u2014 a regression asserting the current aliasing is gone across the whole table, not one example. (4) The reversible flag on an event-derived ActionItem tracks the brief across both True and False, rather than the hardcoded False it carries today. (5) pytest tests/test_event_copy_brief_fields.py covers all four and passes.",
+      "acceptance": "(1) RenderedEvent exposes the three new fields with None defaults and every existing template row still constructs. (2) Round-tripping a brief through render and into ActionItem preserves the decision-consequence element exactly, for each of three distinct briefs, so the mapping is proven rather than a single fixture matching. (3) For every renderable kind, plain_consequence differs from the rendered detail string — a regression asserting the current aliasing is gone across the whole table, not one example. (4) The reversible flag on an event-derived ActionItem tracks the brief across both True and False, rather than the hardcoded False it carries today. (5) pytest tests/test_event_copy_brief_fields.py covers all four and passes.",
       "passes": true,
       "depends_on": [
         "F003"
@@ -184,17 +184,28 @@
       "phase": 1,
       "description": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line",
       "steps": [
-        "Enumerate the renderable kinds \u2014 those whose disposition is LIVE or DASHBOARD_ACTION. INBOX_ONLY and AUDIT_ONLY kinds never reach render and are outside this feature",
+        "Enumerate the renderable kinds — those whose disposition is LIVE or DASHBOARD_ACTION. INBOX_ONLY and AUDIT_ONLY kinds never reach render and are outside this feature",
         "Rewrite each renderable headline in the NEEDS_ACTION band to lead with what changes and who feels it, falling back to the current copy shape when impact is undeclared",
         "Move the plan label, gate, and stage to a supporting reference line per USER.md",
-        "Keep every exact command and the honest-commands rule unchanged \u2014 this feature changes prose only",
+        "Keep every exact command and the honest-commands rule unchanged — this feature changes prose only",
         "Preserve every fact the old copy carried; demotion means relocated, never dropped"
       ],
       "acceptance": "(1) All 27 INBOX kinds still resolve to exactly one disposition and the existing totality test stays green. (2) Every kind that rendered before still renders. (3) Every renderable NEEDS_ACTION variant carries a brief. (4) Events with no feature in scope, and plan-level events, receive a distinct fallback rather than a feature-shaped one. (5) Rendered headlines for renderable NEEDS_ACTION kinds contain the impact line and do not open with the plan identifier. (6) A field-level diff against the pre-change render shows no previously-present fact absent. (7) Every exact command is byte-identical before and after. (8) pytest tests/test_event_copy_impact_first.py covers all seven and passes.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F004"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=signed_off_adjacent)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-08-11T10:45:11Z"
     },
     {
       "id": "F006",
@@ -206,13 +217,24 @@
         "When status is possibly-stale, render the declared summary explicitly marked as written against an earlier version, never presented as current",
         "Add a source-level assertion that no approval template body is ever populated from model output at render time, per D002",
         "Add an advisory at the plan lock path naming features whose plan declares a user-facing surface but carries no impact block",
-        "The advisory prints and exits 0 \u2014 it never refuses the lock, per D004 \u2014 and states the file to edit"
+        "The advisory prints and exits 0 — it never refuses the lock, per D004 — and states the file to edit"
       ],
       "acceptance": "(1) A gate on a feature with no impact block renders the exact undeclared sentence and no synthesized prose. (2) A stale declaration renders marked as stale rather than current. (3) The source-level non-generative assertion holds across every approval template. (4) plan lock on a fixture whose plan declares a user-facing surface and omits the impact block prints an advisory naming each such feature and exits 0. (5) plan lock on the same fixture with the impact block declared prints no advisory and exits 0. (6) pytest tests/test_event_copy_undeclared_impact.py covers all five and passes.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F004"
-      ]
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=environmental_reproduction_failure)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-08-13T13:43:12Z"
     },
     {
       "id": "F007",
@@ -255,7 +277,7 @@
       "phase": 2,
       "description": "Worked before-and-after example built on an in-repo fixture, plus authoring guidance for writing a useful impact declaration",
       "steps": [
-        "Build the example as a DontPanic-owned fixture under tests/fixtures/, modelled on the shape of the Glam sticky-first gate with provenance recorded in the fixture header \u2014 this plan's Target is DontPanic and agent-conventions, so authoring into a third repo is outside its authority",
+        "Build the example as a DontPanic-owned fixture under tests/fixtures/, modelled on the shape of the Glam sticky-first gate with provenance recorded in the fixture header — this plan's Target is DontPanic and agent-conventions, so authoring into a third repo is outside its authority",
         "Capture the fixture gate rendered under the old templates and the new ones, side by side under evidence/",
         "Write guidance covering the four audience values and what separates a useful summary from a restated description",
         "Reference the guidance from the plan-artifacts skill so it reaches authors at plan-writing time",
@@ -266,6 +288,32 @@
       "depends_on": [
         "F008"
       ]
+    },
+    {
+      "id": "F010",
+      "category": "doc",
+      "phase": 3,
+      "description": "Update the root README and CHANGELOG so a new reader sees that approval gates now lead with what changes and who feels it, not only plan and gate identifiers",
+      "steps": [
+        "Add one capabilities-at-a-glance or What-it-does line: gates ask in product terms (what changes, who feels it, what approving does) and fall back honestly when impact is undeclared",
+        "Add a root CHANGELOG entry under the current unreleased section naming the operator-visible change",
+        "Do not rewrite the README hook or vendor matrix; this is a capability addition, not a north-star restyle",
+        "Release-impact advisory should list readme and root_changelog; both files must be in the feature's evidence"
+      ],
+      "acceptance": "(1) README states in operator language that approval prompts lead with outcome and audience when declared. (2) CHANGELOG.md has a dated or Unreleased entry for this plan's operator-visible change. (3) Neither file claims intake exists or restyles the product. (4) A reader of README alone can tell this is different from 'paused at gate pre_merge'.",
+      "passes": false,
+      "depends_on": [
+        "F005",
+        "F006"
+      ],
+      "user_impact": {
+        "audience": "operator",
+        "summary": "The GitHub README now says gates ask what you are approving in product terms, so a new reader sees the capability this plan actually shipped.",
+        "surfaces": [
+          "docs"
+        ],
+        "description_hash": "10f931585ed43c8b3e24ba9a997a20b8b9bf17c012f25a6a7e8df79eaa3ec0f4"
+      }
     }
   ]
 }

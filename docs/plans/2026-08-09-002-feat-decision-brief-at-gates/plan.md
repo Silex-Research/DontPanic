@@ -48,6 +48,20 @@ links:
 
 # Decision brief at gates
 
+## Landing page
+
+Close does not update `README.md`. Release-impact is advisory only.
+
+This plan ships an operator-visible capability: gates lead with what
+changes and who feels it. F010 is the landing-page feature — one README
+line and a CHANGELOG entry. F009 is in-repo authoring guidance and does
+not count. Shipping F001–F009 without F010 means GitHub still describes
+the old product.
+
+This is a **user feature** (every DontPanic operator sees the new
+prompt), not dogfood. The README line is how a stranger learns they get
+it.
+
 ## Target
 
 ```yaml
@@ -56,7 +70,8 @@ target_project: none
 ```
 
 - **repo:** `DontPanic`, plus `agent-conventions` for the schema bump (F001).
-  No other repository may be written — F009 asserts this.
+  No other repository may be written — F009 asserts this. F010 may edit
+  root `README.md` and `CHANGELOG.md` only as named in that feature.
 - **env:** local only. No cloud project, no deploy, no network. `target_env: dev`
   is the lowest rung the enum offers; nothing in this plan contacts a service.
 - **command:** `pytest`, `dontpanic approve --help`, `dontpanic next`,

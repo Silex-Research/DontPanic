@@ -34,6 +34,47 @@
       "gate": "pre_merge",
       "at": "2026-08-09T21:05:06Z",
       "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:iteration_cap",
+      "at": "2026-08-10T23:11:03Z",
+      "actor": "supervisor",
+      "reason": "max_iterations=2 reached without signoff"
+    },
+    {
+      "action": "approve",
+      "gate": "breaker:iteration_cap",
+      "at": "2026-08-11T03:21:12Z",
+      "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:iteration_cap",
+      "at": "2026-08-13T03:40:04Z",
+      "actor": "supervisor",
+      "reason": "max_iterations=2 reached without signoff"
+    },
+    {
+      "action": "pause",
+      "at": "2026-08-13T04:24:59Z",
+      "actor": "supervisor",
+      "pause_gates": [
+        "breaker:iteration_cap"
+      ]
+    },
+    {
+      "action": "approve",
+      "gate": "breaker:iteration_cap",
+      "at": "2026-08-13T04:36:47Z",
+      "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:environmental_blocker",
+      "at": "2026-08-13T05:16:24Z",
+      "actor": "supervisor",
+      "reason": "environmental blocker — round 1 auditor findings classify as environmental_reproduction_failure (advisory, non-blocking); recommended: Re-run the cited verification locally on a host that has the missing tool/auth/sandbox capability. If the verification passes locally, attach the evidence and close the volley as operator-verified; if it fails, that becomes a real defect."
     }
   ],
   "gate_events": [
@@ -53,5 +94,8 @@
   "completed_stages": [
     "pre_impl",
     "pre_merge"
+  ],
+  "active_breakers": [
+    "breaker:environmental_blocker"
   ]
 }

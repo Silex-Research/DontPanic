@@ -66,6 +66,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from dontpanic_orchestrate import outcome_score
 from dontpanic_orchestrate.completion_auditor import (
     POST_IMPL_DIR,
     CompletionAuditError,
@@ -986,6 +987,21 @@ def close_plan(
     if status != "active":
         raise CompletionGateError(
             f"{plan_md}: refusing to close — current status={status!r}, expected 'active'"
+        )
+
+    # Plan 2026-08-13-001 F002 — the proof gaps lock accepted are paid here.
+    # Universal by design: it runs for gated and exempt goal_types alike,
+    # because the outcome contract applies to every plan a user locks. Silent
+    # for any plan whose contract declares no delivers[] slices, which is every
+    # plan authored before the contract existed. Not clearable by
+    # --ignore-completion-findings (that override is for the audit decision);
+    # the escape hatch is a proof_gap_deferred entry in decisions.jsonl.
+    proof_reasons = outcome_score.evaluate_close_proofs(plan_dir)
+    if proof_reasons:
+        raise CompletionGateError(
+            f"plan close refused for {plan_id} — {len(proof_reasons)} declared "
+            "outcome proof(s) never ran:\n"
+            + "\n".join(f"  - {r}" for r in proof_reasons)
         )
 
     if not _should_gate_completion(plan_data):

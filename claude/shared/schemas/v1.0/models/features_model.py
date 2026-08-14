@@ -75,6 +75,63 @@ class ImpactSurface(Enum):
     external_api_wrap = 'external-api-wrap'
 
 
+class ProofMethod(Enum):
+    """How a feature's cheap proof is taken.
+
+    Identical to `objective_contract.schema.json`'s `delivers[].proof.method`
+    — the two enums are kept in lockstep so a slice means the same thing
+    whether it was declared in the contract or carried by the feature.
+    """
+
+    walk = 'walk'
+    request = 'request'
+    named_test = 'named_test'
+    probe = 'probe'
+
+
+class ProofSurface(Enum):
+    """Where a proof is taken. Mirrors the plan-level `surfaces` enum."""
+
+    web = 'web'
+    ios = 'ios'
+    android = 'android'
+    backend = 'backend'
+    infra = 'infra'
+    security = 'security'
+    data = 'data'
+    ux = 'ux'
+    ml = 'ml'
+    docs = 'docs'
+    external_api_wrap = 'external-api-wrap'
+
+
+class Proof(BaseModel):
+    """The cheap first-principle proof a feature carries on its own.
+
+    A feature carrying one is scored as a slice in its own right (plan
+    2026-08-13-001 F002), so a plan whose features each carry a proof states
+    an outcome without any `delivers[]`. Same shape as the contract-level
+    `delivers[].proof`.
+    """
+
+    model_config = ConfigDict(extra='forbid')
+    metric: str = Field(..., min_length=10)
+    method: ProofMethod
+    surface: ProofSurface | None = None
+
+    @model_validator(mode='before')
+    @classmethod
+    def _reject_explicit_nulls(cls, data: object) -> object:
+        """Mirror the schema, which types these fields with no `null` member."""
+        if isinstance(data, dict):
+            for key in ('metric', 'method', 'surface'):
+                if key in data and data[key] is None:
+                    raise ValueError(
+                        f'{key} must be omitted rather than set to null'
+                    )
+        return data
+
+
 class UserImpact(BaseModel):
     """Declared user impact — who feels this feature and how.
 
@@ -278,6 +335,16 @@ class Feature(BaseModel):
             'Optional by design (D003): a feature that declares nothing '
             "renders 'user impact not declared' rather than a synthesized "
             'claim.'
+        ),
+    )
+    proof: Proof | None = Field(
+        None,
+        description=(
+            'Optional cheap first-principle proof this feature carries on its '
+            'own. A feature that carries one is scored as a slice in its own '
+            'right by the lock/close scorer, so a plan whose features each '
+            'carry a proof needs no delivers[] to state an outcome. Absence '
+            'means the feature is not a slice, not that it is invalid.'
         ),
     )
 

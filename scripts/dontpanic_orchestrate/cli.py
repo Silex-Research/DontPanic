@@ -58,6 +58,7 @@ from dontpanic_orchestrate import (
     calibration_loader,
     closeout,
     completion_gate,
+    decision_brief,
     gate_pause,
     git_state,
     inbox,
@@ -3663,6 +3664,90 @@ def _plan_disposition_main(argv: list[str]) -> int:
     return 0
 
 
+def _run_outcome_score_gate(plan_dir: Path) -> int | None:
+    """Plan 2026-08-13-001 F002 — print the outcome / slices / proofs score
+    and refuse the lock on exactly one thing: a missing outcome with nothing
+    inherited (and only where ``delivers[]`` is required — no legacy plan
+    meets a surprise refuse).
+
+    Returns ``3`` on refusal, ``None`` to proceed. A scorer crash is a
+    one-line warning, never a block: the gate exists to name a missing
+    outcome, not to become a new way for lock to fail.
+    """
+    from dontpanic_orchestrate import outcome_score as _outcome_score
+
+    try:
+        plan_data = _outcome_score._read_frontmatter(Path(plan_dir) / "plan.md")
+        if plan_data.get("status") != "draft":
+            # Not a lockable plan — leave the status refusal to lock_plan so the
+            # operator reads "status is active", not "outcome is missing".
+            return None
+        score = _outcome_score.score_plan(plan_dir)
+    except Exception as exc:  # noqa: BLE001 — advisory scorer must not block
+        print(
+            f"[outcome-score] WARN: could not score the plan ({exc!r}); "
+            "lock proceeds unscored",
+            file=sys.stderr,
+        )
+        return None
+
+    for line in _outcome_score.render_score_lines(score):
+        print(line)
+    if score.refuse:
+        print(f"[plan lock] REFUSED: {score.refusal}", file=sys.stderr)
+        return 3
+    return None
+
+
+def _record_outcome_score_before_flip(plan_dir: Path) -> int | None:
+    """Plan 2026-08-13-001 F002 — record the score, and every gap it accepted
+    or inferred, under ``evidence/goal-governance/pre_impl/`` BEFORE the
+    draft → active flip.
+
+    Ordering is the contract: a lock that reports success must have recorded
+    the gaps it accepted, because those gaps are what close is later held to.
+    So the sidecar is written first (atomically), and a write failure REFUSES
+    the lock — the plan stays draft — instead of leaving an active plan whose
+    accepted gaps were never persisted.
+
+    Returns ``3`` on a write failure, ``None`` to proceed. A scorer failure is
+    still only a warning: nothing was scored, so there are no gaps to lose,
+    and the score was never a reason to fail a lock.
+    """
+    from dontpanic_orchestrate import outcome_score as _outcome_score
+
+    try:
+        plan_data = _outcome_score._read_frontmatter(Path(plan_dir) / "plan.md")
+        if plan_data.get("status") != "draft":
+            return None
+        score = _outcome_score.score_plan(plan_dir)
+    except Exception as exc:  # noqa: BLE001 — advisory scorer must not block
+        print(
+            f"[outcome-score] WARN: could not score the plan ({exc!r}); "
+            "lock proceeds unrecorded",
+            file=sys.stderr,
+        )
+        return None
+
+    try:
+        path = _outcome_score.write_score_sidecar(Path(plan_dir), score)
+    except OSError as exc:
+        print(
+            f"[plan lock] REFUSED (outcome-score): could not record the score "
+            f"and its proof gaps ({exc}). The plan stays draft — a lock that "
+            "cannot record its accepted gaps cannot be honoured at close.",
+            file=sys.stderr,
+        )
+        return 3
+
+    gaps = len(score.accepted_gaps) + len(score.inferred_gaps)
+    print(
+        f"[outcome-score] score + {gaps} proof gap(s) recorded at "
+        f"{path.relative_to(Path(plan_dir))}"
+    )
+    return None
+
+
 def _run_pre_lock_scope_gate(
     plan_dir: Path, *, allow_oversize: str | None
 ) -> int | None:
@@ -3982,6 +4067,13 @@ def _plan_lock_main(argv: list[str]) -> int:
         print(f"[plan lock] REFUSED (requires_capabilities): {exc}", file=sys.stderr)
         return 3
 
+    # Plan 2026-08-13-001 F002 — outcome / slices / proofs score. Runs before
+    # every paid pre-lock step so the one refusal this plan owns (a missing
+    # outcome with nothing inherited) costs nothing to hit.
+    score_rc = _run_outcome_score_gate(plan_dir)
+    if score_rc is not None:
+        return score_rc
+
     # Plan 2026-06-01-001 F004 — pre-lock design gate. Runs the F001 scope lint
     # over every feature BEFORE the status flip; a block-severity scope flag
     # refuses the lock unless --allow-oversize <reason> records a rationale in
@@ -3999,6 +4091,13 @@ def _plan_lock_main(argv: list[str]) -> int:
     # gate checks for them, so a gated plan locks in one command instead of
     # dead-ending on a required-but-ungenerated artifact.
     _ensure_sufficiency_findings(plan_dir)
+
+    # Plan 2026-08-13-001 F002 — persist the outcome score + accepted/inferred
+    # proof gaps BEFORE the status flip. A recording failure refuses the lock
+    # rather than producing an active plan with unrecorded gaps.
+    record_rc = _record_outcome_score_before_flip(plan_dir)
+    if record_rc is not None:
+        return record_rc
 
     try:
         plan_md = sufficiency_gate.lock_plan(
@@ -4067,7 +4166,43 @@ def _plan_lock_main(argv: list[str]) -> int:
             file=sys.stderr,
         )
 
+    # Plan 2026-08-09-002 F006 — undeclared user-impact advisory. Warn-only by
+    # D004: a feature that declares no impact under a user-facing plan is worth
+    # saying out loud and never worth refusing the lock over. Failure to compute
+    # it is a one-line warning, like every other advisory in this flow.
+    try:
+        _emit_plan_lock_undeclared_impact_advisory(plan_dir)
+    except Exception as exc:  # noqa: BLE001 — advisory must never block lock
+        print(
+            f"[user-impact] WARN: advisory failed ({exc!r}); lock succeeded — "
+            "no advisory printed",
+            file=sys.stderr,
+        )
+
     return 0
+
+
+def _emit_plan_lock_undeclared_impact_advisory(plan_dir: Path) -> None:
+    """F006 — name the features that owe a ``user_impact`` block and lack one.
+
+    Prints to stdout and writes nothing. Per D004 this never changes the lock
+    outcome: the caller has already flipped ``plan.md`` to ``active`` by the
+    time this runs, and the advisory returns ``None`` in every branch.
+
+    Silent when the plan declares no user-facing surface, or when every feature
+    under one already carries a declaration — including ``audience: none``,
+    which is a complete answer (D003) rather than a missing one.
+    """
+    plan_obj = plan_loader.load(plan_dir)
+    advisory = decision_brief.undeclared_impact_advisory(
+        plan_surfaces=plan_obj.surfaces,
+        features=getattr(plan_obj.features, "features", []) or [],
+    )
+    lines = decision_brief.render_undeclared_impact_advisory(
+        advisory, features_path=str(plan_dir / "features.json")
+    )
+    for line in lines:
+        print(line)
 
 
 def _emit_plan_lock_release_impact_advisory(plan_dir: Path) -> None:

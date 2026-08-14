@@ -1,0 +1,37 @@
+F002 (post-D010 split) — outcome-score suite, real run output
+Repo: DontPanic | Env: dev | Project: (none) | Date: 2026-08-14
+
+The default temp dir is not writable in this sandbox; TMPDIR=/tmp makes the
+tmp_path fixtures work. That is why the i0 run died before collection.
+
+$ TMPDIR=/tmp PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_outcome_score_f002.py -q
+........................................................................ [ 82%]
+...............                                                          [100%]
+87 passed in 21.91s
+
+$ TMPDIR=/tmp ... ruff check --no-cache scripts/dontpanic_orchestrate/outcome_score.py scripts/dontpanic_orchestrate/tests/test_outcome_score_f002.py
+All checks passed!
+
+AC-named tests collected (AC1..AC6 map to test_acN_*):
+$ ... pytest --collect-only -q | grep "test_ac"
+scripts/dontpanic_orchestrate/tests/test_outcome_score_f002.py::test_accepted_gap_beats_inference
+scripts/dontpanic_orchestrate/tests/test_outcome_score_f002.py::test_ac1_no_delivers_no_inherits_refuses_lock_naming_outcome
+scripts/dontpanic_orchestrate/tests/test_outcome_score_f002.py::test_ac1_refusal_names_only_the_outcome_not_the_proofs
+scripts/dontpanic_orchestrate/tests/test_outcome_score_f002.py::test_ac2_inherit_fix_with_one_delta_slice_locks
+scripts/dontpanic_orchestrate/tests/test_outcome_score_f002.py::test_ac2_inherit_with_no_local_delta_still_locks
+scripts/dontpanic_orchestrate/tests/test_outcome_score_f002.py::test_ac5_accepted_missing_proof_locks_and_records_the_gap
+scripts/dontpanic_orchestrate/tests/test_outcome_score_f002.py::test_ac6_legacy_plan_without_contract_locks
+scripts/dontpanic_orchestrate/tests/test_outcome_score_f002.py::test_ac6_trivial_tier_plan_is_not_refused
+scripts/dontpanic_orchestrate/tests/test_outcome_score_f002.py::test_ac6_plan_with_outcome_but_no_proof_locks_as_inferred
+scripts/dontpanic_orchestrate/tests/test_outcome_score_f002.py::test_ac3_features_carrying_proofs_lock_with_no_delivers
+scripts/dontpanic_orchestrate/tests/test_outcome_score_f002.py::test_ac3_one_proof_carrying_feature_clears_the_refusal_with_no_contract
+scripts/dontpanic_orchestrate/tests/test_outcome_score_f002.py::test_ac4_feature_as_slice_without_user_impact_locks_and_records_the_gap
+scripts/dontpanic_orchestrate/tests/test_outcome_score_f002.py::test_ac6_a_feature_without_a_proof_is_not_a_slice
+scripts/dontpanic_orchestrate/tests/test_outcome_score_f002.py::test_ac1_refusal_names_the_feature_route_as_a_way_out
+
+AC6 on the real corpus — no existing plan gets a surprise refuse:
+$ ... python3 -c "<score_plan over docs/plans/*>"
+plans scored: 120
+outcome: {'missing': 120}
+plans with no declared proof on any slice: 120
+would refuse a fresh lock: 0 []

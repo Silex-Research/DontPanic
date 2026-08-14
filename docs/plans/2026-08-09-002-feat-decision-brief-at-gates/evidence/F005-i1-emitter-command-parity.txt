@@ -1,0 +1,26 @@
+F005 iteration 1 — audit i0 findings 1 & 2
+Captured 2026-08-11T03:42:29Z on branch feat/audience-first-plan-contracts against HEAD=3d037ef
+
+== 1. Pre-change capture (HEAD worktree, real emitters) vs post-change tree ==
+$ diff <(python3 .../f005_emitter_command_probe.py) fixtures/f005_prechange_emitter_commands.json
+(no output) — every live emitter renders a byte-identical exact_command
+
+== 2. Non-vacuity: reintroducing the i0 gate metadata at the pause emitter ==
+Mutant = current tree + technical_metadata={'gate': pending_gates[0]} on the gate_paused event.
+$ diff <mutant capture> fixtures/f005_prechange_emitter_commands.json
+17c17
+<       "exact_command": "dontpanic approve 2026-08-09-002-feat-decision-brief-at-gates pre_merge",
+---
+>       "exact_command": "dontpanic approve 2026-08-09-002-feat-decision-brief-at-gates general",
+21c21
+<       "exact_command": "dontpanic approve 2026-08-09-002-feat-decision-brief-at-gates pre_merge",
+---
+>       "exact_command": "dontpanic approve 2026-08-09-002-feat-decision-brief-at-gates implement",
+25c25
+<       "exact_command": "dontpanic approve 2026-08-09-002-feat-decision-brief-at-gates pre_impl",
+---
+>       "exact_command": "dontpanic approve 2026-08-09-002-feat-decision-brief-at-gates implement",
+
+The three diverging lines are exactly the i0 regression: the approval command
+moves from the stage to the pending gate. Gate identity is owned by plan
+2026-08-10-001 F001/F002, not by prose-only F005.

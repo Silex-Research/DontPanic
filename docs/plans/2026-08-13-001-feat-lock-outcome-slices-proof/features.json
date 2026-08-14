@@ -1,0 +1,165 @@
+{
+  "task_id": "2026-08-13-001-feat-lock-outcome-slices-proof",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "schema",
+      "phase": 0,
+      "description": "Add an optional proof object and optional inherit pointer on the outcome contract so every lock can name outcome, slices, and a cheap metric without a new form",
+      "steps": [
+        "Extend delivers[] with optional proof {metric (>=10 chars), method walk|request|named_test|probe, surface? using the plan surfaces enum}",
+        "Add optional plan-level inherits: a plan id this contract deltas from; child/fix plans may omit a full delivers[] when inherits is set and a delta delivers[] is present",
+        "Pydantic twin + fixtures: inherit-only delta valid; proof.method outside the enum rejected; additionalProperties false",
+        "Do not migrate existing plans; absence of proof remains valid at the schema layer (F002 decides lock vs close)",
+        "Subtree-pull into DontPanic after the agent-conventions bump"
+      ],
+      "acceptance": "(1) A delivers item with proof.method walk and a metric >=10 validates. (2) proof.method 'kpi_warehouse' is rejected by both JSON Schema and Pydantic. (3) A fixture plan with inherits set and a one-item delta delivers[] validates. (4) Existing plans without proof keep their current validation exit code. (5) The subtree-pulled schema matches agent-conventions.",
+      "passes": true,
+      "verified_by": [
+        "codex"
+      ],
+      "verified_at": "2026-08-13T16:00:53Z",
+      "evidence_refs": [
+        {
+          "type": "audit_json",
+          "uri": "./audit/codex-auditor-F001-i0.json",
+          "note": "Auditor envelope, iteration 0: audit_status=signed_off, narrative verdict signed_off (no mismatch)."
+        },
+        {
+          "type": "audit_json",
+          "uri": "./audit/claude-implementer-F001-i0.json",
+          "note": "Implementer envelope the auditor reviewed."
+        },
+        {
+          "type": "file",
+          "uri": "./evidence/F001-proof-inherits-contract.md",
+          "note": "AC1/AC2/AC3 — proof object + inherits contract, fixture behaviour per method."
+        },
+        {
+          "type": "test_output",
+          "uri": "./evidence/F001-validation-exit-codes-before.txt",
+          "note": "AC4 baseline — per-plan validation exit codes before the schema change."
+        },
+        {
+          "type": "test_output",
+          "uri": "./evidence/F001-validation-exit-codes-after.txt",
+          "note": "AC4 — byte-identical to the before capture; 120 plans, 23 pre-existing failures unchanged."
+        }
+      ],
+      "depends_on": [],
+      "user_impact": {
+        "audience": "operator",
+        "summary": "Any plan you lock can name a cheap proof per slice, or inherit the parent, without a new document type.",
+        "surfaces": [
+          "docs",
+          "backend"
+        ],
+        "description_hash": "68fd5aa26b6473d751b3657045fd84a489d5c241f1103d68d15827e8770e6d14"
+      }
+    },
+    {
+      "id": "F002",
+      "category": "functional",
+      "phase": 1,
+      "description": "Score plan lock against outcome and slices, counting a feature that carries its own proof as a slice, and refusing only when no outcome is reachable by any route",
+      "steps": [
+        "Read audit/codex-auditor-F002-i0..i2.json first. The i1 findings (malformed delivers bypass) are already fixed and the suite is at 58 passing. Do not re-fix what is fixed.",
+        "Treat a feature carrying a proof (walk|request|named_test|probe) as a slice in its own right. Slices are a sizing decision, not a ceremony.",
+        "Refuse lock only when no outcome is reachable by ANY route: no delivers[], no resolvable inherits, and no proof-carrying feature.",
+        "A feature-as-slice with no user_impact records an accepted gap naming the absent audience; it is never a lock refusal (see D009).",
+        "Slice identity, close obligations, and sidecar durability are F004 and F005. Do not change close_obligations() or read_score_sidecar() here.",
+        "Evidence the suite with real command output; if the sandbox has no writable temp dir, say so rather than reporting an empty commands_run."
+      ],
+      "acceptance": "(1) Lock of a fixture with no delivers, no inherits, and no proof-carrying feature fails with a message that names 'outcome'. (2) Lock of a fixture that inherits a parent and declares one delta slice succeeds. (3) Lock of a fixture whose features each carry a proof and which declares no delivers[] SUCCEEDS, scoring one slice per proof-carrying feature. (4) A feature-as-slice with no user_impact locks successfully and records an accepted gap naming the absent audience. (5) Lock of a fixture with outcome and an accepted missing proof succeeds and records the gap. (6) Existing plans without proof still lock (inferred or accepted-gap, never a surprise refuse). (7) The outcome-score suite passes and the run is evidenced with real command output, not an empty commands_run.",
+      "passes": false,
+      "depends_on": [
+        "F001"
+      ],
+      "user_impact": {
+        "audience": "operator",
+        "summary": "Lock asks only for the outcome you have not already inherited, and a feature that stands on its own counts as its own slice.",
+        "surfaces": [
+          "backend",
+          "ux"
+        ],
+        "description_hash": "5bd4559849dc52365ecc0b6cacf0fee2ecc42bb1f0c8da780b2e9020c9bfd95c"
+      }
+    },
+    {
+      "id": "F004",
+      "category": "functional",
+      "phase": 1,
+      "description": "Key slice identity on the features that prove a slice rather than its position, so close holds the right obligations when slices are replaced, prepended, or reordered",
+      "steps": [
+        "SliceScore.feature_ids already exists; close_obligations() ignores it in favour of `live = {s.index: s for s in score.slice_scores}`. That single line is the defect.",
+        "Match locked and live slices on feature identity, retaining both the locked obligation and any unmatched live slice.",
+        "Resolve cross-plan proof refs on the (plan_id, feature_id) pair; stripping the plan prefix lets an unrelated local feature satisfy a parent reference.",
+        "Do not change the scoring rules (F002) or sidecar durability (F005)."
+      ],
+      "acceptance": "(1) Replacing a locked slice with a different feature at the same numeric index keeps the locked obligation AND surfaces the live slice as its own obligation. (2) Prepending a slice, and separately reordering slices, each leave every locked obligation intact. (3) A test asserts close_obligations() does not key on index — mutating only the index of a live slice must not change the obligation set. (4) A cross-plan proof ref 'parent:F001' is satisfied only by evidence on F001 of plan 'parent'; a local F001 with matching evidence does NOT satisfy it.",
+      "passes": false,
+      "depends_on": [
+        "F002"
+      ],
+      "user_impact": {
+        "audience": "operator",
+        "summary": "Reordering or replacing a slice no longer silently drops the proof close was going to ask you for.",
+        "surfaces": [
+          "backend"
+        ],
+        "description_hash": "72ece588f58d8b6dfb8f07cfa9dde2b9210f5d92364e99c75e810e24d4c1aa1a"
+      }
+    },
+    {
+      "id": "F005",
+      "category": "functional",
+      "phase": 2,
+      "description": "Make locked proof obligations durable: a missing or corrupt score sidecar is distinguishable from a plan locked before the artifact existed, and lock never reports success while reporting unrecorded gaps",
+      "steps": [
+        "read_score_sidecar() treats missing and malformed alike as legacy absence, after which close uses only the mutable live contract.",
+        "Decide the semantics — grandfathered plan vs deleted/corrupt lock evidence — and state the choice in decisions.jsonl.",
+        "cli.py flips status to active before writing the sidecar, then catches write failure and reports 'gaps NOT recorded' while still succeeding.",
+        "Persist the score before the status flip, or leave the plan draft and exit nonzero."
+      ],
+      "acceptance": "(1) A plan locked before the sidecar artifact existed still closes as it does today (no surprise refuse). (2) A deleted or corrupt outcome-score.json on a plan that WAS locked with one is distinguishable from case 1 and behaves differently at close; the chosen semantics are recorded in decisions.jsonl. (3) Lock never exits zero while reporting that gaps were not recorded: either the score is persisted before the status flip, or status stays draft and the exit code is nonzero, proven by a write-failure test.",
+      "passes": false,
+      "depends_on": [
+        "F004"
+      ],
+      "user_impact": {
+        "audience": "operator",
+        "summary": "Deleting the lock record no longer quietly erases the proofs close was holding you to.",
+        "surfaces": [
+          "backend"
+        ],
+        "description_hash": "9392d16f1e965085fef0946b1871cf2bb8b047d55c6fc0888a0e829a9c0a5ed0"
+      }
+    },
+    {
+      "id": "F003",
+      "category": "doc",
+      "phase": 2,
+      "description": "Update README and CHANGELOG so a new reader sees that every locked plan names an outcome, its slices, and a proof, scaled to the size of the work",
+      "steps": [
+        "Add one short README block near Why-not-just-Claude-Code: the lock rule + inherit/cheap-proof + that a slice is a sitting and a stack of slices is days",
+        "Do not replace the current hook or vendor matrix; do not claim intake exists",
+        "Add a root CHANGELOG Unreleased entry",
+        "This feature is a cheap slice: single-agent or operator edit is enough; do not run a three-round adversarial volley unless the prose is disputed"
+      ],
+      "acceptance": "(1) README states that every locked plan names an outcome, slices, and a proof, and that a fix inherits. (2) README does not claim intake or PRD authoring. (3) CHANGELOG.md has an Unreleased or dated entry. (4) The new block is shorter than the existing Why-not-just-Claude-Code section.",
+      "passes": false,
+      "depends_on": [
+        "F005"
+      ],
+      "user_impact": {
+        "audience": "operator",
+        "summary": "The GitHub README says what locking a plan now requires, including that small work inherits instead of filling a form.",
+        "surfaces": [
+          "docs"
+        ],
+        "description_hash": "7231bcd77d101b8fb84d7d647291b09a0eeed2e0877a38c6f32737edf302cccf"
+      }
+    }
+  ]
+}

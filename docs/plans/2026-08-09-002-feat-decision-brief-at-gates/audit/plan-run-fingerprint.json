@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-08-10T04:25:58Z",
+  "captured_at": "2026-08-13T04:41:46Z",
   "decision_lines": [
     "D001\u001f203ad1fa44fc15c0e4ab92c4a775c3a47e4c4cd59e62948d2a0c6d2afdc4aa0a",
     "D002\u001f0314967a3cb09fc51611a9b81d3d5271c2190421ff5db6595b0952bfcd9bafb6",
@@ -15,7 +15,11 @@
     "D012\u001fb7c47285b451c0db994b063e68f8c816806f518b7f25ad766e66c92a6fe4d388",
     "D013\u001f12e2b46f2cab5da044b61ddda3c148169e3d78dc62a1e5fb1f0ec0653a821be3",
     "D014\u001f686c886f4d059f907fad084b8d61a74facd48b263e22f042626401515a007ad1",
-    "D015\u001fa4dbc2ddfbf46b9c8ea7cb8914fbf20f6fb032f02fc5d47f26b6b9cf32a4ee56"
+    "D015\u001fa4dbc2ddfbf46b9c8ea7cb8914fbf20f6fb032f02fc5d47f26b6b9cf32a4ee56",
+    "D016\u001fd3e1803286c7f355c720ed9bc0983d93eb31a7d1eef38f5e647905858811cdab",
+    "D017\u001f54ebd7fefb8b6fd2f9f5714f3512934c95402686e16d78ce8007e42bca3fb1f7",
+    "D018\u001f03eb102bd5ed9c42bafbc3112399ee2a6c3e9e9e563ea76d4e2c5057aaca21e8",
+    "D019\u001f79681f96332f357b00cce6d2a9db856442d3d18382c0b678b27a9460f2679a9f"
   ],
   "features_semantics": {
     "by_id": {
@@ -47,7 +51,7 @@
         "depends_on": [
           "F003"
         ],
-        "passes": false
+        "passes": true
       },
       "F005": {
         "acceptance": "(1) All 27 INBOX kinds still resolve to exactly one disposition and the existing totality test stays green. (2) Every kind that rendered before still renders. (3) Every renderable NEEDS_ACTION variant carries a brief. (4) Events with no feature in scope, and plan-level events, receive a distinct fallback rather than a feature-shaped one. (5) Rendered headlines for renderable NEEDS_ACTION kinds contain the impact line and do not open with the plan identifier. (6) A field-level diff against the pre-change render shows no previously-present fact absent. (7) Every exact command is byte-identical before and after. (8) pytest tests/test_event_copy_impact_first.py covers all seven and passes.",
@@ -55,7 +59,7 @@
         "depends_on": [
           "F004"
         ],
-        "passes": false
+        "passes": true
       },
       "F006": {
         "acceptance": "(1) A gate on a feature with no impact block renders the exact undeclared sentence and no synthesized prose. (2) A stale declaration renders marked as stale rather than current. (3) The source-level non-generative assertion holds across every approval template. (4) plan lock on a fixture whose plan declares a user-facing surface and omits the impact block prints an advisory naming each such feature and exits 0. (5) plan lock on the same fixture with the impact block declared prints no advisory and exits 0. (6) pytest tests/test_event_copy_undeclared_impact.py covers all five and passes.",
@@ -89,6 +93,15 @@
           "F008"
         ],
         "passes": false
+      },
+      "F010": {
+        "acceptance": "(1) README states in operator language that approval prompts lead with outcome and audience when declared. (2) CHANGELOG.md has a dated or Unreleased entry for this plan's operator-visible change. (3) Neither file claims intake exists or restyles the product. (4) A reader of README alone can tell this is different from 'paused at gate pre_merge'.",
+        "agents_required": null,
+        "depends_on": [
+          "F005",
+          "F006"
+        ],
+        "passes": false
       }
     },
     "feature_ids": [
@@ -100,20 +113,21 @@
       "F006",
       "F007",
       "F008",
-      "F009"
+      "F009",
+      "F010"
     ]
   },
   "file_hashes": {
-    "audit/gate-state.json": "1dbc29da1e340f964598b2d1fbbd66be453814d2a6c54ead77a17191a631bf6e",
-    "decisions.jsonl": "c66dcdf1b97bc2e819e6d622881a7652b685cf91a5f5f15498fe355a6771e305",
-    "features.json": "b4448338c37659151cd08fd32729ea65c38ca945f0d22393a64da249e5fb5c36",
+    "audit/gate-state.json": "8222d4b11fb3e9bdffe29d68e7bb7d1601edeb0c90508bbb90d773d7a73ac1f5",
+    "decisions.jsonl": "352ba6ec5d84d132a11c4ef57caa3ac9ad592508cf1ba0a65b75fe2da09999b4",
+    "features.json": "01b9d269c645e4353550e2fbcb0ae77615604c231ffb9b985f6897844f151882",
     "objective_contract.json": null,
     "plan.md": "fafcd0227074c01c5fdf00fefaacfecc4644a8f7fa56dab2ec5c3d6707afc735"
   },
   "file_mtimes": {
-    "audit/gate-state.json": 1786309506.995439,
-    "decisions.jsonl": 1786335927.2639587,
-    "features.json": 1786330158.5691285,
+    "audit/gate-state.json": 1786595807.2138531,
+    "decisions.jsonl": 1786595841.5885732,
+    "features.json": 1786595569.2519035,
     "objective_contract.json": null,
     "plan.md": 1786307384.7781343
   },

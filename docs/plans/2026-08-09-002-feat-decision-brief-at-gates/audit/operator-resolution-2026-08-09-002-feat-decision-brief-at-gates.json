@@ -1,10 +1,8 @@
 {
   "plan_id": "2026-08-09-002-feat-decision-brief-at-gates",
-  "feature_id": "F004",
-  "class": "signed_off_adjacent",
+  "feature_id": "F006",
+  "class": "environmental_reproduction_failure",
   "memo": "evidence/closeout-memo.md",
   "resolved": true,
-  "resolved_at": "2026-08-10T14:14:38Z",
-  "terminal_class": "signed_off_adjacent",
-  "note": "Auditor signed off at iter 2 after two needs_changes rounds. Patch-completeness blocked on one file only: decisions.jsonl, the implementer's own D015 append — staged and committed in 8285970. Verified independently: 56 tests pass; AC2 runs 3 distinct briefs with guards that the fixtures differ and that one is rewrite-sensitive; AC3 runs 15 kinds derived from DISPOSITION_TABLE, not hardcoded; full sweep 4 failed/5536 passed vs 4 failed/5480 passed before F004 — identical failure set, zero regressions."
+  "resolved_at": "2026-08-13T13:43:12Z"
 }
