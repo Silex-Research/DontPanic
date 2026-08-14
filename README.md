@@ -173,6 +173,24 @@ As the run goes, DontPanic writes durable artifacts under the plan directory:
 4. **Human gate** — risky changes pause with evidence and a clear choice.
 5. **Approve** — only approved work moves toward merge.
 
+## What "locked" means
+
+A plan doesn't lock because someone declared it ready. It locks when it names an
+outcome — who can now do something they could not before, in plain language.
+
+A fix inherits its parent's outcome and declares only what it changes, so small
+work doesn't restate the world.
+
+Slices scale to the work. A feature that can be tested or deployed on its own is
+already a slice: give it a cheap proof — a `walk`, a `request`, a `named_test`,
+or a `probe` — and it counts as one. A plan whose features each carry a proof
+needs nothing further to state its outcome. One slice is usually a sitting; a
+stack of them is days.
+
+Proofs you skip are not lock-time homework. They are recorded as accepted gaps
+and checked at close. And a lock that cannot record its score refuses rather
+than reporting success: the plan stays draft and the exit code is nonzero.
+
 ## Why not just Claude Code (or any single agent)?
 
 Claude Code, Codex, Gemini, Grok, and local models make coding faster. They're

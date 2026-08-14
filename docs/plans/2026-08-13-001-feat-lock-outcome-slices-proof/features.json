@@ -224,7 +224,7 @@
         "This feature is a cheap slice: single-agent or operator edit is enough; do not run a three-round adversarial volley unless the prose is disputed"
       ],
       "acceptance": "(1) README states that every locked plan names an outcome, slices, and a proof, and that a fix inherits. (2) README does not claim intake or PRD authoring. (3) CHANGELOG.md has an Unreleased or dated entry. (4) The new block is shorter than the existing Why-not-just-Claude-Code section.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F005"
       ],
@@ -235,7 +235,28 @@
           "docs"
         ],
         "description_hash": "7231bcd77d101b8fb84d7d647291b09a0eeed2e0877a38c6f32737edf302cccf"
-      }
+      },
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-08-14T20:30:00Z",
+      "evidence_refs": [
+        {
+          "type": "diff",
+          "uri": "README.md",
+          "note": "New \"What locked means\" block, 160 words - shorter than the 173-word Why-not-just-Claude-Code section AC4 measures against. States outcome, inherit, feature-as-slice, the four proof methods, and skipped proofs becoming close checks."
+        },
+        {
+          "type": "diff",
+          "uri": "CHANGELOG.md",
+          "note": "Dated entry 2026-08-14 under the file's existing YYYY-MM-DD newest-first convention."
+        },
+        {
+          "type": "file",
+          "uri": "./evidence/F003-acceptance-check.txt",
+          "note": "All four ACs checked programmatically, including the word-count comparison AC4 requires."
+        }
+      ]
     }
   ]
 }

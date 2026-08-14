@@ -3,7 +3,7 @@ id: 2026-08-13-001-feat-lock-outcome-slices-proof
 title: Every lock names outcome, slices, and proof — in part or whole
 type: feat
 tier: architectural
-status: active
+status: completed
 date: "2026-08-13"
 description: >
   Every locked plan is scored on an outcome, the MECE slices that deliver it,
