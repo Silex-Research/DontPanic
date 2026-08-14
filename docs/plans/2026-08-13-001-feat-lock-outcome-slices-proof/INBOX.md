@@ -581,3 +581,21 @@ Evidence: `/Users/bayesian/Code/DontPanic/docs/plans/2026-08-13-001-feat-lock-ou
 </details>
 
 ===
+---
+timestamp: 2026-08-14T14:44:57Z
+event: feature_operator_resolved
+plan_id: 2026-08-13-001-feat-lock-outcome-slices-proof
+feature_id: F002
+reason_class: signed_off_adjacent
+---
+
+Operator closed feature F002 as operator_resolved (class=signed_off_adjacent).
+
+Closeout memo: evidence/closeout-memo.md
+Signoff envelope: audit/signoff-2026-08-13-001-feat-lock-outcome-slices-proof.json
+breaker:no_progress cleared: False
+features.json passes flipped: True
+
+Edit the closeout memo's `Rationale` section before merging.
+
+===

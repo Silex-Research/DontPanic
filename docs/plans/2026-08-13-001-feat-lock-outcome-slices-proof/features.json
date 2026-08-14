@@ -72,7 +72,7 @@
         "Evidence the suite with real command output; if the sandbox has no writable temp dir, say so rather than reporting an empty commands_run."
       ],
       "acceptance": "(1) Lock of a fixture with no delivers, no inherits, and no proof-carrying feature fails with a message that names 'outcome'. (2) Lock of a fixture that inherits a parent and declares one delta slice succeeds. (3) Lock of a fixture whose features each carry a proof and which declares no delivers[] SUCCEEDS, scoring one slice per proof-carrying feature. (4) A feature-as-slice with no user_impact locks successfully and records an accepted gap naming the absent audience. (5) Lock of a fixture with outcome and an accepted missing proof succeeds and records the gap. (6) Existing plans without proof still lock (inferred or accepted-gap, never a surprise refuse). (7) The outcome-score suite passes and the run is evidenced with real command output, not an empty commands_run.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001"
       ],
@@ -84,7 +84,39 @@
           "ux"
         ],
         "description_hash": "5bd4559849dc52365ecc0b6cacf0fee2ecc42bb1f0c8da780b2e9020c9bfd95c"
-      }
+      },
+      "evidence_refs": [
+        {
+          "type": "audit_json",
+          "uri": "./audit/codex-auditor-F002-i0.json",
+          "note": "Auditor signed off at iteration 0 with zero findings against the rewritten 7-clause contract."
+        },
+        {
+          "type": "test_output",
+          "uri": "./evidence/F002-outcome-score-suite-run.txt",
+          "note": "Suite capture preserved by the implementer."
+        },
+        {
+          "type": "file",
+          "uri": "./evidence/F002-outcome-score-suite.md",
+          "note": "Suite narrative mapping tests to the seven acceptance clauses."
+        },
+        {
+          "type": "file",
+          "uri": "./evidence/closeout-memo.md",
+          "note": "Operator close-out: why patch_completeness blocked, and the 87-passed run executed outside the sandbox both agents were confined to."
+        },
+        {
+          "type": "commit",
+          "uri": "agent-conventions@b6016db",
+          "note": "Schema mirrored upstream so the claude/shared subtree is a mirror, not a fork; VERSION 1.18.0."
+        }
+      ],
+      "verified_by": [
+        "codex",
+        "operator"
+      ],
+      "verified_at": "2026-08-14T14:44:57Z"
     },
     {
       "id": "F004",

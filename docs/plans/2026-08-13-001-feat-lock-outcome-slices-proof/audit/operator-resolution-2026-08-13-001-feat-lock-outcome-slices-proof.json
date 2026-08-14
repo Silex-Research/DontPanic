@@ -1,0 +1,10 @@
+{
+  "plan_id": "2026-08-13-001-feat-lock-outcome-slices-proof",
+  "feature_id": "F002",
+  "class": "signed_off_adjacent",
+  "memo": "evidence/closeout-memo.md",
+  "resolved": true,
+  "resolved_at": "2026-08-14T14:44:57Z",
+  "terminal_class": "signed_off_adjacent",
+  "note": "Auditor signed off at iteration 0 with zero findings (audit/codex-auditor-F002-i0.json, audit_status=signed_off). The volley terminal was 'blocked' on patch_completeness test_file_untracked, not on an implementation defect. That check is unsatisfiable by pre-staging: it fails on 'untracked OR unstaged_modified', and the implementer necessarily writes the test file during the volley, so the file returns to AM (staged-then-modified) on every run. Pre-staged before this dispatch and it re-fired anyway. Resolution: staged the volley output by hand — outcome_score.py (which was untracked entirely, so a fresh clone had no implementation module, not merely no tests), test_outcome_score_f002.py, and the plan artifacts. Suite verified green at 87 passed after staging. Schema change mirrored to agent-conventions b6016db (VERSION 1.18.0) so the subtree is a mirror rather than a fork; features.schema.json, models/features_model.py and objective_contract.schema.json all byte-identical afterwards."
+}
