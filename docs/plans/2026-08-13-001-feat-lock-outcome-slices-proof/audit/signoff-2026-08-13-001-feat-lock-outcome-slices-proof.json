@@ -8,21 +8,21 @@
     "codex"
   ],
   "audits": [
-    "audit/claude-implementer-F002-i0.json",
-    "audit/codex-auditor-F002-i0.json",
-    "audit/claude-implementer-F002-i1.json",
-    "audit/codex-auditor-F002-i1.json",
-    "audit/claude-implementer-F002-i2.json",
-    "audit/codex-auditor-F002-i2.json"
+    "audit/claude-implementer-F004-i0.json",
+    "audit/codex-auditor-F004-i0.json",
+    "audit/claude-implementer-F004-i1.json",
+    "audit/codex-auditor-F004-i1.json",
+    "audit/claude-implementer-F004-i2.json",
+    "audit/codex-auditor-F004-i2.json"
   ],
   "vote_summary": {
-    "signed_off_count": 5,
-    "needs_changes_count": 1,
+    "signed_off_count": 4,
+    "needs_changes_count": 2,
     "blocked_count": 0,
     "inconclusive_count": 0
   },
   "signoff": true,
   "signoff_reason": "operator_finish (terminal=signed_off_adjacent): the auditor signed off; a downstream gate blocked the automated finalize. Operator accepted the feature as merge-ready. See evidence/closeout-memo.md.",
   "next_action": "merge",
-  "decided_at": "2026-08-14T14:44:57Z"
+  "decided_at": "2026-08-14T19:45:22Z"
 }

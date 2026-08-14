@@ -1,20 +1,20 @@
 {
   "audit_paths": [
-    "/Users/bayesian/Code/DontPanic/docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/claude-implementer-F002-i0.json",
-    "/Users/bayesian/Code/DontPanic/docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/codex-auditor-F002-i0.json",
-    "/Users/bayesian/Code/DontPanic/docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/claude-implementer-F002-i1.json",
-    "/Users/bayesian/Code/DontPanic/docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/codex-auditor-F002-i1.json"
+    "/Users/bayesian/Code/DontPanic/docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/claude-implementer-F004-i0.json",
+    "/Users/bayesian/Code/DontPanic/docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/codex-auditor-F004-i0.json",
+    "/Users/bayesian/Code/DontPanic/docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/claude-implementer-F004-i1.json",
+    "/Users/bayesian/Code/DontPanic/docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/codex-auditor-F004-i1.json"
   ],
   "exception_class": "PatchCompletenessError",
-  "exception_message": "Patch incomplete \u2014 signoff blocked.\nPass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:\n  test_file_untracked | block | scripts/dontpanic_orchestrate/tests/test_outcome_score_f002.py | A test file is untracked or unstaged_modified \u2014 pytest discovery on a fresh clone will not run it. | Run: git add scripts/dontpanic_orchestrate/tests/test_outcome_score_f002.py\n  unstaged_dirty_state | block | claude/shared/schemas/v1.0/features.schema.json,claude/shared/schemas/v1.0/models/features_model.py,docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/evidence/F010-journey-transcript.md,docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/evidence/F010-live-upgrade-report.json,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/decisions.jsonl,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/features.json,scripts/dontpanic_orchestrate/cli.py,scripts/dontpanic_orchestrate/completion_gate.py | Unstaged modifications present. F003 will require an operator note",
-  "feature_id": "F002",
+  "exception_message": "Patch incomplete \u2014 signoff blocked.\nPass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:\n  test_file_untracked | block | scripts/dontpanic_orchestrate/tests/test_outcome_score_f004.py | A test file is untracked or unstaged_modified \u2014 pytest discovery on a fresh clone will not run it. | Run: git add scripts/dontpanic_orchestrate/tests/test_outcome_score_f004.py\n  unstaged_dirty_state | block | docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/INBOX.md,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/gate-state.json,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/plan-run-fingerprint.json,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/signoff-2026-08-13-001-feat-lock-outcome-slices-proof.json,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/transcript.md,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/decisions.jsonl,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/git-state-0-a",
+  "feature_id": "F004",
   "iteration": 1,
-  "last_good_audit_path": "/Users/bayesian/Code/DontPanic/docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/codex-auditor-F002-i1.json",
+  "last_good_audit_path": "/Users/bayesian/Code/DontPanic/docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/codex-auditor-F004-i1.json",
   "plan_id": "2026-08-13-001-feat-lock-outcome-slices-proof",
-  "recommended_command": "dontpanic close --operator-resolved 2026-08-13-001-feat-lock-outcome-slices-proof F002 --reason environmental_reproduction_failure",
-  "recommended_recovery": "dontpanic close --operator-resolved 2026-08-13-001-feat-lock-outcome-slices-proof F002 --reason environmental_reproduction_failure",
+  "recommended_command": "dontpanic close --operator-resolved 2026-08-13-001-feat-lock-outcome-slices-proof F004 --reason environmental_reproduction_failure",
+  "recommended_recovery": "dontpanic close --operator-resolved 2026-08-13-001-feat-lock-outcome-slices-proof F004 --reason environmental_reproduction_failure",
   "recovery_notes": "F004 broad-Exception backstop fired during stage='post_iter'. The iter loop raised PatchCompletenessError after 4 audit envelope(s) landed; the last entry in ``audit_paths`` is the most recent successful write (e.g. the orphaned implementer envelope when stage==auditor). Use the recommended close-out command to clear breaker:no_progress and flip features.json.",
   "schema": "terminal-state.v0",
   "stage": "post_iter",
-  "written_at": "2026-08-14T04:22:23Z"
+  "written_at": "2026-08-14T17:32:10Z"
 }

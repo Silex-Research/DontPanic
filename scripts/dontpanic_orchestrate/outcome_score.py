@@ -49,6 +49,11 @@ outcome-score.json``) and paid at close:
     The obligation set comes from the lock-time sidecar where there is one
     (:func:`close_obligations`), so editing or deleting a slice after the lock
     cannot retire its proof — the drift is named in the refusal instead.
+    Lock-time and live slices are paired on the EXACT set of features they
+    prove, never on position and never on a merely shared feature, so
+    prepending or reordering ``delivers[]`` moves no obligation while
+    replacing a slice — or re-pointing one at a different feature — keeps the
+    old obligation and adds the new.
     Evidence is resolved by the ``(plan_id, feature_id)`` PAIR: a
     ``proof_refs`` entry carrying ``plan`` is answered from THAT plan's
     ``features.json``, never from a same-numbered local feature.
@@ -84,6 +89,7 @@ from __future__ import annotations
 
 import json
 import os
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -1145,13 +1151,134 @@ def _record_refs(record: dict[str, Any]) -> tuple[str, ...]:
     return tuple(r.strip() for r in raw if isinstance(r, str) and r.strip())
 
 
+def _slice_identity(refs: Iterable[str], plan_id: str, plan_name: str) -> frozenset[str]:
+    """What a slice IS at close: the features it promises to prove, as
+    canonical ``"<plan-id>:<FEATURE>"`` tokens.
+
+    Identity, not position. Prepend a slice, reorder the list, renumber the
+    whole contract — the same features are still owed the same proofs, so this
+    is what pairs a lock-time record to its live slice. Same-plan refs are
+    qualified with ``plan_id`` so a bare ``"F001"`` and an explicitly
+    self-qualified ``"<this-plan>:F001"`` are one identity, and a cross-plan
+    ``"<parent>:F001"`` is never confused with the local F001.
+    """
+    ids: set[str] = set()
+    for ref in refs:
+        plan_token, feature_id = _split_feature_ref(ref)
+        if not feature_id.strip():
+            continue
+        if plan_token is None or plan_token in {plan_id, plan_name}:
+            plan_token = plan_id
+        ids.add(f"{plan_token}:{feature_id.strip().upper()}")
+    return frozenset(ids)
+
+
+def _pair_locked_with_live(
+    records: dict[int, dict[str, Any]],
+    slices: tuple[SliceScore, ...],
+    plan_id: str,
+    plan_name: str,
+) -> tuple[dict[int, SliceScore | None], tuple[SliceScore, ...]]:
+    """Pair each lock-time record with the live slice proving the same
+    features, and return ``(pairing, live slices no record claimed)``.
+
+    ``None`` in the pairing means no live slice proves the same features —
+    still an obligation, now a drifted one. The unclaimed live slices are
+    obligations in their own right: replacing a slice does not let the
+    replacement inherit the proof of what it displaced.
+
+    Identity is matched EXACTLY, never on a shared feature. A locked
+    ``{F001, F002}`` and a live ``{F001, F003}`` are two different promises:
+    pairing them on the shared F001 would consume the live slice, so F003's
+    proof would be owed by nobody while the locked pair silently reported as a
+    ref edit. The honest reading is a delete plus an add — the locked pair is
+    owed in full, and ``{F001, F003}`` is owed on its own. The same rule keeps
+    a contract that splits ``{F001, F002}`` into two slices from having the
+    locked record claim whichever happened to be scored first.
+
+    The numeric index is never consulted, not even as a fallback. A record that
+    names no feature at all — a pre-``proof_refs`` sidecar — carries the EMPTY
+    identity, and so pairs only with a live slice that likewise names none. A
+    live slice that does name features is a different promise: the legacy
+    record is owed as a drifted obligation and the live slice is owed on its
+    own. Falling back to position for those records would reintroduce exactly
+    the defect this function exists to remove — the obligation set would change
+    when nothing but a slice's number did.
+
+    Several slices may legitimately name the SAME proving features — two
+    sittings against one feature, for two audiences, or one feature proved
+    twice by different capabilities. Identity alone cannot tell those apart, so
+    within an identity group **capability text is the tiebreak**, and only
+    where it too is equal does live order decide. The passes run in that
+    order: capability (and, among equal capabilities, method as well), then
+    capability alone, then whatever is left in lock-index × live order.
+
+    Capability comes strictly before method, and that ordering is
+    load-bearing. Two records reading (alpha/walk, beta/named_test) against
+    live slices reading (beta/walk, alpha/named_test) have each swapped
+    position AND changed method; pairing on "nothing drifted at all" finds no
+    exact twin for either and falls to live order, pairing alpha with beta and
+    reporting a capability edit nobody made. Capability-first pairs alpha with
+    alpha and names the method change, which is what actually happened.
+    Matching greedily in live order has the same failure for a plain swap.
+
+    The method pass is a refinement WITHIN a capability group, never a way
+    around it: it only chooses between live slices already agreed to carry the
+    same capability, so it can invent no drift — it can only avoid inventing
+    some. Two slices identical in identity AND capability therefore reorder to
+    nothing whether or not their methods differ.
+
+    Where identity AND capability match, the slices are interchangeable in the
+    sense that matters: the contract carries no further way to tell them apart,
+    so *which* record pairs with *which* live slice of that group is not a
+    question the data answers, and every pairing the passes above can produce
+    yields the same obligations and the same drift. This function invents no
+    further tiebreak — audience and index are both to hand, and both would
+    manufacture a distinction the contract never made.
+    """
+    identities = [_slice_identity(s.feature_ids, plan_id, plan_name) for s in slices]
+    claimed: set[int] = set()
+    paired: dict[int, SliceScore | None] = {index: None for index in records}
+
+    def _same_capability(record: dict[str, Any], live: SliceScore) -> bool:
+        return str(record.get("capability") or "").strip().lower() == (
+            live.capability.strip().lower()
+        )
+
+    def _same_capability_and_method(record: dict[str, Any], live: SliceScore) -> bool:
+        return _same_capability(record, live) and _record_method(record) == live.method
+
+    def _any_of_this_identity(record: dict[str, Any], live: SliceScore) -> bool:
+        return True
+
+    def _claim(index: int, accepts) -> None:
+        record = records[index]
+        wanted = _slice_identity(_record_refs(record), plan_id, plan_name)
+        for pos, identity in enumerate(identities):
+            if pos in claimed or identity != wanted:
+                continue
+            if not accepts(record, slices[pos]):
+                continue
+            claimed.add(pos)
+            paired[index] = slices[pos]
+            return
+
+    for accepts in (_same_capability_and_method, _same_capability, _any_of_this_identity):
+        for index in sorted(records):
+            if paired[index] is None:
+                _claim(index, accepts)
+
+    return paired, tuple(s for pos, s in enumerate(slices) if pos not in claimed)
+
+
 def _drift_note(record: dict[str, Any], live: SliceScore | None) -> str | None:
     """How the contract has moved under a locked obligation. ``None`` = it
     hasn't."""
     if live is None:
         return (
-            "the slice was recorded at lock but is no longer in the contract — a "
-            "slice cannot be deleted out of its own proof"
+            "the slice was recorded at lock but is no longer in the contract as "
+            "locked — no live slice proves the same features. A slice cannot be "
+            "deleted, nor re-pointed at different features, out of its own proof"
         )
     diffs: list[str] = []
     locked_method = _record_method(record)
@@ -1160,17 +1287,26 @@ def _drift_note(record: dict[str, Any], live: SliceScore | None) -> str | None:
     locked_capability = str(record.get("capability") or "").strip().lower()
     if locked_capability and locked_capability != live.capability.strip().lower():
         diffs.append("capability text changed after lock")
-    locked_refs = set(_record_refs(record))
-    if locked_refs != set(live.feature_ids):
-        diffs.append(
-            f"proof_refs changed after lock ({sorted(locked_refs)} → "
-            f"{sorted(live.feature_ids)})"
-        )
+    # No proof_refs drift to report: pairing is identity, so a record that has
+    # a live slice at all has the same features it locked. A ref edit is a
+    # delete plus an add, reported by the `live is None` branch above and by
+    # the new slice's own obligation.
     return "; ".join(diffs) or None
 
 
 def close_obligations(plan_dir: Path, score: OutcomeScore) -> list[ProofObligation]:
-    """The proofs close is held to, keyed by slice index.
+    """The proofs close is held to, keyed by the features each slice proves.
+
+    Identity, not position (F004). A slice IS the exact set of features it
+    promised to prove, so prepending a slice, reordering the list, or
+    renumbering the whole contract leaves every locked obligation exactly where
+    it was. Keying on the numeric index instead would let a replacement slice
+    inherit the proof of whatever used to sit at its number — the locked
+    obligation would silently vanish and the new slice would owe nothing. The
+    same holds one feature at a time: a live slice sharing only *some* features
+    with a locked one is a different promise, so both are owed. Where several
+    slices share one identity, capability text separates them and, failing
+    that, they are interchangeable — see :func:`_pair_locked_with_live`.
 
     With a lock-time sidecar, every recorded slice is an obligation whether or
     not it is still in the contract — otherwise deleting a slice would delete
@@ -1178,8 +1314,11 @@ def close_obligations(plan_dir: Path, score: OutcomeScore) -> list[ProofObligati
     Slices added to the contract *after* the lock are obligations too, taken
     from the live score. With no sidecar (any plan locked before the artifact
     existed) the live score is the whole obligation set, as before.
+
+    Locked obligations keep their lock-time index, which is the number the
+    operator was told at lock and the one a ``decisions.jsonl`` deferral
+    addresses.
     """
-    live = {s.index: s for s in score.slice_scores}
     records = _locked_slice_records(plan_dir)
 
     def _from_live(slc: SliceScore, *, drift: str | None = None) -> ProofObligation:
@@ -1196,28 +1335,31 @@ def close_obligations(plan_dir: Path, score: OutcomeScore) -> list[ProofObligati
     if records is None:
         return [_from_live(slc) for slc in score.slice_scores]
 
-    obligations: list[ProofObligation] = []
-    for index in sorted(set(records) | set(live)):
-        record = records.get(index)
-        if record is None:
-            obligations.append(_from_live(live[index]))
-            continue
-        obligations.append(
-            ProofObligation(
-                index=index,
-                label=_slice_label(
-                    index,
-                    str(record.get("audience") or "unknown"),
-                    str(record.get("kind") or "unknown"),
-                    str(record.get("capability") or ""),
-                ),
-                method=_record_method(record),
-                feature_ids=_record_refs(record),
-                origin="declared" if record.get("declared_method") else "inferred",
-                locked=True,
-                drift=_drift_note(record, live.get(index)),
-            )
+    paired, unclaimed = _pair_locked_with_live(
+        records, score.slice_scores, score.plan_id, plan_dir.name
+    )
+    obligations = [
+        ProofObligation(
+            index=index,
+            label=_slice_label(
+                index,
+                str(record.get("audience") or "unknown"),
+                str(record.get("kind") or "unknown"),
+                str(record.get("capability") or ""),
+            ),
+            method=_record_method(record),
+            feature_ids=_record_refs(record),
+            origin="declared" if record.get("declared_method") else "inferred",
+            locked=True,
+            drift=_drift_note(record, paired.get(index)),
         )
+        for index, record in sorted(records.items())
+    ]
+    obligations.extend(_from_live(slc) for slc in unclaimed)
+    # Lock-time index first, and a locked obligation ahead of a live one that
+    # landed on the same number — the operator reads the proof they were held
+    # to before the one the contract has since grown.
+    obligations.sort(key=lambda o: (o.index, not o.locked))
     return obligations
 
 

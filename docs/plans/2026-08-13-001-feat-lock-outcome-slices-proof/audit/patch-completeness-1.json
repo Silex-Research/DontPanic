@@ -5,38 +5,50 @@
     {
       "mode": "test_file_untracked",
       "files": [
-        "scripts/dontpanic_orchestrate/tests/test_outcome_score_f002.py"
+        "scripts/dontpanic_orchestrate/tests/test_outcome_score_f004.py"
       ],
       "reason": "A test file is untracked or unstaged_modified \u2014 pytest discovery on a fresh clone will not run it.",
       "severity": "block",
-      "recommendation": "Run: git add scripts/dontpanic_orchestrate/tests/test_outcome_score_f002.py"
+      "recommendation": "Run: git add scripts/dontpanic_orchestrate/tests/test_outcome_score_f004.py"
     },
     {
       "mode": "unstaged_dirty_state",
       "files": [
-        "claude/shared/schemas/v1.0/features.schema.json",
-        "claude/shared/schemas/v1.0/models/features_model.py",
-        "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/evidence/F010-journey-transcript.md",
-        "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/evidence/F010-live-upgrade-report.json",
+        "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/INBOX.md",
+        "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/gate-state.json",
+        "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/plan-run-fingerprint.json",
+        "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/signoff-2026-08-13-001-feat-lock-outcome-slices-proof.json",
+        "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/transcript.md",
         "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/decisions.jsonl",
+        "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/git-state-0-auditor.json",
+        "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/git-state-0-implementer.json",
+        "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/git-state-1-auditor.json",
+        "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/git-state-1-implementer.json",
+        "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/git-state-2-auditor.json",
+        "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/git-state-2-implementer.json",
         "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/features.json",
-        "scripts/dontpanic_orchestrate/cli.py",
-        "scripts/dontpanic_orchestrate/completion_gate.py"
+        "scripts/dontpanic_orchestrate/outcome_score.py"
       ],
-      "reason": "Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: claude/shared/schemas/v1.0/features.schema.json,claude/shared/schemas/v1.0/models/features_model.py,docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/evidence/F010-journey-transcript.md,docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/evidence/F010-live-upgrade-report.json,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/decisions.jsonl,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/features.json,scripts/dontpanic_orchestrate/cli.py,scripts/dontpanic_orchestrate/completion_gate.py",
+      "reason": "Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/decisions.jsonl,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/features.json,scripts/dontpanic_orchestrate/outcome_score.py",
       "severity": "block",
       "recommendation": "Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch."
     }
   ],
   "files": [
-    "scripts/dontpanic_orchestrate/tests/test_outcome_score_f002.py",
-    "claude/shared/schemas/v1.0/features.schema.json",
-    "claude/shared/schemas/v1.0/models/features_model.py",
-    "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/evidence/F010-journey-transcript.md",
-    "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/evidence/F010-live-upgrade-report.json",
+    "scripts/dontpanic_orchestrate/tests/test_outcome_score_f004.py",
+    "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/INBOX.md",
+    "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/gate-state.json",
+    "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/plan-run-fingerprint.json",
+    "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/signoff-2026-08-13-001-feat-lock-outcome-slices-proof.json",
+    "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/transcript.md",
     "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/decisions.jsonl",
+    "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/git-state-0-auditor.json",
+    "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/git-state-0-implementer.json",
+    "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/git-state-1-auditor.json",
+    "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/git-state-1-implementer.json",
+    "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/git-state-2-auditor.json",
+    "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/git-state-2-implementer.json",
     "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/features.json",
-    "scripts/dontpanic_orchestrate/cli.py",
-    "scripts/dontpanic_orchestrate/completion_gate.py"
+    "scripts/dontpanic_orchestrate/outcome_score.py"
   ]
 }

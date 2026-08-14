@@ -599,3 +599,259 @@ features.json passes flipped: True
 Edit the closeout memo's `Rationale` section before merging.
 
 ===
+---
+timestamp: 2026-08-14T15:44:56Z
+event: volley_start
+plan_id: 2026-08-13-001-feat-lock-outcome-slices-proof
+feature_id: F004
+---
+
+impl=claude aud=codex cap=2 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-08-14T15:44:56Z
+event: volley_start
+plan_id: 2026-08-13-001-feat-lock-outcome-slices-proof
+feature_id: F004
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=2
+
+===
+---
+timestamp: 2026-08-14T16:08:43Z
+event: breaker_tripped
+plan_id: 2026-08-13-001-feat-lock-outcome-slices-proof
+breaker_kind: iteration_cap
+feature_id: F004
+approval_required: true
+---
+
+Circuit breaker tripped: iteration_cap
+
+Reason: max_iterations=2 reached without signoff
+
+Operator clearance required: `jarvis approve 2026-08-13-001-feat-lock-outcome-slices-proof breaker:iteration_cap` or `jarvis resume 2026-08-13-001-feat-lock-outcome-slices-proof --all`.
+
+===
+<!-- rendered annotation 2026-08-14T16:08:44Z -->
+**Operators: Reordering or replacing a slice no longer silently drops the proof close was going to ask you for — Blocked work: breaker `iteration_cap` tripped** _(band: needs_action)_
+
+Circuit breaker `iteration_cap` tripped. Operator clearance required before dispatch continues. Reference: plan `2026-08-13-001-feat-lock-outcome-slices-proof`, feature `F004`.
+
+Run:
+
+```
+dontpanic approve 2026-08-13-001-feat-lock-outcome-slices-proof breaker:iteration_cap
+```
+
+Evidence: `/Users/bayesian/Code/DontPanic/docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/INBOX.md`
+
+<details><summary>Technical details</summary>
+
+- `breaker_kind` = `iteration_cap`
+- `feature_id` = `F004`
+- `inbox_event` = `breaker_tripped`
+- `plan_id` = `2026-08-13-001-feat-lock-outcome-slices-proof`
+
+</details>
+
+===
+---
+timestamp: 2026-08-14T16:08:44Z
+event: volley_terminal
+plan_id: 2026-08-13-001-feat-lock-outcome-slices-proof
+final_status: stopped_cap
+rounds: 3
+feature_id: F004
+---
+
+final_status: stopped_cap
+rounds: 3
+audits: ['claude-implementer-F004-i0.json', 'codex-auditor-F004-i0.json', 'claude-implementer-F004-i1.json', 'codex-auditor-F004-i1.json', 'claude-implementer-F004-i2.json', 'codex-auditor-F004-i2.json']
+reason: max_iterations=2 reached without signoff
+
+===
+<!-- rendered annotation 2026-08-14T16:08:44Z -->
+**Operators: Reordering or replacing a slice no longer silently drops the proof close was going to ask you for — Blocked work: stopped cap** _(band: needs_action)_
+
+Volley terminated after 3 round(s) with status `stopped_cap`. Review the audit envelope before deciding next step. Reference: plan `2026-08-13-001-feat-lock-outcome-slices-proof`, feature `F004`.
+
+Run:
+
+```
+dontpanic resume 2026-08-13-001-feat-lock-outcome-slices-proof --all
+```
+
+Evidence: `/Users/bayesian/Code/DontPanic/docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/signoff.json`
+
+<details><summary>Technical details</summary>
+
+- `feature_id` = `F004`
+- `final_status` = `stopped_cap`
+- `inbox_event` = `volley_terminal`
+- `iteration_count` = `3`
+- `plan_id` = `2026-08-13-001-feat-lock-outcome-slices-proof`
+- `rounds` = `3`
+
+</details>
+
+===
+---
+timestamp: 2026-08-14T17:12:53Z
+event: gate_cleared
+plan_id: 2026-08-13-001-feat-lock-outcome-slices-proof
+gate: breaker:iteration_cap
+---
+
+Operator cleared gate 'breaker:iteration_cap' via 'approve'.
+
+===
+---
+timestamp: 2026-08-14T17:17:32Z
+event: volley_start
+plan_id: 2026-08-13-001-feat-lock-outcome-slices-proof
+feature_id: F004
+---
+
+impl=claude aud=codex cap=2 target_env=dev target_project=(none)
+
+===
+---
+timestamp: 2026-08-14T17:17:32Z
+event: volley_start
+plan_id: 2026-08-13-001-feat-lock-outcome-slices-proof
+feature_id: F004
+implementer: claude
+auditor: codex
+---
+
+Volley begins: claude (impl) + codex (aud), max_iterations=2
+
+===
+---
+timestamp: 2026-08-14T17:32:10Z
+event: volley_terminal
+plan_id: 2026-08-13-001-feat-lock-outcome-slices-proof
+final_status: signed_off
+rounds: 2
+feature_id: F004
+---
+
+final_status: signed_off
+rounds: 2
+audits: ['claude-implementer-F004-i0.json', 'codex-auditor-F004-i0.json', 'claude-implementer-F004-i1.json', 'codex-auditor-F004-i1.json']
+reason: auditor signed off
+
+===
+<!-- rendered annotation 2026-08-14T17:32:10Z -->
+**AI work finished on 2026-08-13-001-feat-lock-outcome-slices-proof** _(band: ready)_
+
+Volley completed after 2 round(s) with `signed_off`. No action needed.
+
+Evidence: `/Users/bayesian/Code/DontPanic/docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/signoff.json`
+
+<details><summary>Technical details</summary>
+
+- `feature_id` = `F004`
+- `final_status` = `signed_off`
+- `inbox_event` = `volley_terminal`
+- `iteration_count` = `2`
+- `plan_id` = `2026-08-13-001-feat-lock-outcome-slices-proof`
+- `rounds` = `2`
+
+</details>
+
+===
+---
+timestamp: 2026-08-14T17:32:10Z
+event: breaker:patch_incomplete
+plan_id: 2026-08-13-001-feat-lock-outcome-slices-proof
+report_path: /Users/bayesian/Code/DontPanic/docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/patch-completeness-1.json
+---
+
+Patch incomplete — signoff blocked.
+Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
+  test_file_untracked | block | scripts/dontpanic_orchestrate/tests/test_outcome_score_f004.py | A test file is untracked or unstaged_modified — pytest discovery on a fresh clone will not run it. | Run: git add scripts/dontpanic_orchestrate/tests/test_outcome_score_f004.py
+  unstaged_dirty_state | block | docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/INBOX.md,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/gate-state.json,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/plan-run-fingerprint.json,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/signoff-2026-08-13-001-feat-lock-outcome-slices-proof.json,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/transcript.md,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/decisions.jsonl,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/git-state-0-auditor.json,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/git-state-0-implementer.json,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/git-state-1-auditor.json,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/git-state-1-implementer.json,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/git-state-2-auditor.json,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/git-state-2-implementer.json,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/features.json,scripts/dontpanic_orchestrate/outcome_score.py | Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/decisions.jsonl,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/features.json,scripts/dontpanic_orchestrate/outcome_score.py | Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch.
+
+===
+---
+timestamp: 2026-08-14T17:32:10Z
+event: volley_crash_caught
+plan_id: 2026-08-13-001-feat-lock-outcome-slices-proof
+feature_id: F004
+stage: post_iter
+exception_class: PatchCompletenessError
+---
+
+supervisor caught unhandled exception in iter loop (iteration=1, stage=post_iter): PatchCompletenessError: Patch incomplete — signoff blocked.
+Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
+  test_file_untracked | block | scripts/dontpanic_orchestrate/tests/test_outcome_score_f004.py | A test file is untracked or unstaged_modified — pytest discovery on a fresh clone will not run it. | Run: git add scripts/dontpanic_orchestrate/tests/test_outcome_score_f004.py
+  unstaged_dirty_state | block | docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/INBOX.md,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/gate-state.json,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/plan-run-fingerprint.json,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/signoff-2026-08-13-001-feat-lock-outcome-slices-proof.json,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/transcript.md,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/decisions.jsonl,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/git-state-0-auditor.json,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/git-state-0-implementer.json,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/git-state-1-auditor.json,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/git-state-1-implementer.json,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/git-state-2-auditor.json,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/git-state-2-implementer.json,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/features.json,scripts/dontpanic_orchestrate/outcome_score.py | Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/decisions.jsonl,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/features.json,scripts/dontpanic_orchestrate/outcome_score.py | Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch.. F004 backstop (D025 root cause #2). Operator: read audit/terminal-state-iter1.json for the stage + last-good envelope pointers, then use `dontpanic close --operator-resolved` (F2 F004 CLI) to close this feature without a re-dispatch when the failure is not a real implementation defect.
+
+===
+---
+timestamp: 2026-08-14T17:32:10Z
+event: volley_terminal
+plan_id: 2026-08-13-001-feat-lock-outcome-slices-proof
+final_status: blocked
+rounds: 2
+feature_id: F004
+---
+
+final_status: blocked
+rounds: 2
+audits: ['claude-implementer-F004-i0.json', 'codex-auditor-F004-i0.json', 'claude-implementer-F004-i1.json', 'codex-auditor-F004-i1.json']
+reason: supervisor caught unhandled exception in iter loop (iteration=1, stage=post_iter): PatchCompletenessError: Patch incomplete — signoff blocked.
+Pass --allow-incomplete-patch <reason> (>=8 chars) to override, or fix:
+  test_file_untracked | block | scripts/dontpanic_orchestrate/tests/test_outcome_score_f004.py | A test file is untracked or unstaged_modified — pytest discovery on a fresh clone will not run it. | Run: git add scripts/dontpanic_orchestrate/tests/test_outcome_score_f004.py
+  unstaged_dirty_state | block | docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/INBOX.md,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/gate-state.json,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/plan-run-fingerprint.json,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/signoff-2026-08-13-001-feat-lock-outcome-slices-proof.json,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/transcript.md,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/decisions.jsonl,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/git-state-0-auditor.json,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/git-state-0-implementer.json,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/git-state-1-auditor.json,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/git-state-1-implementer.json,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/git-state-2-auditor.json,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/git-state-2-implementer.json,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/features.json,scripts/dontpanic_orchestrate/outcome_score.py | Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/decisions.jsonl,docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/features.json,scripts/dontpanic_orchestrate/outcome_score.py | Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch.. F004 backstop (D025 root cause #2). Operator: read audit/terminal-state-iter1.json for the stage + last-good envelope pointers, then use `dontpanic close --operator-resolved` (F2 F004 CLI) to close this feature without a re-dispatch when the failure is not a real implementation defect.
+
+===
+<!-- rendered annotation 2026-08-14T17:32:11Z -->
+**Operators: Reordering or replacing a slice no longer silently drops the proof close was going to ask you for — Blocked work: blocked** _(band: needs_action)_
+
+Volley terminated after 2 round(s) with status `blocked`. Review the audit envelope before deciding next step. Reference: plan `2026-08-13-001-feat-lock-outcome-slices-proof`, feature `F004`.
+
+Run:
+
+```
+dontpanic resume 2026-08-13-001-feat-lock-outcome-slices-proof --all
+```
+
+Evidence: `/Users/bayesian/Code/DontPanic/docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/signoff.json`
+
+<details><summary>Technical details</summary>
+
+- `feature_id` = `F004`
+- `final_status` = `blocked`
+- `inbox_event` = `volley_terminal`
+- `iteration_count` = `2`
+- `plan_id` = `2026-08-13-001-feat-lock-outcome-slices-proof`
+- `rounds` = `2`
+
+</details>
+
+===
+---
+timestamp: 2026-08-14T19:45:22Z
+event: feature_operator_resolved
+plan_id: 2026-08-13-001-feat-lock-outcome-slices-proof
+feature_id: F004
+reason_class: signed_off_adjacent
+---
+
+Operator closed feature F004 as operator_resolved (class=signed_off_adjacent).
+
+Closeout memo: evidence/closeout-memo.md
+Signoff envelope: audit/signoff-2026-08-13-001-feat-lock-outcome-slices-proof.json
+breaker:no_progress cleared: False
+features.json passes flipped: True
+
+Edit the closeout memo's `Rationale` section before merging.
+
+===

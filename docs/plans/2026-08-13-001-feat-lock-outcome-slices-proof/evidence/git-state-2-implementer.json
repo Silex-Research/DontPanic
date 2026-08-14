@@ -1,267 +1,47 @@
 {
-  "staged": [
-    {
-      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/INBOX.md",
-      "status": "M"
-    },
-    {
-      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/claude-implementer-F005-i0.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/claude-implementer-F005-i1.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/claude-implementer-F005-i2.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/claude-implementer-F006-i0.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/claude-implementer-F006-i1.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/claude-implementer-F006-i2.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/codex-auditor-F005-i0.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/codex-auditor-F005-i1.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/codex-auditor-F005-i2.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/codex-auditor-F006-i0.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/codex-auditor-F006-i1.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/codex-auditor-F006-i2.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/gate-state.json",
-      "status": "M"
-    },
-    {
-      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/no_progress_classification_F006_iter1.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/operator-resolution-2026-08-09-002-feat-decision-brief-at-gates.json",
-      "status": "M"
-    },
-    {
-      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/partials/2026-08-09-002-feat-decision-brief-at-gates#claude#0.stdout.txt",
-      "status": "M"
-    },
-    {
-      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/partials/2026-08-09-002-feat-decision-brief-at-gates#claude#1.stdout.txt",
-      "status": "M"
-    },
-    {
-      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/partials/2026-08-09-002-feat-decision-brief-at-gates#claude#2.stdout.txt",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/patch-completeness-0.json",
-      "status": "M"
-    },
-    {
-      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/patch-completeness-2.json",
-      "status": "M"
-    },
-    {
-      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/plan-run-fingerprint.json",
-      "status": "M"
-    },
-    {
-      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/signoff-2026-08-09-002-feat-decision-brief-at-gates.json",
-      "status": "M"
-    },
-    {
-      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/terminal-state-iter2.json",
-      "status": "M"
-    },
-    {
-      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/audit/transcript.md",
-      "status": "M"
-    },
-    {
-      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/decisions.jsonl",
-      "status": "M"
-    },
-    {
-      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/evidence/F005-i1-emitter-command-parity.txt",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/evidence/F005-i2-emitter-command-parity.txt",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/evidence/closeout-memo.md",
-      "status": "M"
-    },
-    {
-      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/evidence/git-state-0-auditor.json",
-      "status": "M"
-    },
-    {
-      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/evidence/git-state-0-implementer.json",
-      "status": "M"
-    },
-    {
-      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/evidence/git-state-1-auditor.json",
-      "status": "M"
-    },
-    {
-      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/evidence/git-state-1-implementer.json",
-      "status": "M"
-    },
-    {
-      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/evidence/git-state-2-auditor.json",
-      "status": "M"
-    },
-    {
-      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/evidence/git-state-2-implementer.json",
-      "status": "M"
-    },
-    {
-      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/features.json",
-      "status": "M"
-    },
-    {
-      "path": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/plan.md",
-      "status": "M"
-    },
-    {
-      "path": "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/patch-completeness-0.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/decisions.jsonl",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/applicable-skills.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/required-capabilities.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/features.json",
-      "status": "A"
-    },
-    {
-      "path": "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/plan.md",
-      "status": "A"
-    },
-    {
-      "path": "scripts/dontpanic_orchestrate/cli.py",
-      "status": "M"
-    },
-    {
-      "path": "scripts/dontpanic_orchestrate/decision_brief.py",
-      "status": "M"
-    },
-    {
-      "path": "scripts/dontpanic_orchestrate/event_copy.py",
-      "status": "M"
-    },
-    {
-      "path": "scripts/dontpanic_orchestrate/supervisor.py",
-      "status": "M"
-    },
-    {
-      "path": "scripts/dontpanic_orchestrate/tests/fixtures/f005_prechange_emitter_commands.json",
-      "status": "A"
-    },
-    {
-      "path": "scripts/dontpanic_orchestrate/tests/fixtures/f005_prechange_render.json",
-      "status": "A"
-    },
-    {
-      "path": "scripts/dontpanic_orchestrate/tests/test_event_copy_impact_first.py",
-      "status": "A"
-    },
-    {
-      "path": "scripts/dontpanic_orchestrate/tests/test_event_copy_undeclared_impact.py",
-      "status": "A"
-    },
-    {
-      "path": "scripts/dontpanic_orchestrate/tests/tools/f005_emitter_command_probe.py",
-      "status": "A"
-    }
-  ],
+  "staged": [],
   "unstaged_modified": [
     {
-      "path": "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/evidence/F010-journey-transcript.md",
+      "path": "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/INBOX.md",
       "status": "M"
     },
     {
-      "path": "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/evidence/F010-live-upgrade-report.json",
+      "path": "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/plan-run-fingerprint.json",
       "status": "M"
     },
     {
-      "path": "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/decisions.jsonl",
+      "path": "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/transcript.md",
       "status": "M"
     },
     {
-      "path": "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/features.json",
+      "path": "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/git-state-0-auditor.json",
       "status": "M"
     },
     {
-      "path": "scripts/dontpanic_orchestrate/cli.py",
+      "path": "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/git-state-0-implementer.json",
       "status": "M"
     },
     {
-      "path": "scripts/dontpanic_orchestrate/completion_gate.py",
+      "path": "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/git-state-1-auditor.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/git-state-1-implementer.json",
+      "status": "M"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/outcome_score.py",
       "status": "M"
     }
   ],
   "untracked": [
     ".claude/",
-    "docs/brainstorms/",
-    "docs/plans/2026-08-12-001-infra-admitted-state-and-process-behaviors/",
-    "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/INBOX.md",
-    "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/claude-implementer-F001-i0.json",
-    "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/claude-implementer-F002-i0.json",
-    "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/claude-implementer-F002-i1.json",
-    "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/claude-implementer-F002-i2.json",
-    "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/codex-auditor-F001-i0.json",
-    "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/codex-auditor-F002-i0.json",
-    "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/codex-auditor-F002-i1.json",
-    "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/gate-state.json",
-    "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/partials/",
-    "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/plan-run-fingerprint.json",
-    "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/transcript.md",
-    "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/F001-proof-inherits-contract.md",
-    "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/F001-validation-exit-codes-after.txt",
-    "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/F001-validation-exit-codes-before.txt",
-    "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/git-state-0-auditor.json",
-    "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/git-state-0-implementer.json",
-    "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/git-state-1-auditor.json",
-    "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/git-state-1-implementer.json",
-    "memory/",
-    "scripts/dontpanic_orchestrate/outcome_score.py",
-    "scripts/dontpanic_orchestrate/tests/test_outcome_score_f002.py",
-    "uv.lock"
+    "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/claude-implementer-F004-i0.json",
+    "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/claude-implementer-F004-i1.json",
+    "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/claude-implementer-F004-i2.json",
+    "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/codex-auditor-F004-i0.json",
+    "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/codex-auditor-F004-i1.json",
+    "scripts/dontpanic_orchestrate/tests/test_outcome_score_f004.py"
   ],
   "deleted_staged": [],
   "deleted_unstaged": []

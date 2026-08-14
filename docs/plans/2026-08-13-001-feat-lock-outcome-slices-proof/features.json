@@ -103,8 +103,8 @@
         },
         {
           "type": "file",
-          "uri": "./evidence/closeout-memo.md",
-          "note": "Operator close-out: why patch_completeness blocked, and the 87-passed run executed outside the sandbox both agents were confined to."
+          "uri": "./evidence/closeout-memo-F002.md",
+          "note": "Operator close-out for F002. Stored per-feature because `close --operator-resolved` writes one memo per plan and F004's close overwrote the shared path; recovered from ef3f2d5. See D012."
         },
         {
           "type": "commit",
@@ -127,10 +127,11 @@
         "SliceScore.feature_ids already exists; close_obligations() ignores it in favour of `live = {s.index: s for s in score.slice_scores}`. That single line is the defect.",
         "Match locked and live slices on feature identity, retaining both the locked obligation and any unmatched live slice.",
         "Resolve cross-plan proof refs on the (plan_id, feature_id) pair; stripping the plan prefix lets an unrelated local feature satisfy a parent reference.",
-        "Do not change the scoring rules (F002) or sidecar durability (F005)."
+        "Do not change the scoring rules (F002) or sidecar durability (F005).",
+        "Duplicate identities: two slices can legitimately name the same proving features, so slice identity alone cannot tell them apart. Within an identity group, disambiguate by capability text before falling back to live order — a locked record pairs with the live slice whose capability matches it. Where identity AND capability both match, the slices are interchangeable and order is harmless; say so in the docstring rather than inventing a distinction the data cannot support. The existing docstring reasons well about partial overlap and the empty legacy identity but is silent on this case."
       ],
-      "acceptance": "(1) Replacing a locked slice with a different feature at the same numeric index keeps the locked obligation AND surfaces the live slice as its own obligation. (2) Prepending a slice, and separately reordering slices, each leave every locked obligation intact. (3) A test asserts close_obligations() does not key on index — mutating only the index of a live slice must not change the obligation set. (4) A cross-plan proof ref 'parent:F001' is satisfied only by evidence on F001 of plan 'parent'; a local F001 with matching evidence does NOT satisfy it.",
-      "passes": false,
+      "acceptance": "(1) Replacing a locked slice with a different feature at the same numeric index keeps the locked obligation AND surfaces the live slice as its own obligation. (2) Prepending a slice, and separately reordering slices, each leave every locked obligation intact. (3) A test asserts close_obligations() does not key on index — mutating only the index of a live slice must not change the obligation set. (4) A cross-plan proof ref 'parent:F001' is satisfied only by evidence on F001 of plan 'parent'; a local F001 with matching evidence does NOT satisfy it. (5) Two slices naming the same proving features but differing in capability text, swapped in order, produce byte-identical obligations and report NO drift — each locked record pairs with the live slice carrying its own capability. (6) Two slices identical in both proving features and capability are documented as interchangeable; a reorder of those is a no-op, and the code says why rather than implying a distinction it cannot make.",
+      "passes": true,
       "depends_on": [
         "F002"
       ],
@@ -141,7 +142,29 @@
           "backend"
         ],
         "description_hash": "72ece588f58d8b6dfb8f07cfa9dde2b9210f5d92364e99c75e810e24d4c1aa1a"
-      }
+      },
+      "evidence_refs": [
+        {
+          "type": "audit_json",
+          "uri": "./audit/codex-auditor-F004-i1.json",
+          "note": "Signed off at iteration 1; one advisory on envelope hygiene, no correctness findings."
+        },
+        {
+          "type": "audit_json",
+          "uri": "./audit/codex-auditor-F004-i0.json",
+          "note": "Prior round under the tightened contract."
+        },
+        {
+          "type": "file",
+          "uri": "./evidence/closeout-memo-F004.md",
+          "note": "Operator close-out: the three identity defects fixed, and the memo-clobber defect found and repaired while closing."
+        }
+      ],
+      "verified_by": [
+        "codex",
+        "operator"
+      ],
+      "verified_at": "2026-08-14T19:45:22Z"
     },
     {
       "id": "F005",

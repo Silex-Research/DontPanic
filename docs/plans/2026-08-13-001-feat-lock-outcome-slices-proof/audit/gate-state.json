@@ -47,6 +47,19 @@
       "gate": "breaker:iteration_cap",
       "at": "2026-08-13T22:42:38Z",
       "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:iteration_cap",
+      "at": "2026-08-14T16:08:43Z",
+      "actor": "supervisor",
+      "reason": "max_iterations=2 reached without signoff"
+    },
+    {
+      "action": "approve",
+      "gate": "breaker:iteration_cap",
+      "at": "2026-08-14T17:12:53Z",
+      "actor": "operator"
     }
   ],
   "gate_events": [
