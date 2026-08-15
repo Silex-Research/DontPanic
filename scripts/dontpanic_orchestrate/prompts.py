@@ -68,6 +68,24 @@ every later turn's input. Default cadence:
 """
 
 
+STAGING_NOTE = """
+## Stage what you write (patch-completeness gate)
+
+Before you reply, `git add` every file you created or modified. Staging is not
+committing — it does not create a commit and does not touch history.
+
+The supervisor runs a patch-completeness gate at signoff. A new test file left
+untracked, or a source module the tests import that nobody staged, blocks the
+flip to `passes: true` — a fresh clone would not run your test. Nobody else can
+stage for you: the operator's last action ended before your files existed, and
+the gate runs after your round.
+
+  $ git add <the files you touched>
+  $ git status --short   # nothing you wrote should be left as ?? or ` M`
+
+Do NOT `git add` unrelated pre-existing dirty files, and do NOT commit.
+"""
+
 EC5_AUDITOR_RULE = """
 EC5 severity rule (target-context prelude — narrow downgrade, F003 / D005):
 
@@ -160,6 +178,7 @@ Steps:
             base
             + target_section
             + TEST_DISCIPLINE_NOTE
+            + STAGING_NOTE
             + (
                 "\nImplement the feature. Run any verification commands specified in steps.\n"
                 "Reply with a concise paragraph (3-6 sentences) summarizing what you did and the outcome.\n"
@@ -172,6 +191,7 @@ Steps:
         base
         + target_section
         + TEST_DISCIPLINE_NOTE
+        + STAGING_NOTE
         + (
             f"\nPrior round's auditor produced findings (full JSON at {prior_auditor_path}):\n"
             f"{findings_block}\n"
