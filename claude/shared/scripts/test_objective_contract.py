@@ -11,6 +11,9 @@ at ``schemas/v1.0/validate.py``. Seven fixture cases:
   6. goal_type=parity, no links.objective_contract -> exit 1, ✗ objective_contract — required by goal_type=parity
   7. goal_type=mechanical, no contract        -> exit 0, no contract line (mechanical doesn't require it)
 
+Case 15: a completed schema 1.0 new_feature plan with no contract warns
+instead of failing (historical records are not rewritten).
+
 Cases 13-14 (plan 2026-08-13-001 F001) carry the additive contract fields
 end-to-end through the validator, not just through the schema:
 
@@ -187,6 +190,17 @@ def main() -> int:
             0,
             ["✓ plan.md frontmatter", "✓ objective_contract"],
             ["✗ objective_contract", "advisory"],
+        ),
+        (
+            "case 15: completed 1.0 new_feature missing contract warns, does not fail",
+            "_fixture_completed_new_feature_no_contract",
+            0,
+            [
+                "✓ plan.md frontmatter",
+                "⚠ objective_contract",
+                "status=completed",
+            ],
+            ["✗ objective_contract"],
         ),
     ]
 

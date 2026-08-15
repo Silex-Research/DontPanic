@@ -178,6 +178,20 @@ def _check_objective_contract(plan_dir: Path, plan_data: dict) -> tuple[bool, st
             f"goal_type={goal_type.value}" if goal_requires
             else "schema_version>=1.1 (substantive plan)"
         )
+        # Historical completed/abandoned 1.0 plans are not rewritten with
+        # invented contracts. Warn so the fleet can validate; live drafts
+        # and schema_version >= 1.1 still fail closed.
+        status = plan_data.get("status")
+        historical = (
+            status in {"completed", "abandoned"}
+            and schema_version < _DELIVERS_REQUIRED_FROM
+        )
+        if historical:
+            return True, (
+                f"  ⚠ {label} — required by {reason} but missing; "
+                f"warning only because status={status} "
+                "(historical record, not rewritten)"
+            )
         return False, (
             f"  ✗ {label} — required by {reason} but "
             "links.objective_contract is missing or empty"

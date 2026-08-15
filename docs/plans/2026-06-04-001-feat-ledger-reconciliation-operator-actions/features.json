@@ -17,7 +17,9 @@
       "acceptance": "ActionItem carries clears_when (a reference into a CLOSED named-predicate registry + bound params; no expression eval) and resolution_class constrained to exactly {command_resolvable, chained, operator_attested, blocked_external}; evaluate_clears_when() is a pure function (zero I/O) returning the correct boolean for each registered predicate; to_dict() serializes the fields. Verified by unit tests covering every registry predicate true/false.",
       "passes": true,
       "depends_on": [],
-      "verified_by": "operator-style-implementation",
+      "verified_by": [
+        "operator-style-implementation"
+      ],
       "verified_at": "2026-06-04T22:08:09Z",
       "evidence_refs": [
         {
@@ -54,7 +56,9 @@
       "depends_on": [
         "F001"
       ],
-      "verified_by": "operator-style-implementation",
+      "verified_by": [
+        "operator-style-implementation"
+      ],
       "verified_at": "2026-06-04T22:21:08Z",
       "evidence_refs": [
         {
@@ -65,7 +69,7 @@
         {
           "type": "file",
           "uri": "scripts/dontpanic_orchestrate/dashboard.py",
-          "note": "_gather_action_items routes operator_console.aggregate(...) through _ar.suppress_resolved with one fleet LiveState (plan_status + cleared_gates captured during the plan walk) — single evaluate-and-filter seam at the state producer"
+          "note": "_gather_action_items routes operator_console.aggregate(...) through _ar.suppress_resolved with one fleet LiveState (plan_status + cleared_gates captured during the plan walk) \u2014 single evaluate-and-filter seam at the state producer"
         },
         {
           "type": "test_output",
@@ -75,7 +79,7 @@
         {
           "type": "test_output",
           "uri": "full orchestrate sweep",
-          "note": "3758 passed, 7 skipped in 204.48s — F002's change to the live state producer (dashboard.py) breaks nothing"
+          "note": "3758 passed, 7 skipped in 204.48s \u2014 F002's change to the live state producer (dashboard.py) breaks nothing"
         }
       ]
     },
@@ -95,7 +99,9 @@
       "depends_on": [
         "F002"
       ],
-      "verified_by": "operator-style-implementation",
+      "verified_by": [
+        "operator-style-implementation"
+      ],
       "verified_at": "2026-06-04T22:21:08Z",
       "evidence_refs": [
         {
@@ -136,7 +142,9 @@
       "depends_on": [
         "F002"
       ],
-      "verified_by": "operator-style-implementation",
+      "verified_by": [
+        "operator-style-implementation"
+      ],
       "verified_at": "2026-06-04T22:21:08Z",
       "evidence_refs": [
         {
@@ -180,7 +188,9 @@
         "F003",
         "F004"
       ],
-      "verified_by": "operator-style-implementation",
+      "verified_by": [
+        "operator-style-implementation"
+      ],
       "verified_at": "2026-06-04T22:21:08Z",
       "evidence_refs": [
         {

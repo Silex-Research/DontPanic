@@ -27,6 +27,8 @@ human_gates:
 loop_caps:
   max_iterations: 2
   hard_stop: false
+verification:
+  command: python3 claude/shared/schemas/v1.0/validate.py docs/plans/2026-08-12-001-infra-admitted-state-and-process-behaviors
 privacy_tier: internal
 surfaces:
   - backend

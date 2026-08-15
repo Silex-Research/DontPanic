@@ -26,6 +26,8 @@ human_gates:
 loop_caps:
   max_iterations: 2
   hard_stop: false
+verification:
+  command: python3 claude/shared/schemas/v1.0/validate.py docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof
 privacy_tier: internal
 surfaces:
   - backend

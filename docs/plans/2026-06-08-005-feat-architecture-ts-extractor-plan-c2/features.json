@@ -12,7 +12,9 @@
         "ts_module",
         "ts_import_crawler"
       ],
-      "verified_by": "scripts/dontpanic_orchestrate/tests/test_architecture_ts_extractor_c2.py (11 tests) + updated C0 scope-guard pins + 73-test architecture sweep + 38 dashboard vitest"
+      "verified_by": [
+        "scripts/dontpanic_orchestrate/tests/test_architecture_ts_extractor_c2.py (11 tests) + updated C0 scope-guard pins + 73-test architecture sweep + 38 dashboard vitest"
+      ]
     },
     {
       "id": "F002",
@@ -24,7 +26,9 @@
         "missing_extractor",
         "confidence_ceiling"
       ],
-      "verified_by": "scripts/dontpanic_orchestrate/tests/test_architecture_ts_extractor_c2.py (11 tests) + updated C0 scope-guard pins + 73-test architecture sweep + 38 dashboard vitest"
+      "verified_by": [
+        "scripts/dontpanic_orchestrate/tests/test_architecture_ts_extractor_c2.py (11 tests) + updated C0 scope-guard pins + 73-test architecture sweep + 38 dashboard vitest"
+      ]
     }
   ]
 }

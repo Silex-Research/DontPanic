@@ -21,7 +21,9 @@
       "acceptance": "From a fresh clone, running `python -m claude.skills.changelog.changelog --fixtures claude/skills/changelog/tests/fixtures/nominal/` produces a markdown changelog whose section headings, commit count, and per-group summaries match the recorded golden output byte-for-byte (deterministic given fixture). Empty-range fixture produces an empty-changelog report (exit 0, never a stack trace). Non-Conventional commits fall under an 'other' group rather than being dropped. Tests pass without git history, without LLM calls, without secrets. Skill is registered in claude/RESOLVER.md and validate.py exits 0 with zero NEW issues vs the post-#692 baseline.",
       "passes": true,
       "depends_on": [],
-      "verified_by": "operator-ledger-reconciliation",
+      "verified_by": [
+        "operator-ledger-reconciliation"
+      ],
       "verified_at": "2026-06-04T19:54:13Z",
       "evidence_refs": [
         {

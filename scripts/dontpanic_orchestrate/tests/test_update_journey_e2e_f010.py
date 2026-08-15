@@ -32,7 +32,9 @@ Decisions enforced here:
   isolated instance (its own ``$DONTPANIC_HOME`` + fixture project registry),
   NEVER the operator's real registry; it is torn down after the journey. The live
   read of the REAL instance is limited to the read-only upgrade report capture.
-* D048 — test output for this feature is captured under evidence/ at close.
+* D048 — close-time evidence capture is a plan-author step, not a pytest
+  side effect. These tests write transcripts under tmp_path only. Writing
+  into ``docs/plans/.../evidence/`` dirties the working tree on every sweep.
 
 The "real doctor CLI" surface is exercised entirely out-of-process here: the
 journey calls genuine ``python -m dontpanic_orchestrate doctor`` / ``... projects``
@@ -66,13 +68,6 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SCRIPTS_DIR = REPO_ROOT / "scripts"
-EVIDENCE_DIR = (
-    REPO_ROOT
-    / "docs"
-    / "plans"
-    / "2026-06-21-001-feat-upgrade-readiness-doctor"
-    / "evidence"
-)
 
 # The real seeded required action under test (docs/upgrade/releases.json).
 CANONICAL_RELEASE = "2026-06-17-001-canonical-discovery"
@@ -278,7 +273,7 @@ def _seed_pending_required(fx: dict, monkeypatch) -> dict:
 # ───────────────────────────  the end-to-end journey  ───────────────────────────
 
 
-def test_update_journey_e2e(isolated_instance, monkeypatch):
+def test_update_journey_e2e(isolated_instance, monkeypatch, tmp_path):
     """fresh update -> WARN -> report (pending required) -> APPLY -> VERIFY ->
     cleared + WARN gone + update_state transition, through the REAL doctor +
     projects CLIs, executed out-of-process (codex-auditor F010-i0)."""
@@ -403,11 +398,10 @@ def test_update_journey_e2e(isolated_instance, monkeypatch):
     assert upgrade_after["warn"] is False  # WARN gone for the required action
     assert "up to date" in upgrade_after["message"]
 
-    # ── persist the journey transcript under evidence/ (D014) ────────────────────
-    EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
-    (EVIDENCE_DIR / "F010-journey-transcript.md").write_text(
-        "".join(transcript), encoding="utf-8"
-    )
+    # Persist the journey transcript under tmp_path — never the plan tree.
+    dest = tmp_path / "F010-journey-transcript.md"
+    dest.write_text("".join(transcript), encoding="utf-8")
+    assert dest.is_file() and dest.stat().st_size > 0
 
 
 # ─────────────────────  D043: apply hits ONLY the isolated instance  ─────────────────────
@@ -461,9 +455,9 @@ def test_apply_runs_only_against_isolated_instance(isolated_instance, monkeypatc
 # ─────────────────────  live read-only report capture on the REAL instance  ─────────────────────
 
 
-def test_capture_live_upgrade_report_real_instance():
+def test_capture_live_upgrade_report_real_instance(tmp_path):
     """Capture a live `dontpanic doctor --upgrade --json` on the operator's REAL
-    instance (read-only) and save it under evidence/ (acceptance + D043).
+    instance (read-only) and save it under tmp_path (acceptance + D043).
 
     Runs out-of-process with the test's isolation env stripped so it resolves the
     real ~/.dontpanic and the real repo identity — the canonical-discovery migration
@@ -499,7 +493,7 @@ def test_capture_live_upgrade_report_real_instance():
     mig_ids = [m["action_id"] for m in payload["migration_status"]]
     assert CANONICAL_ACTION in mig_ids
 
-    EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
-    (EVIDENCE_DIR / "F010-live-upgrade-report.json").write_text(
-        json.dumps(payload, indent=2) + "\n", encoding="utf-8"
-    )
+    dest = tmp_path / "F010-live-upgrade-report.json"
+    dest.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    assert dest.is_file()
+    assert json.loads(dest.read_text()) == payload

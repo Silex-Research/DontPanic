@@ -35,6 +35,8 @@ human_gates:
 loop_caps:
   max_iterations: 2
   hard_stop: false
+verification:
+  command: python3 -m pytest scripts/dontpanic_orchestrate/tests/test_event_copy_impact_first.py scripts/dontpanic_orchestrate/tests/test_event_copy_undeclared_impact.py scripts/dontpanic_orchestrate/tests/test_decision_brief_delivery.py -q
 privacy_tier: internal
 dependencies:
   - 2026-05-24-004-feat-event-messaging-v1
