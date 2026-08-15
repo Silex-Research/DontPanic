@@ -32,7 +32,10 @@ SCHEMAS_DIR = Path(__file__).parent
 sys.path.insert(0, str(SCHEMAS_DIR))
 
 from models.audit_model import Audit  # noqa: E402
-from models.features_model import Features  # noqa: E402
+from models.features_model import (  # noqa: E402
+    Features,
+    evidence_gaps_for_document,
+)
 from models.objective_contract_model import (  # noqa: E402
     GoalType as ContractGoalType,
 )
@@ -258,11 +261,30 @@ def validate_plan_dir(plan_dir: Path) -> int:
 
     features_json = plan_dir / "features.json"
     if features_json.is_file():
-        ok, line = _check(
-            "features.json", Features, json.loads(features_json.read_text())
-        )
+        features_data = json.loads(features_json.read_text())
+        ok, line = _check("features.json", Features, features_data)
         print(line)
         errors += 0 if ok else 1
+        # D008: the model deliberately does NOT raise on an unbacked
+        # `passes: true` — it is the read path, and raising there made 39
+        # checked-in plans unloadable. Enforcement lives here instead, so the
+        # command operators and CI actually run still refuses the flip.
+        if ok:
+            gaps = evidence_gaps_for_document(features_data)
+            # A terminal plan is frozen history. Requiring it to satisfy a rule
+            # added after it closed means every schema tightening retroactively
+            # fails the fleet walk — the plan will never be edited again. Report
+            # it, do not fail on it. A plan still in play keeps failing, which
+            # is the point: you cannot lock or close a LIVE plan on an unbacked
+            # flip. Same rule the doctor applies to the parent-plan gate.
+            terminal = str((plan_data or {}).get("status") or "").strip().lower() in {
+                "completed",
+                "abandoned",
+            }
+            marker = "⚠" if terminal else "✗"
+            for gap in gaps[:5]:
+                print(f"  {marker} features.json — {gap}")
+            errors += 1 if (gaps and not terminal) else 0
 
     audit_dir = plan_dir / "audit"
     if audit_dir.is_dir():

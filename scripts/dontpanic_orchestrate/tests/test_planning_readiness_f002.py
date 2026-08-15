@@ -159,7 +159,7 @@ def _feature(
     steps: list[str] | None = None,
     description: str = "synthetic readiness fixture feature",
 ) -> dict:
-    return {
+    feature = {
         "id": fid,
         "category": "test",
         "phase": 0,
@@ -169,6 +169,19 @@ def _feature(
         "passes": passes,
         "depends_on": depends_on or [],
     }
+    if passes:
+        # A flip to true must name who verified it, when, and cite at least one
+        # evidence_ref — enforced in BOTH validator arms since the D008 fix. A
+        # fixture that skips this is not a "passing feature", it is an invalid
+        # one, and the plan silently drops out of the readiness scan.
+        feature |= {
+            "verified_by": ["codex"],
+            "verified_at": "2026-05-23T00:00:00Z",
+            "evidence_refs": [
+                {"type": "audit_json", "uri": f"./audit/codex-auditor-{fid}-i0.json"}
+            ],
+        }
+    return feature
 
 
 # ─────────────────────────────  tests  ─────────────────────────────

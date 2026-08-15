@@ -328,6 +328,49 @@ def check_pydantic_models() -> CheckResult:
     return _ok("pydantic-models", "plan/features/audit/environments/signoff models import clean")
 
 
+# Plan statuses that mean "finished, one way or another". A terminal plan is
+# frozen history: it will not be edited again, so validating it against
+# schemas that keep tightening is a bet the repo always eventually loses. The
+# parent-plan gate therefore warns rather than fails on these — see
+# check_parent_plan_validates.
+_TERMINAL_PLAN_STATUSES: frozenset[str] = frozenset({"completed", "abandoned"})
+
+
+def is_terminal_plan_status(status: str | None) -> bool:
+    """True only for a status positively recognised as terminal.
+
+    Anything unrecognised — None, empty, a typo — is NOT terminal. Leniency is
+    granted on proof, never on ignorance: a plan whose status cannot be read
+    takes the strict path.
+    """
+    if not status:
+        return False
+    return status.strip().strip("\"'").lower() in _TERMINAL_PLAN_STATUSES
+
+
+def read_plan_status(plan_dir: Path) -> str | None:
+    """Read ``status:`` from plan.md's YAML frontmatter. None when unreadable.
+
+    Deliberately scans only the frontmatter block, so the word "abandoned"
+    appearing in the plan's prose can never be mistaken for its status.
+    """
+    plan_md = plan_dir / "plan.md"
+    try:
+        text = plan_md.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    lines = text.splitlines()
+    if not lines or lines[0].strip() != "---":
+        return None
+    for line in lines[1:]:
+        if line.strip() == "---":
+            break
+        if line.startswith("status:"):
+            value = line.split(":", 1)[1].strip().strip("\"'")
+            return value or None
+    return None
+
+
 def check_parent_plan_validates() -> CheckResult:
     if not PARENT_PLAN_DIR.is_dir():
         return _bad(
@@ -349,9 +392,22 @@ def check_parent_plan_validates() -> CheckResult:
         timeout=30,
     )
     if proc.returncode != 0:
+        detail = (proc.stderr.strip() or proc.stdout.strip())[:200]
+        status = read_plan_status(PARENT_PLAN_DIR)
+        if is_terminal_plan_status(status):
+            # Frozen history. Report it, do not block on it — otherwise every
+            # schema tightening retroactively breaks CI for a plan nobody will
+            # touch again. A live plan (below) still blocks: that is a contract
+            # in play, and a broken one is a real defect.
+            return _warn(
+                "parent-plan",
+                f"parent plan is {status} and no longer validates: {detail}",
+                "expected for frozen history after a schema tightening; "
+                "backfill only if you intend to reopen the plan",
+            )
         return _bad(
             "parent-plan",
-            f"validator rejected parent plan: {proc.stderr.strip()[:200]}",
+            f"validator rejected parent plan: {detail}",
             "review changes against agent-conventions v1.x schemas",
         )
     return _ok("parent-plan", "parent orchestration plan validates")
