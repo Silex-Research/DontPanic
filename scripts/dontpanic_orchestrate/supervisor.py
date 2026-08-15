@@ -45,6 +45,7 @@ from dontpanic_orchestrate import (
     signoff_writer,
     sufficiency_gate,
     transcript,
+    verification_runner,
     worker_profiles,
 )
 from dontpanic_orchestrate.config.resolvers import resolve_model
@@ -2479,6 +2480,34 @@ def dispatch_volley(
                     loaded.plan_dir, loaded.plan_id, aud_name, aud_pct, feature_id
                 )
 
+                # Supervisor-run regression (2026-08-15). The auditor's sandbox
+                # is read-only by design (D012) so it can collect but never
+                # execute tests — five consecutive audits on plan
+                # 2026-08-13-001 reported exactly that, and nothing else in the
+                # harness ran tests either. Run the plan-declared command here,
+                # on the trusted host, and hand the auditor the output. Opt-in:
+                # no `verification` block means nothing runs. Never fatal — a
+                # broken runner must not eat the volley, and its status reaches
+                # the auditor either way.
+                verification_result = None
+                _v_spec = verification_runner.spec_from_plan(loaded.plan)
+                if _v_spec is not None:
+                    try:
+                        verification_result = verification_runner.run_verification(
+                            loaded.plan_dir,
+                            _v_spec,
+                            iteration=iteration,
+                            repo_root=registry_repo_root or loaded.plan_dir,
+                            role="supervisor",
+                            env=round_subprocess_env,
+                        )
+                        print(
+                            f"[volley] verification: {verification_result.status} "
+                            f"({_v_spec.command})"
+                        )
+                    except Exception as exc:  # noqa: BLE001 — advisory, never fatal
+                        print(f"[volley] verification runner failed: {exc}")
+
                 aud_audit_path = _run_round(
                     loaded=loaded,
                     executor=aud_executor,
@@ -2494,6 +2523,9 @@ def dispatch_volley(
                         implementer_audit_path=impl_audit_path,
                         target_env=effective_env,
                         target_project=effective_project,
+                        verification_block=verification_runner.render_context_block(
+                            verification_result
+                        ),
                     ),
                     extra_validation=[
                         *([nested_marker] if nested_marker else []),

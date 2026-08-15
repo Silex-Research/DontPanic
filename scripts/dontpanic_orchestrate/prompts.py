@@ -190,6 +190,7 @@ def auditor_prompt(
     implementer_audit_path: Path,
     target_env: str | None = None,
     target_project: str | None = None,
+    verification_block: str = "",
 ) -> str:
     steps = "\n".join(f"- {s}" for s in (feature.get("steps") or [])) or "(none specified)"
     target_section = _target_block(target_env, target_project) if target_env is not None else ""
@@ -214,18 +215,23 @@ Your job:
 3. Inspect target_context.commands_run in the implementer audit; flag any
    forbidden command shapes (see list below).
 4. Inspect the actual code changes (run `git diff HEAD~1` or `git status` from {plan_dir.parent.parent}).
-5. Run any tests/lints/checks the steps specify, or that you'd expect for this category of work.
+5. Judge the regression the SUPERVISOR ran for you (section below). Your sandbox is
+   read-only, so you cannot execute tests — do not claim you did, and do not treat
+   an absent or non-passing run as if it were green.
 6. Compare what was claimed against what was actually done.
 7. List concrete findings — each with severity (critical|high|medium|low|advisory),
    category (correctness|security|performance|architecture|style|test_coverage|documentation),
    issue (one sentence), evidence (what you observed), recommendation (what to fix).
+
+{verification_block}
 {target_section}
 {EC5_AUDITOR_RULE}
 Reply with a concise paragraph that:
 - Begins with your own {{Repo, Env: {target_env}, Project: {project_line}}} declaration block.
 - States overall verdict (signed_off | needs_changes | blocked).
 - Lists each finding inline with severity (e.g. "FINDING (high, test_coverage): ...").
-- Mentions any tests/checks you actually ran with `$ ` line prefixes.
+- Cites the supervisor's regression run by status, and any read-only checks you
+  performed yourself with `$ ` line prefixes.
 
 Do NOT output JSON; the supervisor extracts findings from your prose and wraps the result.
 """

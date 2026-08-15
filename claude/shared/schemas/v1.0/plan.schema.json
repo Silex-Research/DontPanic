@@ -206,6 +206,23 @@
       },
       "uniqueItems": true
     },
+    "verification": {
+      "type": "object",
+      "description": "v1.19.0 \u2014 regression command the SUPERVISOR runs between the implementer and the auditor. The auditor's sandbox is read-only by design (D012), so it can collect but never execute tests; without this, a feature could sign off with no executed proof. Opt-in: absent means nothing runs. The command is shlex-split, run with shell=False, and checked by command_guard before execution.",
+      "properties": {
+        "command": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Example: 'python3 -m pytest scripts/dontpanic_orchestrate/tests -q'."
+        },
+        "cwd": {
+          "type": "string",
+          "description": "Working directory relative to the repo root; must resolve inside it. Default '.'."
+        }
+      },
+      "required": ["command"],
+      "additionalProperties": false
+    },
     "external_refs": {
       "type": "array",
       "description": "v1.10.0 — opt-in pointers to external entities the plan tracks (PM-tool issues, etc.). DontPanic plan lifecycle hooks (lock validates reachability, close pushes status) consult these via the category-adapter layer (scripts/dontpanic_orchestrate/integrations/). Strictly additive — absent or empty array = no external sync. Example: [{kind: 'pm_issue', uri: 'linear://issue/ABC-123', sync: 'push_status'}].",
