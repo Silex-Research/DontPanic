@@ -48,7 +48,7 @@
       "id": "F004",
       "category": "functional",
       "phase": 3,
-      "description": "Integrity under failure: idempotency keys so a double-click or retry never double-applies; audit-log integrity (append-only, tamper-evident) so every browser-originated action is provably recorded; failure recovery so a partial action leaves a clean, resumable state; and a stale-tab guard \u2014 each action carries the model fingerprint it was issued against, and the backend refuses if the world has moved on.",
+      "description": "Integrity under failure: idempotency keys so a double-click or retry never double-applies; audit-log integrity (append-only, tamper-evident) so every browser-originated action is provably recorded; failure recovery so a partial action leaves a clean, resumable state; and a stale-tab guard — each action carries the model fingerprint it was issued against, and the backend refuses if the world has moved on.",
       "steps": [
         "Idempotency keys on every action; replays are no-ops",
         "Append-only, tamper-evident audit log of browser-originated actions",
@@ -65,12 +65,28 @@
       "phase": 5,
       "passes": true,
       "verified_by": [
-        "scripts/dontpanic_orchestrate/pty_bridge.py",
-        "scripts/dontpanic_orchestrate/tests/test_pty_bridge_t.py"
+        "operator"
       ],
-      "verified_at": "2026-06-06T00:00:00Z",
-      "description": "Embedded terminal \u2014 PTY\u2194WebSocket bridge (pty_bridge): stdlib RFC-6455 handshake + frame codec + login-shell PTY pump + resize. No new deps.",
-      "acceptance": "Handshake matches the RFC-6455 vector; frames round-trip including masked/extended/partial; a shell runs a command and is reaped on socket close; resize control frame applies."
+      "verified_at": "2026-08-14T21:30:00Z",
+      "description": "Embedded terminal — PTY↔WebSocket bridge (pty_bridge): stdlib RFC-6455 handshake + frame codec + login-shell PTY pump + resize. No new deps.",
+      "acceptance": "Handshake matches the RFC-6455 vector; frames round-trip including masked/extended/partial; a shell runs a command and is reaped on socket close; resize control frame applies.",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/pty_bridge.py",
+          "note": "Implementation cited by the original record."
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_pty_bridge_t.py",
+          "note": "Test suite, executed and passing at backfill time."
+        },
+        {
+          "type": "log",
+          "uri": "./evidence/F005-F009-backfill-test-run.txt",
+          "note": "Operator re-ran every cited suite at backfill time: 21 Python tests (test_pty_bridge_t, test_terminal_serve_t, test_serve_port_policy) and 3 vitest tests (terminal-dock). All pass."
+        }
+      ]
     },
     {
       "id": "F006",
@@ -78,12 +94,28 @@
       "phase": 5,
       "passes": true,
       "verified_by": [
-        "scripts/dontpanic_orchestrate/dashboard.py",
-        "scripts/dontpanic_orchestrate/tests/test_terminal_serve_t.py"
+        "operator"
       ],
-      "verified_at": "2026-06-06T00:00:00Z",
-      "description": "Embedded terminal \u2014 serve integration: threaded server + guarded /pty + /terminal/session behind --enable-terminal; loopback + Origin + per-serve token.",
-      "acceptance": "Off-by-default \u2192 /pty 404 + session enabled:false; wrong/no token \u2192 403; foreign Origin \u2192 403; loopback-only enforced; good token+origin \u2192 a live shell over the real serve handler."
+      "verified_at": "2026-08-14T21:30:00Z",
+      "description": "Embedded terminal — serve integration: threaded server + guarded /pty + /terminal/session behind --enable-terminal; loopback + Origin + per-serve token.",
+      "acceptance": "Off-by-default → /pty 404 + session enabled:false; wrong/no token → 403; foreign Origin → 403; loopback-only enforced; good token+origin → a live shell over the real serve handler.",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/dashboard.py",
+          "note": "Implementation cited by the original record."
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_terminal_serve_t.py",
+          "note": "Test suite, executed and passing at backfill time."
+        },
+        {
+          "type": "log",
+          "uri": "./evidence/F005-F009-backfill-test-run.txt",
+          "note": "Operator re-ran every cited suite at backfill time: 21 Python tests (test_pty_bridge_t, test_terminal_serve_t, test_serve_port_policy) and 3 vitest tests (terminal-dock). All pass."
+        }
+      ]
     },
     {
       "id": "F007",
@@ -91,12 +123,28 @@
       "phase": 5,
       "passes": true,
       "verified_by": [
-        "scripts/dontpanic_orchestrate/tests/test_terminal_serve_t.py",
-        "docs/plans/2026-06-06-002-feat-governed-gui-action-channel-v1/threat-model-embedded-terminal.md"
+        "operator"
       ],
-      "verified_at": "2026-06-06T00:00:00Z",
-      "description": "Embedded terminal \u2014 governance: audit log line when armed, NO auto-enable from config/build, threat-model doc.",
-      "acceptance": "terminal_audit_line names local shell + cwd + unrestricted; serve_start defaults enable_terminal=False; build() exposes no enable_terminal param; threat model documents the residual local-token risk."
+      "verified_at": "2026-08-14T21:30:00Z",
+      "description": "Embedded terminal — governance: audit log line when armed, NO auto-enable from config/build, threat-model doc.",
+      "acceptance": "terminal_audit_line names local shell + cwd + unrestricted; serve_start defaults enable_terminal=False; build() exposes no enable_terminal param; threat model documents the residual local-token risk.",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_terminal_serve_t.py",
+          "note": "Test suite, executed and passing at backfill time."
+        },
+        {
+          "type": "file",
+          "uri": "docs/plans/2026-06-06-002-feat-governed-gui-action-channel-v1/threat-model-embedded-terminal.md",
+          "note": "Implementation cited by the original record."
+        },
+        {
+          "type": "log",
+          "uri": "./evidence/F005-F009-backfill-test-run.txt",
+          "note": "Operator re-ran every cited suite at backfill time: 21 Python tests (test_pty_bridge_t, test_terminal_serve_t, test_serve_port_policy) and 3 vitest tests (terminal-dock). All pass."
+        }
+      ]
     },
     {
       "id": "F008",
@@ -104,12 +152,28 @@
       "phase": 5,
       "passes": true,
       "verified_by": [
-        "dashboard/terminal-dock.js",
-        "dashboard/tests/unit/terminal-dock.test.js"
+        "operator"
       ],
-      "verified_at": "2026-06-06T00:00:00Z",
-      "description": "Embedded terminal \u2014 frontend dock: always-visible xterm dock; visible warning + scope when armed; honest off-hint when not.",
-      "acceptance": "Dock renders regardless of state; armed \u2192 '\u26a0 Terminal enabled \u00b7 local shell \u00b7 <repo> \u00b7 unrestricted commands' + 'Shell: <repo> \u00b7 session active'; disabled \u2192 off-hint with --enable-terminal, no warning."
+      "verified_at": "2026-08-14T21:30:00Z",
+      "description": "Embedded terminal — frontend dock: always-visible xterm dock; visible warning + scope when armed; honest off-hint when not.",
+      "acceptance": "Dock renders regardless of state; armed → '⚠ Terminal enabled · local shell · <repo> · unrestricted commands' + 'Shell: <repo> · session active'; disabled → off-hint with --enable-terminal, no warning.",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "dashboard/terminal-dock.js",
+          "note": "Implementation cited by the original record."
+        },
+        {
+          "type": "test_output",
+          "uri": "dashboard/tests/unit/terminal-dock.test.js",
+          "note": "Test suite, executed and passing at backfill time."
+        },
+        {
+          "type": "log",
+          "uri": "./evidence/F005-F009-backfill-test-run.txt",
+          "note": "Operator re-ran every cited suite at backfill time: 21 Python tests (test_pty_bridge_t, test_terminal_serve_t, test_serve_port_policy) and 3 vitest tests (terminal-dock). All pass."
+        }
+      ]
     },
     {
       "id": "F009",
@@ -117,12 +181,28 @@
       "phase": 6,
       "passes": true,
       "verified_by": [
-        "scripts/dontpanic_orchestrate/dashboard.py (DEFAULT_CLI_PORT + port_conflict_message + _port_holder + EADDRINUSE branch)",
-        "scripts/dontpanic_orchestrate/tests/test_serve_port_policy.py"
+        "operator"
       ],
-      "verified_at": "2026-06-06T00:00:00Z",
+      "verified_at": "2026-08-14T21:30:00Z",
       "description": "Serve reliability: `dashboard serve` defaults to a STABLE port (8787) so the URL is predictable; on conflict it fails loud (names the holder + remediation) instead of silently drifting to a random ephemeral port.",
-      "acceptance": "CLI --port defaults to 8787; --port 0 still gives ephemeral; a taken port \u2192 REFUSED (rc 2) naming the holder pid/command + `--port N` remediation; non-conflict OSError keeps the bind-failed path (rc 1)."
+      "acceptance": "CLI --port defaults to 8787; --port 0 still gives ephemeral; a taken port → REFUSED (rc 2) naming the holder pid/command + `--port N` remediation; non-conflict OSError keeps the bind-failed path (rc 1).",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/dashboard.py",
+          "note": "Implementation cited by the original record. Original record noted: DEFAULT_CLI_PORT + port_conflict_message + _port_holder + EADDRINUSE branch."
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_serve_port_policy.py",
+          "note": "Test suite, executed and passing at backfill time."
+        },
+        {
+          "type": "log",
+          "uri": "./evidence/F005-F009-backfill-test-run.txt",
+          "note": "Operator re-ran every cited suite at backfill time: 21 Python tests (test_pty_bridge_t, test_terminal_serve_t, test_serve_port_policy) and 3 vitest tests (terminal-dock). All pass."
+        }
+      ]
     }
   ]
 }

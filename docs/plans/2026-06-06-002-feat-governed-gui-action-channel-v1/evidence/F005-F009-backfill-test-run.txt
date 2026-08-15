@@ -1,0 +1,23 @@
+Evidence backfill for F005-F009 — operator-executed, 2026-08-14
+
+WHY THIS FILE EXISTS
+Enforcing the schema's long-standing "passes:true requires evidence" rule in the
+Pydantic arm (which validate.py runs) turned this plan red. It was the only
+ACTIVE plan among 29 newly-failing ones; the other 28 are completed/abandoned
+history and are left honestly red.
+
+WHAT WAS ALREADY THERE
+Nothing was fabricated. Each feature already cited real files — but in
+`verified_by`, whose schema meaning is "agent names that verified", not file
+paths. So the pointers existed and `evidence_refs` was empty. The backfill moves
+those paths into evidence_refs where they belong.
+
+WHAT WAS VERIFIED, NOT ASSUMED
+  every cited path exists on disk                              10/10 OK
+  pytest test_pty_bridge_t.py test_terminal_serve_t.py \
+         test_serve_port_policy.py                             21 passed
+  vitest run tests/unit/terminal-dock.test.js                  3 passed
+
+verified_by is now ['operator'] and verified_at is the time of THIS run, not the
+original 2026-06-06 claim date. The original date is preserved in the notes but
+is not what the evidence supports: these refs attest to a run performed today.
