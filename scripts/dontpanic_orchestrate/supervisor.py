@@ -1820,59 +1820,15 @@ def dispatch_volley(
     plan_aud = str(agents_req[1]).split(".")[-1] if len(agents_req) >= 2 else None
     impl_name = implementer_agent or plan_impl or resolved["implementer"]
     aud_name = auditor_agent or plan_aud or resolved["auditor"]
-    # F013 i1 (codex audit i0 high finding): the configured value may be a
-    # worker-profile id (or a D015 harness alias). Resolve BOTH roles through
-    # resolve_worker BEFORE quota, admission, and executor resolution, so the
-    # volley path keys everything on the real harness — parity with the
-    # single-agent path. Gate refusals surface here as WorkerProfileError
-    # with an operator-fixable message instead of a registry KeyError.
-    impl_worker = worker_profiles.resolve_worker(loaded.plan_dir, "implementer", impl_name)
-    aud_worker = worker_profiles.resolve_worker(loaded.plan_dir, "auditor", aud_name)
-    impl_name = impl_worker.harness
-    aud_name = aud_worker.harness
-    if impl_worker.profile_id or aud_worker.profile_id:
-        print(
-            f"[volley] worker profiles: impl={impl_worker.profile_id or '(legacy)'}"
-            f"→{impl_worker.harness} aud={aud_worker.profile_id or '(legacy)'}"
-            f"→{aud_worker.harness}"
-        )
-    if project_match is not None:
-        # Stamp last_used_at on the resolved registered project so
-        # `jarvis projects list` reflects real recency. Best-effort —
-        # missing-name (registry edited mid-flight) must not block dispatch.
-        try:
-            projects_registry.update_last_used(project_match[1])
-        except projects_registry.ProjectsRegistryError:
-            pass
-
-    # Iteration cap from plan or argument
-    cap = max_iterations
-    if cap is None:
-        loop_caps = loaded.plan.loop_caps
-        cap = loop_caps.max_iterations if loop_caps and loop_caps.max_iterations is not None else 1
-
     audit_paths: list[Path] = []
-    prior_aud_path: Path | None = None
-    prior_aud_status: str | None = None
-    # Plan 2026-05-30-002 F001 (D029 fix): retain the prior round's full auditor
-    # envelope so check_no_progress can compare finding-signature SETS, not just
-    # verdict strings — a shrinking blocking-finding set is progress and must not
-    # trip no-progress even when both verdicts stay ``needs_changes``.
-    prior_aud_envelope: dict[str, Any] | None = None
-
-    effective_env = target_env if target_env is not None else loaded.target_env
-    effective_project = target_project if target_project is not None else loaded.target_project
-    target_source = "kwarg" if (target_env is not None or target_project is not None) else "plan"
-
-    registry_repo, registry_repo_root, registry_log = _validate_environment_registry(
-        loaded.plan_dir, effective_env, effective_project
-    )
-    print(registry_log)
 
     # F006 — global circuit breaker. Hard stop when ≥3 iteration_cap hits in
-    # the last 24h across any plan. Evaluated BEFORE executor resolution so a
-    # tripped breaker reliably halts dispatch even when AGENT_REGISTRY can't
-    # produce the named agents (KeyError previously masked the breaker).
+    # the last 24h across any plan. Evaluated BEFORE **any** agent resolution —
+    # worker profiles (F013 i1) as well as AGENT_REGISTRY executors — so a
+    # tripped breaker reliably halts dispatch and runs its INBOX/notify/signoff
+    # path. F013 i1 later hoisted resolve_worker above this check, which put an
+    # UnknownWorkerError in front of the breaker and re-opened exactly the hole
+    # fix#2 closed: a misconfigured worker masked a tripped global breaker.
     global_state = circuit_breakers.evaluate_global()
     if global_state.tripped:
         reason = (
@@ -1902,6 +1858,68 @@ def dispatch_volley(
             feature_id=feature_id,
             agents_in_panel=[impl_name, aud_name],
         )
+
+    # F013 i1 (codex audit i0 high finding): the configured value may be a
+    # worker-profile id (or a D015 harness alias). Resolve BOTH roles through
+    # resolve_worker BEFORE quota, admission, and executor resolution, so the
+    # volley path keys everything on the real harness — parity with the
+    # single-agent path. Gate refusals surface here as WorkerProfileError
+    # with an operator-fixable message instead of a registry KeyError.
+    # …but a worker-profile problem must not PREEMPT the safety gates. The
+    # gate-pause check (breaker:* / defer:* / unmet declared gates) runs after
+    # admission reconcile further down, so raising here would let a
+    # misconfigured worker mask an active breaker — the same class of bug
+    # fix#2 closed for the global breaker. Resolve optimistically; carry any
+    # failure forward and raise it at executor resolution, by which point the
+    # breaker and gate checks have already had their say.
+    _worker_error: worker_profiles.WorkerProfileError | None = None
+    impl_worker = aud_worker = None
+    try:
+        impl_worker = worker_profiles.resolve_worker(loaded.plan_dir, "implementer", impl_name)
+        aud_worker = worker_profiles.resolve_worker(loaded.plan_dir, "auditor", aud_name)
+    except worker_profiles.WorkerProfileError as exc:
+        _worker_error = exc
+    else:
+        impl_name = impl_worker.harness
+        aud_name = aud_worker.harness
+    if impl_worker is not None and (impl_worker.profile_id or aud_worker.profile_id):
+        print(
+            f"[volley] worker profiles: impl={impl_worker.profile_id or '(legacy)'}"
+            f"→{impl_worker.harness} aud={aud_worker.profile_id or '(legacy)'}"
+            f"→{aud_worker.harness}"
+        )
+    if project_match is not None:
+        # Stamp last_used_at on the resolved registered project so
+        # `jarvis projects list` reflects real recency. Best-effort —
+        # missing-name (registry edited mid-flight) must not block dispatch.
+        try:
+            projects_registry.update_last_used(project_match[1])
+        except projects_registry.ProjectsRegistryError:
+            pass
+
+    # Iteration cap from plan or argument
+    cap = max_iterations
+    if cap is None:
+        loop_caps = loaded.plan.loop_caps
+        cap = loop_caps.max_iterations if loop_caps and loop_caps.max_iterations is not None else 1
+
+    prior_aud_path: Path | None = None
+    prior_aud_status: str | None = None
+    # Plan 2026-05-30-002 F001 (D029 fix): retain the prior round's full auditor
+    # envelope so check_no_progress can compare finding-signature SETS, not just
+    # verdict strings — a shrinking blocking-finding set is progress and must not
+    # trip no-progress even when both verdicts stay ``needs_changes``.
+    prior_aud_envelope: dict[str, Any] | None = None
+
+    effective_env = target_env if target_env is not None else loaded.target_env
+    effective_project = target_project if target_project is not None else loaded.target_project
+    target_source = "kwarg" if (target_env is not None or target_project is not None) else "plan"
+
+    registry_repo, registry_repo_root, registry_log = _validate_environment_registry(
+        loaded.plan_dir, effective_env, effective_project
+    )
+    print(registry_log)
+
 
     # F007 Slice 2 — pre-dispatch admission reconcile. Evaluates runtime
     # dispatch class (p0 from plan.tier, interactive from --mode/env, else
@@ -2039,6 +2057,10 @@ def dispatch_volley(
             audit_paths,
         )
 
+    # Deferred from worker resolution above: the breaker and gate checks have
+    # now run, so an unresolvable worker is the real reason we stop here.
+    if _worker_error is not None:
+        raise _worker_error
     impl_executor = _resolve_executor(impl_name)
     aud_executor = _resolve_executor(aud_name)
 

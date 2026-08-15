@@ -217,12 +217,18 @@ class TestRoutingPerDisposition:
 
         assert terminal_calls == []
         assert discord_calls == []
-        assert result == {
-            "terminal": False,
-            "discord": False,
-            "sidecar": False,
-            "inbox_annotation": False,
-        }
+        # Assert the PROPERTY — no sink fired — rather than a frozen literal.
+        # Pinning the exact dict made this test fail the moment a new sink was
+        # added (buzz), even though the new sink correctly reported False. The
+        # invariant under test is "INBOX_ONLY reaches no live sink", and it
+        # should hold for sinks that do not exist yet.
+        assert result, "dispatch_event returned no routing record at all"
+        fired = sorted(name for name, sent in result.items() if sent)
+        assert fired == [], f"INBOX_ONLY event reached live sink(s): {fired}"
+        # The sinks this regression was written for must still be reported.
+        for required in ("terminal", "discord", "sidecar", "inbox_annotation"):
+            assert required in result, f"{required} disappeared from the routing record"
+            assert result[required] is False
 
 
 # ─── breaker normalization (finding 3) ─────────────────────────────────────

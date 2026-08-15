@@ -1,6 +1,6 @@
 """Test isolation for dontpanic_orchestrate.
 
-Five operator-state surfaces cross-pollute tests when not isolated:
+Six operator-state surfaces cross-pollute tests when not isolated:
 
   1. ~/.jarvis/breaker_history.jsonl (F006 global circuit breaker) —
      every iteration_cap hit writes a row; once any 24h window holds 3
@@ -30,7 +30,7 @@ Five operator-state surfaces cross-pollute tests when not isolated:
      declare different agent pairings, producing SameVendorRefused-style
      failures that have nothing to do with the test's own assertions.
 
-Solution: autouse fixture redirects all five surfaces to per-test
+Solution: autouse fixtures isolate all six surfaces. The first five redirect to per-test
 tmp_path entries via JARVIS_BREAKER_HISTORY_PATH /
 JARVIS_ACTIVE_SUPERVISORS_PATH / JARVIS_INTERACTIVE_STATE_PATH /
 JARVIS_QUOTA_STATE_PATH / JARVIS_QUOTA_CAPS_PATH plus the home-dir env
@@ -193,6 +193,35 @@ def _block_paid_auditor_dispatch(request, monkeypatch):
         module = importlib.import_module(module_path)
         # raising=True (default): a missing/renamed symbol fails HERE, loudly.
         monkeypatch.setattr(module, attr, _blocked)
+
+
+@pytest.fixture(autouse=True)
+def _restore_agent_registry():
+    """Surface 6: ``executors.AGENT_REGISTRY`` (2026-08-15).
+
+    ~14 modules install fake executors with ``AGENT_REGISTRY["claude"] = ...``
+    so a volley can run without paid calls. Eight of them never restore, so the
+    fakes outlive the test that installed them and leak into every later test
+    in the session.
+
+    That is how ``test_f014_harness_adapters`` failed in the full sweep while
+    passing in isolation: it walks ``for name in AGENT_REGISTRY`` asserting each
+    adapter's declared capabilities match the authoritative table, and a
+    leftover ``lambda`` declares nothing.
+
+    Order-dependent failures are worse than plain ones — they move when tests
+    are added, get blamed on the wrong change, and train people to re-run until
+    green. Snapshot and restore around EVERY test so the isolation holds no
+    matter which module forgets, and so the same class cannot come back.
+    """
+    from dontpanic_orchestrate.executors import AGENT_REGISTRY
+
+    saved = dict(AGENT_REGISTRY)
+    try:
+        yield
+    finally:
+        AGENT_REGISTRY.clear()
+        AGENT_REGISTRY.update(saved)
 
 
 @pytest.fixture(autouse=True)
