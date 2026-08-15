@@ -58,9 +58,77 @@ from typing import Any
 from dontpanic_orchestrate import circuit_breakers, gate_pause, signoff_writer
 
 CLOSEOUT_MEMO_RELPATH = Path("evidence") / "closeout-memo.md"
+"""Legacy shared path. Retained ONLY so the conflict guard can still find and
+attribute memos written before close-out artifacts were named per feature.
+Never write here — use :func:`closeout_memo_relpath`."""
 
 
-def operator_resolution_path(plan_dir: Path, plan_id: str) -> Path:
+class CloseoutArtifactConflict(RuntimeError):
+    """A close-out write would have destroyed another feature's record.
+
+    Raised instead of overwriting. The previous behaviour was a silent
+    clobber with a zero exit code: three artifacts were named per PLAN while
+    the operation they record is per FEATURE, so the Nth operator-resolved
+    close on a plan replaced the (N-1)th. Measured across the fleet on
+    2026-08-14: 13 plans, 51 memos destroyed, worst case one plan whose memo
+    had held 16 different feature ids. See
+    ``docs/solutions/2026-08-14-closeout-memo-clobber.md``.
+    """
+
+
+def closeout_memo_relpath(feature_id: str) -> Path:
+    """Memo path for ONE feature's close-out.
+
+    Named for the feature because that is what the memo records. The audit
+    envelopes already got this right (``codex-auditor-F002-i1.json`` carries
+    both feature and iteration); the close path simply never adopted the
+    convention.
+    """
+    return Path("evidence") / f"closeout-memo-{feature_id}.md"
+
+
+def _artifact_feature_id(path: Path) -> str | None:
+    """The feature a close-out artifact says it belongs to, or None.
+
+    Reads the markdown frontmatter of a memo or the ``feature_id`` key of a
+    JSON sidecar. Returns None when the file is absent, unreadable, or simply
+    does not say — an artifact we cannot attribute is not evidence that we are
+    about to destroy someone else's record.
+    """
+    try:
+        if not path.is_file():
+            return None
+        if path.suffix == ".json":
+            data = json.loads(path.read_text())
+            value = data.get("feature_id") if isinstance(data, dict) else None
+            return str(value) if value else None
+        for line in path.read_text().splitlines()[:12]:
+            if line.startswith("feature_id:"):
+                return line.split(":", 1)[1].strip() or None
+    except (OSError, json.JSONDecodeError):
+        return None
+    return None
+
+
+def assert_artifact_not_another_features(path: Path, *, feature_id: str) -> None:
+    """Refuse to write over a close-out artifact belonging to a DIFFERENT feature.
+
+    Only a POSITIVE mismatch refuses. Re-running a close for the same feature
+    is a legitimate refresh, and an unattributable file does not block — being
+    unable to read a file is not proof that it holds something precious, and
+    refusing there would strand operators behind an artifact nobody can name.
+    """
+    found = _artifact_feature_id(path)
+    if found is not None and found != feature_id:
+        raise CloseoutArtifactConflict(
+            f"{path} records feature {found}, but this close is for {feature_id}. "
+            f"Refusing to overwrite it — writing here is how 51 close-out records "
+            f"were destroyed across 13 plans before this guard existed. Move or "
+            f"rename the existing artifact if it is genuinely stale."
+        )
+
+
+def operator_resolution_path(plan_dir: Path, plan_id: str, feature_id: str | None = None) -> Path:
     """v3 F004 i1 fix: side-car file recording operator-resolution metadata.
 
     The Signoff schema has ``extra='forbid'`` so we can't attach
@@ -71,6 +139,10 @@ def operator_resolution_path(plan_dir: Path, plan_id: str) -> Path:
     consumers learn this layout from one place; the auditor's i1 finding
     flagged the original in-band attach as schema-invalid.
     """
+    if feature_id:
+        return plan_dir / "audit" / f"operator-resolution-{plan_id}-{feature_id}.json"
+    # Legacy shared name. Kept resolvable so the conflict guard can attribute
+    # sidecars written before close-out artifacts were named per feature.
     return plan_dir / "audit" / f"operator-resolution-{plan_id}.json"
 
 # v0 7-class taxonomy (auditor_taxonomy.FindingClass). Kept duplicated as a
@@ -447,7 +519,7 @@ def _build_operator_signoff(
     signoff_reason = (
         f"operator_resolved (class={reason_class}): operator accepted the "
         f"stopped_no_progress terminal as non-defect after review. "
-        f"See {CLOSEOUT_MEMO_RELPATH} for rationale."
+        f"See {closeout_memo_relpath(feature_id)} for rationale."
     )
     # build_signoff_dict consults volley_status for the next_action mapping.
     # We pass "signed_off" so next_action resolves to "merge" — matches the
@@ -483,7 +555,7 @@ def _build_operator_resolution_sidecar(
         "plan_id": plan_id,
         "feature_id": feature_id,
         "class": reason_class,
-        "memo": str(CLOSEOUT_MEMO_RELPATH),
+        "memo": str(closeout_memo_relpath(feature_id)),
         "resolved": True,
         "resolved_at": _now_iso(),
     }
@@ -577,8 +649,18 @@ def run_close_out(
         auditor_envelope=auditor_envelope,
     )
     signoff_path = signoff_writer.signoff_path(plan_dir, plan_id)
-    memo_path = plan_dir / CLOSEOUT_MEMO_RELPATH
-    resolution_path = operator_resolution_path(plan_dir, plan_id)
+    memo_path = plan_dir / closeout_memo_relpath(feature_id)
+    resolution_path = operator_resolution_path(plan_dir, plan_id, feature_id)
+    # Refuse rather than destroy: both the per-feature target and the legacy
+    # shared path are checked, so a memo written before per-feature naming is
+    # still protected from a close for a different feature.
+    for candidate in (
+        memo_path,
+        plan_dir / CLOSEOUT_MEMO_RELPATH,
+        resolution_path,
+        operator_resolution_path(plan_dir, plan_id),
+    ):
+        assert_artifact_not_another_features(candidate, feature_id=feature_id)
     resolution_payload = _build_operator_resolution_sidecar(
         plan_id=plan_id,
         feature_id=feature_id,
@@ -646,7 +728,7 @@ def run_close_out(
         plan_dir,
         feature_id,
         reason_class=reason_class,
-        memo_relpath=str(CLOSEOUT_MEMO_RELPATH),
+        memo_relpath=str(closeout_memo_relpath(feature_id)),
     )
 
     return CloseoutResult(
@@ -691,11 +773,11 @@ def _recorded_gate_block(plan_dir: Path) -> str | None:
 
 
 def _operator_finish_signoff_reason(
-    *, terminal_class: str, evidence: str | None, note: str | None
+    *, feature_id: str, terminal_class: str, evidence: str | None, note: str | None
 ) -> str:
     """Honest signoff_reason naming the ACTUAL terminal class (F002 acceptance
     #4) — never a stopped_no_progress pretence."""
-    memo = CLOSEOUT_MEMO_RELPATH
+    memo = closeout_memo_relpath(feature_id)
     if terminal_class == "signed_off_adjacent":
         return (
             "operator_finish (terminal=signed_off_adjacent): the auditor signed "
@@ -808,6 +890,7 @@ def run_operator_finish(
             )
 
     signoff_reason = _operator_finish_signoff_reason(
+        feature_id=feature_id,
         terminal_class=terminal_class, evidence=evidence, note=note
     )
     decision_paragraph = _operator_finish_decision_paragraph(
@@ -845,9 +928,16 @@ def run_operator_finish(
     if evidence is not None:
         resolution_payload["evidence"] = evidence
 
-    memo_path = plan_dir / CLOSEOUT_MEMO_RELPATH
+    memo_path = plan_dir / closeout_memo_relpath(feature_id)
     signoff_path = signoff_writer.signoff_path(plan_dir, plan_id)
-    resolution_path = operator_resolution_path(plan_dir, plan_id)
+    resolution_path = operator_resolution_path(plan_dir, plan_id, feature_id)
+    for candidate in (
+        memo_path,
+        plan_dir / CLOSEOUT_MEMO_RELPATH,
+        resolution_path,
+        operator_resolution_path(plan_dir, plan_id),
+    ):
+        assert_artifact_not_another_features(candidate, feature_id=feature_id)
 
     # COMMIT memo → signoff → resolution sidecar (roll back on OSError).
     memo_path.parent.mkdir(parents=True, exist_ok=True)
@@ -881,7 +971,7 @@ def run_operator_finish(
         plan_dir,
         feature_id,
         reason_class=terminal_class,
-        memo_relpath=str(CLOSEOUT_MEMO_RELPATH),
+        memo_relpath=str(closeout_memo_relpath(feature_id)),
     )
 
     return CloseoutResult(
@@ -912,7 +1002,7 @@ def format_no_progress_close_hint(
         f"{plan_id} {feature_id} --reason {class_token}\n"
         "\n"
         "This generates a closeout-memo template at "
-        f"{CLOSEOUT_MEMO_RELPATH}, clears breaker:no_progress, writes the "
+        f"{closeout_memo_relpath(feature_id)}, clears breaker:no_progress, writes the "
         "signoff envelope, and flips features.json passes:true — all in one "
         "transaction."
     )
@@ -920,6 +1010,9 @@ def format_no_progress_close_hint(
 
 __all__ = [
     "CLOSEOUT_MEMO_RELPATH",
+    "CloseoutArtifactConflict",
+    "assert_artifact_not_another_features",
+    "closeout_memo_relpath",
     "CloseoutError",
     "CloseoutResult",
     "KNOWN_CLOSEOUT_CLASSES",

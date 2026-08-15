@@ -9,7 +9,9 @@ Acceptance items pinned (cross-referencing v3 features.json F004):
 
   (1) ``dontpanic close --operator-resolved <plan> <feature> --reason
       <class>`` works end-to-end on a synthetic fixture.
-  (2) Generates the closeout-memo template at ``evidence/closeout-memo.md``.
+  (2) Generates the closeout-memo template at ``evidence/closeout-memo-<FEATURE>.md``
+      — named per FEATURE since 2026-08-14; a shared name silently destroyed
+      the previous feature's memo (51 records across 13 plans).
   (3) Clears ``breaker:no_progress`` + writes signoff envelope in one
       transaction (CLI success exit 0 + both side-effects observable).
   (4) INBOX ``no_progress_classification`` body surfaces the recommended
@@ -230,7 +232,7 @@ def test_close_operator_resolved_end_to_end() -> None:
         assert rc == 0, (rc, out, err)
 
         # AC2: memo generated
-        memo = plan_dir / closeout.CLOSEOUT_MEMO_RELPATH
+        memo = plan_dir / closeout.closeout_memo_relpath("F001")
         assert memo.is_file(), f"memo not at {memo}"
         body = memo.read_text()
         assert "status: operator_resolved" in body, body
@@ -258,7 +260,7 @@ def test_close_operator_resolved_end_to_end() -> None:
             "operator_resolution must NOT ride along in the signoff envelope; "
             "Signoff schema has extra='forbid' so it lives in a sidecar"
         )
-        resolution_path = closeout.operator_resolution_path(plan_dir, plan_id)
+        resolution_path = closeout.operator_resolution_path(plan_dir, plan_id, "F001")
         assert resolution_path.is_file(), f"sidecar missing at {resolution_path}"
         resolution = json.loads(resolution_path.read_text())
         assert resolution["resolved"] is True
@@ -272,7 +274,7 @@ def test_close_operator_resolved_end_to_end() -> None:
         assert f001["passes"] is True, f001
         refs = f001.get("evidence_refs") or []
         assert any(
-            r.get("uri") == "evidence/closeout-memo.md" for r in refs
+            r.get("uri") == "evidence/closeout-memo-F001.md" for r in refs
         ), refs
         assert "operator" in (f001.get("verified_by") or [])
 
@@ -322,7 +324,7 @@ def test_close_refuses_unknown_reason_class() -> None:
         assert rc == 3, (rc, out, err)
         assert "unknown reason class" in err, err
         # No closeout-memo should have been created on the refusal path.
-        memo = plan_dir / closeout.CLOSEOUT_MEMO_RELPATH
+        memo = plan_dir / closeout.closeout_memo_relpath("F001")
         assert not memo.exists(), f"memo should not exist; got {memo}"
         print("  ✓ unknown class rejected before any state change")
 
@@ -400,7 +402,7 @@ def test_close_allow_missing_breaker_overrides_safety_check() -> None:
             ]
         )
         assert rc == 0, (rc, out, err)
-        memo = plan_dir / closeout.CLOSEOUT_MEMO_RELPATH
+        memo = plan_dir / closeout.closeout_memo_relpath("F001")
         assert memo.is_file()
         print("  ✓ --allow-missing-breaker bypasses safety check")
 
@@ -525,7 +527,7 @@ def test_close_idempotent_on_rerun() -> None:
         # features.json passes is already true — no double evidence ref.
         features = json.loads((plan_dir / "features.json").read_text())
         f001 = next(f for f in features["features"] if f["id"] == "F001")
-        refs = [r for r in f001["evidence_refs"] if r["uri"] == "evidence/closeout-memo.md"]
+        refs = [r for r in f001["evidence_refs"] if r["uri"] == "evidence/closeout-memo-F001.md"]
         assert len(refs) == 1, refs
         print("  ✓ re-run is idempotent with --allow-missing-breaker")
 
@@ -744,7 +746,7 @@ def test_close_operator_resolved_replays_plan010_f001_fixture() -> None:
         # AC2 — memo template lifts the i1 auditor summary (the LATEST
         # auditor envelope, per _latest_auditor_envelope's reverse-iter
         # pick-the-newest behavior).
-        memo = (plan_dir / closeout.CLOSEOUT_MEMO_RELPATH).read_text()
+        memo = (plan_dir / closeout.closeout_memo_relpath("F001")).read_text()
         assert "status: operator_resolved" in memo
         assert "reason_class: unknown" in memo
         assert "PP version pinning" in memo, memo  # lifted from i1 summary
@@ -757,7 +759,7 @@ def test_close_operator_resolved_replays_plan010_f001_fixture() -> None:
         assert signoff["signoff"] is True
         assert signoff["next_action"] == "merge"
         # operator_resolution lives in a sidecar file (v3 F004 i1 fix).
-        resolution_path = closeout.operator_resolution_path(plan_dir, plan_id)
+        resolution_path = closeout.operator_resolution_path(plan_dir, plan_id, "F001")
         resolution = json.loads(resolution_path.read_text())
         assert resolution["class"] == "unknown"
         # Audit history spans all four envelopes — operator close-out cites
