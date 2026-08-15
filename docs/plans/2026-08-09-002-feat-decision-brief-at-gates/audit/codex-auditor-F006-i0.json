@@ -1,0 +1,52 @@
+{
+  "task_id": "2026-08-09-002-feat-decision-brief-at-gates",
+  "audit_id": "2026-08-09-002-feat-decision-brief-at-gates#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-08-13T05:11:49Z",
+  "completed_at": "2026-08-13T05:16:22Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "worker: profile_id=None harness=codex model=(harness default)",
+    "quota gate aud=37.022385",
+    "reviewing implementer audit at claude-implementer-F006-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-08-09-002-feat-decision-brief-at-gates-wtv_qdfu target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 2020341 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 3555511,
+    "tokens_out": 17924,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 6 (see structured target_context.commands_run)\n\n[F006] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nOverall verdict: **needs_changes**. The implementer correctly declared `{Repo: DontPanic, Env: dev, Project: (none)}`; structured context agrees and contains no forbidden commands.\n\nFINDING (high, test_coverage): The mandatory `tests/test_event_copy_undeclared_impact.py` is absent, so acceptance item 6 is unmet. Evidence: focused pytest exits 4 with “file or directory not found.” Recommendation: add the suite covering all five behaviors and demonstrate it passes.\n\nFINDING (high, correctness): The completion claim is unsupported by the implementer audit. Evidence: its summary says “DISPATCH TIMED OUT,” `audit_status` is `blocked`, and it records no validation commands. Recommendation: rerun implementation validation and provide successful test evidence.\n\nDirect probes passed for undeclared/stale rendering, both advisory branches, and adversarial non-generative scanner mutations. The adjacent pytest suite could not execute because the read-only environment has no writable temporary directory. Ruff and diff checks also found unrelated existing tree issues.\n\n$ PYTHONDONTWRITEBYTECODE=1 pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_event_copy_undeclared_impact.py  \n$ PYTHONDONTWRITEBYTECODE=1 pytest -s -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_event_copy_undeclared_impact.py  \n$ PYTHONDONTWRITEBYTECODE=1 pytest -s -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_event_copy_impact_fir",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_event_copy_undeclared_impact.py",
+      "PYTHONDONTWRITEBYTECODE=1 pytest -s -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_event_copy_undeclared_impact.py",
+      "PYTHONDONTWRITEBYTECODE=1 pytest -s -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_event_copy_impact_first.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -B -c 'from pathlib import Path; from types import SimpleNamespace as N; from dontpanic_orchestrate import decision_brief as d, event_copy as e; u=d.DecisionBrief(\"Change X\",None,None,\"Approve X\",True,d.BriefStatus.UNDECLARED); s=d.DecisionBrief(\"Change X\",\"Old declared summary\",\"end_user\",\"Approve X\",True,d.BriefStatus.POSSIBLY_STALE); base=dict(kind=\"gate_paused\",inbox_event=\"gate_hit\",plan_id=\"P1\",feature_id=\"F1\",subtype=\"pre_impl\",technical_metadata={}); ru=e.render(N(**base,decision_brief=u)); rs=e.render(N(**base,decision_brief=s)); assert e.UNDECLARED_IMPACT_SENTENCE in ru.detail and ru.user_impact is None; assert e.STALE_IMPACT_PREFIX+\"Old declared summary.\" in rs.detail and \"Old declared summary\" not in rs.title; clean=e.scan_non_generative_copy(); assert not clean.violations; src=Path(e.__file__).read_text(); m1=src.replace(\"why = \\\" \\\".join(part for part in (why, honesty, reference) if part).strip()\",\"why = \\\" \\\".join(part for part in (why, honesty, reference) if part).strip()\\n        why = getattr(event, \\\"model_output\\\", why)\",1); assert e.scan_non_generative_copy(m1).violations; m2=src.replace(\"\\\"user_impact\\\": getattr(brief, \\\"user_impact\\\", None)\",\"\\\"user_impact\\\": getattr(brief, \\\"model_output\\\", None)\",1); assert e.scan_non_generative_copy(m2).violations; missing=d.undeclared_impact_advisory(plan_surfaces=[\"web\"],features=[{\"id\":\"F1\"},{\"id\":\"F2\"}]); lines=d.render_undeclared_impact_advisory(missing,features_path=\"/fixture/features.json\"); assert all(fid in \"\\n\".join(lines) for fid in (\"F1\",\"F2\")) and \"/fixture/features.json\" in \"\\n\".join(lines); declared=d.undeclared_impact_advisory(plan_surfaces=[\"web\"],features=[{\"id\":\"F1\",\"user_impact\":{\"audience\":\"none\"}}]); assert not d.render_undeclared_impact_advisory(declared,features_path=\"/fixture/features.json\"); print(\"direct F006 assertions passed; copy expressions:\",clean.copy_expressions_checked)'",
+      "ruff check --no-cache scripts/dontpanic_orchestrate/event_copy.py scripts/dontpanic_orchestrate/decision_brief.py scripts/dontpanic_orchestrate/cli.py && git diff --check",
+      "git diff --check"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "test_coverage",
+      "feature_id": "F006",
+      "issue": "The mandatory `tests/test_event_copy_undeclared_impact.py` is absent, so acceptance item 6 is unmet. Evidence: focused pytest exits 4 with “file or directory not found.” Recommendation: add the suite covering all five behaviors and demonstrate it passes.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F006",
+      "issue": "The completion claim is unsupported by the implementer audit. Evidence: its summary says “DISPATCH TIMED OUT,” `audit_status` is `blocked`, and it records no validation commands. Recommendation: rerun implementation validation and provide successful test evidence. Direct probes passed for undeclared/stale rendering, both advisory branches, and adversarial non-generative scanner mutations. The adjacent pytest suite could not execute because the read-only environment has no writable temporary dire",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

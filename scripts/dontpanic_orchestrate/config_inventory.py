@@ -424,9 +424,12 @@ def provider_global_config(ctx: InventoryContext) -> InventoryItem:
         from dontpanic_orchestrate import agent_surface
 
         cfg = gc.load_config()
-        impl = cfg.default_implementer or (cfg.roles.implementer if cfg.roles else None)
-        aud = cfg.default_auditor or (cfg.roles.auditor if cfg.roles else None)
-        goal_aud = getattr(cfg.roles, "goal_auditor", None) if cfg.roles else None
+        # F012 i1 — roles entries may be strings or RoleSpec objects.
+        from dontpanic_orchestrate.config.roles import role_name
+
+        impl = cfg.default_implementer or (role_name(cfg.roles.implementer) if cfg.roles else None)
+        aud = cfg.default_auditor or (role_name(cfg.roles.auditor) if cfg.roles else None)
+        goal_aud = role_name(getattr(cfg.roles, "goal_auditor", None)) if cfg.roles else None
         # AC2b/AC2c — status must NOT be optimistic (audit finding, codex i1).
         # A worker *default* (implementer / auditor / goal_auditor) whose value
         # is not in AGENT_REGISTRY is operator-only — dispatch would refuse it —

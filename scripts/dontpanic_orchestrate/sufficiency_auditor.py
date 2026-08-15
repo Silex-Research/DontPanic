@@ -147,7 +147,7 @@ def _resolve_contract_rel(plan_dir: Path) -> str:
             ref = links.get("objective_contract")
             if isinstance(ref, str) and ref.strip():
                 return ref
-    except Exception:  # noqa: BLE001 — fingerprint must never raise on bad input
+    except Exception:  # noqa: BLE001, S110 — fingerprint must never raise on bad input
         pass
     return _DEFAULT_CONTRACT_REL
 
@@ -167,9 +167,7 @@ def compute_input_fingerprint(plan_dir: Path) -> str:
     plan_dir = Path(plan_dir)
     contract_rel = _resolve_contract_rel(plan_dir)
     # (logical name framed into the digest, path to read)
-    entries: list[tuple[str, Path]] = [
-        (name, plan_dir / name) for name in SUFFICIENCY_INPUT_FILES
-    ]
+    entries: list[tuple[str, Path]] = [(name, plan_dir / name) for name in SUFFICIENCY_INPUT_FILES]
     entries.append((f"objective_contract@{contract_rel}", plan_dir / contract_rel))
 
     digest = hashlib.sha256()
@@ -180,13 +178,14 @@ def compute_input_fingerprint(plan_dir: Path) -> str:
         except OSError:
             digest.update(b"\x00<absent>\x00")
             continue
-        digest.update(f"\x00{len(data)}\x00".encode("utf-8"))
+        digest.update(f"\x00{len(data)}\x00".encode())
         digest.update(data)
     return f"sha256:{digest.hexdigest()}"
 
 
 def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
 
 _SAME_VENDOR_OVERRIDE_ENV: str = "DONTPANIC_GOAL_AUDITOR_ALLOW_SAME_VENDOR"
 """Operator override channel. When set to ``'1'`` / ``'true'`` / ``'yes'``
@@ -393,12 +392,24 @@ def _resolve_goal_auditor_agent(
             "returned empty 'auditor'"
         )
 
-    if resolved_implementer == auditor and not _is_truthy_env(
-        os.environ.get(_SAME_VENDOR_OVERRIDE_ENV)
-    ):
+    # F013 i1 — either side may be a worker-profile id (or a D015 alias);
+    # the cross-vendor invariant compares HARNESSES, not configured names
+    # (a claude-harness profile auditing a claude implementer is exactly
+    # the same-vendor antipattern D006 bans). Names that resolve to
+    # neither a harness nor a profile fall back to string identity — the
+    # dispatch site validates them separately.
+    from dontpanic_orchestrate import worker_profiles as _wp
+
+    _aud_peek = _wp.peek_worker(plan_dir, auditor)
+    _impl_peek = _wp.peek_worker(plan_dir, resolved_implementer)
+    aud_vendor = _aud_peek.harness if _aud_peek is not None else auditor
+    impl_vendor = _impl_peek.harness if _impl_peek is not None else resolved_implementer
+
+    if impl_vendor == aud_vendor and not _is_truthy_env(os.environ.get(_SAME_VENDOR_OVERRIDE_ENV)):
         raise SufficiencyAuditError(
             "cross-vendor invariant (D006 / Goal Governance V1 §5) violated: "
-            f"resolved auditor {auditor!r} equals implementer {resolved_implementer!r}. "
+            f"resolved auditor {auditor!r} (harness {aud_vendor!r}) equals implementer "
+            f"{resolved_implementer!r} (harness {impl_vendor!r}). "
             f"Set {_SAME_VENDOR_OVERRIDE_ENV}=1 to override (and record the override "
             "in close-out evidence)."
         )
@@ -706,9 +717,7 @@ def parse_sufficiency_findings(response: str) -> SufficiencyParseOutcome:
                 except ValidationError as exc2:
                     errors = exc2.errors()
 
-        malformed.append(
-            {"index": index, "raw": item, "errors": [str(e) for e in errors]}
-        )
+        malformed.append({"index": index, "raw": item, "errors": [str(e) for e in errors]})
         notes.append(
             f"finding[{index}]: failed validation — quarantined, raw retained "
             f"({len(errors)} error(s))"
@@ -901,12 +910,27 @@ def _production_sufficiency_dispatch(plan_dir: Path):
     from dontpanic_orchestrate.executors.base import DispatchTask
 
     def dispatch(auditor_agent: str, prompt: str) -> str:
-        executor = get_executor(auditor_agent)
+        # F013 i1 — the resolved auditor may be a worker-profile id (or a
+        # D015 alias); map to (harness, model) through the role gates
+        # before touching the registry.
+        from dontpanic_orchestrate import worker_profiles as _wp
+
+        worker = _wp.resolve_goal_audit_worker(plan_dir, auditor_agent)
+        executor = get_executor(worker.harness)
         if not executor.is_available():
             raise SufficiencyAuditError(
-                f"resolved sufficiency auditor {auditor_agent!r} is not available — "
-                f"{executor.availability_hint()}"
+                f"resolved sufficiency auditor {auditor_agent!r} (harness "
+                f"{worker.harness!r}) is not available — {executor.availability_hint()}"
             )
+        # F012 i1 (codex audit i0 high finding) — forward the configured
+        # goal-audit model override; None keeps the harness CLI default.
+        # F013: the profile-level model wins over the role-level override.
+        # F015 i1: config model_aliases resolve single-hop on the effective
+        # model, mirroring supervisor._run_round; freeform strings pass
+        # through unchanged.
+        from dontpanic_orchestrate import model_catalog
+        from dontpanic_orchestrate.config.resolvers import resolve_goal_audit_model
+
         task = DispatchTask(
             plan_id=plan_dir.name,
             plan_dir=plan_dir,
@@ -918,6 +942,10 @@ def _production_sufficiency_dispatch(plan_dir: Path):
             iteration=0,
             extra_context={"prompt_override": prompt},
             permission_policy="auditor",
+            model=model_catalog.resolve_alias(
+                worker.model or resolve_goal_audit_model(plan_dir, harness=worker.harness),
+                plan_dir,
+            ),
         )
         return executor.dispatch(task).raw_response or ""
 

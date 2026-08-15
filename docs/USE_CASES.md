@@ -24,7 +24,7 @@ DontPanic has one shape; use cases pick which optional layers to attach.
 
 | Use case | Required core | Optional core | Required external runtime | Human-engagement surface | Setup time |
 |---|---|---|---|---|---|
-| **U1. Solo dev — terminal-only** | core CLI, plan/gate/audit substrate | — | Claude / Codex / Gemini CLI (≥1) | Terminal + INBOX.md | ~10 min |
+| **U1. Solo dev — terminal-only** | core CLI, plan/gate/audit substrate | — | Claude and/or Codex CLI (≥1 dispatchable worker; Gemini CLI optional as an operator-only surface) | Terminal + INBOX.md | ~10 min |
 | **U2. Solo dev — Discord receive-only** | + notify_event surface | + Discord webhook sink | — | Discord channel (read-only) + terminal | +2 min |
 | **U3. Interactive IDE agent (Claude Code, Cursor, Codex CLI)** | + MCP server + agent-manifest | — | One MCP-aware IDE/CLI | Active IDE session | ~5 min |
 | **U4. Personal-axiom (operator + friends)** | + MCP server + NotifyEvent | + Discord webhook OFF | OpenClaw runtime + Discord/Telegram bots | Multi-channel chat (bidirectional) + dashboard (when adapter lands) | ~1-2 days |

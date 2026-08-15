@@ -1,0 +1,28 @@
+{
+  "task_id": "2026-08-09-002-feat-decision-brief-at-gates",
+  "signoff_id": "2026-08-09-002-feat-decision-brief-at-gates#signoff#2",
+  "iteration": 2,
+  "tier": "cross-cutting",
+  "agents_in_panel": [
+    "claude",
+    "codex"
+  ],
+  "audits": [
+    "audit/claude-implementer-F006-i0.json",
+    "audit/codex-auditor-F006-i0.json",
+    "audit/claude-implementer-F006-i1.json",
+    "audit/codex-auditor-F006-i1.json",
+    "audit/claude-implementer-F006-i2.json",
+    "audit/codex-auditor-F006-i2.json"
+  ],
+  "vote_summary": {
+    "signed_off_count": 0,
+    "needs_changes_count": 3,
+    "blocked_count": 3,
+    "inconclusive_count": 0
+  },
+  "signoff": true,
+  "signoff_reason": "operator_resolved (class=environmental_reproduction_failure): operator accepted the stopped_no_progress terminal as non-defect after review. See evidence/closeout-memo.md for rationale.",
+  "next_action": "merge",
+  "decided_at": "2026-08-13T13:43:12Z"
+}

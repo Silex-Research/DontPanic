@@ -28,11 +28,19 @@ class DispatchRefused(Exception):
     set — operator-role preferences are not dispatch authorization (D009)."""
 
 
-def is_dispatchable(name: str) -> bool:
+def is_dispatchable(name: str, project_path: Path | None = None) -> bool:
     """True iff ``name`` can be dispatched as a worker. Authority derives SOLELY
-    from ``executors.AGENT_REGISTRY`` (via ``agent_surface.is_worker_capable``);
-    this never consults ``operator_roles``."""
-    return agent_surface.is_worker_capable(str(name).strip().lower())
+    from ``executors.AGENT_REGISTRY``: directly (``agent_surface.is_worker_capable``)
+    or through a worker profile (F013) whose harness is a registry key and whose
+    role/capability gates pass — a profile binds a registered harness, it never
+    widens dispatchability. This never consults ``operator_roles``."""
+    norm = str(name).strip().lower()
+    if agent_surface.is_worker_capable(norm):
+        return True
+    # Lazy import mirrors agent_surface.assert_registrable — keeps the edge acyclic.
+    from dontpanic_orchestrate import worker_profiles as wp
+
+    return wp.is_dispatchable_name(norm, project_path=project_path)
 
 
 def dispatchable_agents() -> list[str]:

@@ -67,6 +67,9 @@ gemini/google_accounts.json
 gemini/installation_id
 gemini/tmp/
 
+# Per-machine Claude/Cursor permission allowlists — never commit
+.claude/
+
 # Cursor project-specific
 cursor/projects/
 .firebase/

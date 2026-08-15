@@ -41,8 +41,9 @@ from pydantic import BaseModel, ConfigDict, field_validator
 
 from dontpanic_orchestrate import global_config as gc
 from dontpanic_orchestrate import projects_registry as pr
-from dontpanic_orchestrate.config.roles import RolesConfig
+from dontpanic_orchestrate.config.roles import RoleModelsConfig, RolesConfig
 from dontpanic_orchestrate.config.runtime_evidence import RuntimeEvidenceConfig
+from dontpanic_orchestrate.config.worker_profiles import WorkerProfile
 from dontpanic_orchestrate.executors import AGENT_REGISTRY
 
 _LOG = logging.getLogger(__name__)
@@ -131,6 +132,23 @@ class ProjectConfig(BaseModel):
     <agent>``. Wins over the legacy top-level ``implementer`` /
     ``auditor`` fields when both are set; falls through to global per
     :func:`config.resolvers.resolve_role`."""
+
+    models: RoleModelsConfig | None = None
+    """F012 (D1/D011) — per-project per-role vendor model-id overrides.
+    Wins over the global ``models`` block; resolved by
+    :func:`config.resolvers.resolve_model`. Unset roles keep the harness
+    CLI default."""
+
+    worker_profiles: dict[str, WorkerProfile] | None = None
+    """F013 (D2) — per-project named worker profiles. Overlaid atop the
+    global ``worker_profiles`` block per id (project wins); resolution +
+    role/capability gates live in
+    :mod:`dontpanic_orchestrate.worker_profiles`."""
+
+    model_aliases: dict[str, str] | None = None
+    """F015 (D4) — per-project model aliases, overlaid atop the global
+    ``model_aliases`` block per key (project wins). Resolved single-hop by
+    :func:`dontpanic_orchestrate.model_catalog.resolve_alias`."""
 
     runtime_evidence: RuntimeEvidenceConfig | None = None
     """Plan G F006 / D015 — project-scoped runtime evidence defaults
@@ -353,14 +371,33 @@ def resolve_dispatch_defaults(
         project_cfg = load_project_config(project_path)
     global_cfg = gc.load_config()
 
+    # F013 i1 (codex audit i0 high finding): the canonical ``roles.<role>``
+    # block must reach dispatch through THIS resolver too, not only through
+    # config.resolvers.resolve_role — dispatch_volley and the dispatch-from-
+    # plan preflight both key off resolve_dispatch_defaults. Within a layer
+    # the canonical roles entry wins over the legacy field, matching
+    # config.resolvers._role_from_layer_cfg. Lazy import: resolvers imports
+    # this module at module level.
+    from dontpanic_orchestrate.config.roles import role_name
+
+    def _layer_role(cfg: Any, canonical: str, legacy_attr: str) -> str | None:
+        if cfg is None:
+            return None
+        roles = getattr(cfg, "roles", None)
+        if roles is not None:
+            v = role_name(getattr(roles, canonical, None))
+            if v:
+                return v
+        return getattr(cfg, legacy_attr, None) or None
+
     impl = (
-        (project_cfg.implementer if project_cfg is not None else None)
-        or global_cfg.default_implementer
+        _layer_role(project_cfg, "implementer", "implementer")
+        or _layer_role(global_cfg, "implementer", "default_implementer")
         or fallback_implementer
     )
     aud = (
-        (project_cfg.auditor if project_cfg is not None else None)
-        or global_cfg.default_auditor
+        _layer_role(project_cfg, "auditor", "auditor")
+        or _layer_role(global_cfg, "auditor", "default_auditor")
         or fallback_auditor
     )
     plans_dir = (project_cfg.plans_dir if project_cfg is not None else None) or DEFAULT_PLANS_DIR

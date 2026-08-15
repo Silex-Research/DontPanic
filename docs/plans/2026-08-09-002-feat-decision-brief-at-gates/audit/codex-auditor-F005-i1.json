@@ -1,0 +1,66 @@
+{
+  "task_id": "2026-08-09-002-feat-decision-brief-at-gates",
+  "audit_id": "2026-08-09-002-feat-decision-brief-at-gates#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-08-11T03:43:53Z",
+  "completed_at": "2026-08-11T03:47:26Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "worker: profile_id=None harness=codex model=(harness default)",
+    "quota gate aud=37.022385",
+    "reviewing implementer audit at claude-implementer-F005-i1.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-08-09-002-feat-decision-brief-at-gates-msr18sj0 target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 1418972 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 2244743,
+    "tokens_out": 18489,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 6 (see structured target_context.commands_run)\n\n[F005] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nOverall verdict: **needs_changes**. The implementer’s prose and structured target declarations agree; no forbidden command shapes were recorded. Its advisory claiming `Env: dev` was missing is incorrect.\n\nFINDING (high, correctness): Iteration 1 leaves the impact-first overlay inactive for nearly every production NEEDS_ACTION emitter. Evidence: the iteration-1 state records only `event_copy.py` modified; `render()` requires `decision_brief`, while only the existing gate-pause path supplied one, so other emitters retained plan-first headlines. Recommendation: attach an appropriate brief to every renderable NEEDS_ACTION emitter and verify real emitted events.\n\nFINDING (medium, correctness): Iteration 1 treats arbitrary `NotifyEvent.subtype` values as gate/stage references. Evidence: `_gather_fields()` aliases subtype into both fields, causing a real `verdict_mismatch` subtype such as `signed_off` to appear as `gate signed_off`. Recommendation: derive references only from explicit metadata or documented gate-specific event shapes.\n\nFINDING (medium, test_coverage): The iteration-1 tests conceal both production defects by assigning every synthetic event a brief and `subtype=\"pre_merge\"`. Recommendation: add production-shaped cases and assert every real NEEDS_ACTION emitter supplies a brief while non-gate subtypes never enter reference lines.\n\nFINDING (medium, documentation): The recorded baseline procedure is not reproducible. Evidence",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q -p no:cacheprovider ../scripts/dontpanic_orchestrate/tests/test_event_copy_impact_first.py",
+      "PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q -s -p no:cacheprovider ../scripts/dontpanic_orchestrate/tests/test_event_copy_impact_first.py",
+      "PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q -s -p no:cacheprovider --noconftest ../scripts/dontpanic_orchestrate/tests/test_event_copy_impact_first.py",
+      "PYTHONDONTWRITEBYTECODE=1 python3 -c \"import contextlib,json,runpy,pathlib; d=runpy.run_path('../scripts/dontpanic_orchestrate/tests/tools/f005_emitter_command_probe.py',run_name='f005_probe'); d['tempfile'].TemporaryDirectory=lambda: contextlib.nullcontext(str(pathlib.Path('plans/2026-08-09-002-feat-decision-brief-at-gates').resolve())); before=json.loads(pathlib.Path('../scripts/dontpanic_orchestrate/tests/fixtures/f005_prechange_emitter_commands.json').read_text())['probes']; after=d['capture'](); print(json.dumps({'equal':after==before,'before':before,'after':after},indent=2,sort_keys=True))\"",
+      "python3 -m ruff check --no-cache ../scripts/dontpanic_orchestrate/tests/test_event_copy_impact_first.py ../scripts/dontpanic_orchestrate/tests/tools/f005_emitter_command_probe.py ../scripts/dontpanic_orchestrate/supervisor.py ../scripts/dontpanic_orchestrate/event_copy.py",
+      "git diff --check HEAD~1"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F005",
+      "issue": "Iteration 1 leaves the impact-first overlay inactive for nearly every production NEEDS_ACTION emitter. Evidence: the iteration-1 state records only `event_copy.py` modified; `render()` requires `decision_brief`, while only the existing gate-pause path supplied one, so other emitters retained plan-first headlines. Recommendation: attach an appropriate brief to every renderable NEEDS_ACTION emitter and verify real emitted events.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F005",
+      "issue": "Iteration 1 treats arbitrary `NotifyEvent.subtype` values as gate/stage references. Evidence: `_gather_fields()` aliases subtype into both fields, causing a real `verdict_mismatch` subtype such as `signed_off` to appear as `gate signed_off`. Recommendation: derive references only from explicit metadata or documented gate-specific event shapes.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "test_coverage",
+      "feature_id": "F005",
+      "issue": "The iteration-1 tests conceal both production defects by assigning every synthetic event a brief and `subtype=\"pre_merge\"`. Recommendation: add production-shaped cases and assert every real NEEDS_ACTION emitter supplies a brief while non-gate subtypes never enter reference lines.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "documentation",
+      "feature_id": "F005",
+      "issue": "The recorded baseline procedure is not reproducible. Evidence: the detached `HEAD` worktree could not contain the newly added, uncommitted probe; no copy command is recorded, evidence mentions unlogged mutant/diff actions, and `git add <7 changed/new paths>` is a placeholder rather than an exact command. Recommendation: regenerate the evidence with a complete byte-exact command log. Current later-iteration code reached 529 passed assertions; the remaining test errored solely because the read-onl",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

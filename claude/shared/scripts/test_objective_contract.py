@@ -11,9 +11,22 @@ at ``schemas/v1.0/validate.py``. Seven fixture cases:
   6. goal_type=parity, no links.objective_contract -> exit 1, ✗ objective_contract — required by goal_type=parity
   7. goal_type=mechanical, no contract        -> exit 0, no contract line (mechanical doesn't require it)
 
+Case 15: a completed schema 1.0 new_feature plan with no contract warns
+instead of failing (historical records are not rewritten).
+
+Cases 13-14 (plan 2026-08-13-001 F001) carry the additive contract fields
+end-to-end through the validator, not just through the schema:
+
+ 13. delivers[] item with a cheap ``proof`` (walk) -> exit 0, ✓
+ 14. fix plan with ``inherits`` + a ONE-ITEM delta delivers[] -> exit 0, ✓
+
+Case 14 is the load-bearing one: ``inherits`` licenses omitting the parent's
+FULL outcome set, not the ``delivers[]`` block, so the v1.1 non-empty rule must
+still be satisfied by a single delta slice.
+
 Each fixture lives under ``tests/objective_contract/_fixture_*/`` and is a
 minimal-but-real plan dir (plan.md frontmatter + features.json + an
-``objective_contract.json`` for the four cases that need one).
+``objective_contract.json`` for the cases that need one).
 
 Usage:
 
@@ -162,6 +175,31 @@ def main() -> int:
             "_fixture_parity_with_contract",
             0,
             ["✓ objective_contract", "advisory"],
+            ["✗ objective_contract"],
+        ),
+        (
+            "case 13: delivers item carrying a cheap walk proof validates end-to-end",
+            "_fixture_v11_proof_walk",
+            0,
+            ["✓ plan.md frontmatter", "✓ objective_contract"],
+            ["✗ objective_contract", "advisory"],
+        ),
+        (
+            "case 14: fix plan with inherits + a one-item delta delivers[] validates",
+            "_fixture_v11_inherits_delta",
+            0,
+            ["✓ plan.md frontmatter", "✓ objective_contract"],
+            ["✗ objective_contract", "advisory"],
+        ),
+        (
+            "case 15: completed 1.0 new_feature missing contract warns, does not fail",
+            "_fixture_completed_new_feature_no_contract",
+            0,
+            [
+                "✓ plan.md frontmatter",
+                "⚠ objective_contract",
+                "status=completed",
+            ],
             ["✗ objective_contract"],
         ),
     ]

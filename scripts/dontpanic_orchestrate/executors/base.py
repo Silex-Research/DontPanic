@@ -76,6 +76,10 @@ class DispatchTask:
     # None = legacy / explicit no-policy (executors emit no permission flags,
     # preserving pre-F005b behavior for synthetic-disagreement mocks etc.).
     permission_policy: Literal["implementer", "auditor"] | None = None
+    # F012 (D1/D011): resolved vendor model-id override. None = harness CLI
+    # default (pre-F012 behavior); when set, executors forward it via the
+    # vendor's model flag. Models are data, never registry keys (D010).
+    model: str | None = None
 
 
 @dataclass
@@ -100,6 +104,15 @@ class BaseExecutor(ABC):
     agent_name: str = ""  # subclass: "claude" | "codex" | "gemini" | "grok" | "ollama" | …
     cli_binary: str | None = None  # subclass: name of the CLI binary on PATH
 
+    # F014 — the adapter's capability declaration (F011 vocabulary:
+    # file_edit / tool_use / non_interactive). Conservative default: a
+    # harness that does not explicitly declare more is audit-capable only
+    # and can never hold the implementer role. Must agree with
+    # config.worker_profiles.HARNESS_CAPABILITIES (the authoritative table
+    # for role gating) — test_f014_harness_adapters guards the two against
+    # drift.
+    capabilities: frozenset[str] = frozenset({"non_interactive"})
+
     @abstractmethod
     def dispatch(self, task: DispatchTask) -> DispatchResult:
         """Execute the task synchronously. Must not raise on subprocess failure;
@@ -111,6 +124,16 @@ class BaseExecutor(ABC):
         if not self.cli_binary:
             return False
         return shutil.which(self.cli_binary) is not None
+
+    def list_models(self) -> list[str] | None:
+        """F015 (D4) — optional model-catalog discovery. ``None`` means this
+        harness has no discovery surface (documented pass-through): any
+        freeform model string is forwarded to the vendor CLI via
+        ``DispatchTask.model`` unverified. A harness adapter with a real
+        catalog (a future ollama/openrouter executor) overrides this to
+        return discovered model ids. Models are data, never AGENT_REGISTRY
+        keys (D010)."""
+        return None
 
     def availability_hint(self) -> str:
         """Operator-facing message when is_available() returns False."""

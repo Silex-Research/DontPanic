@@ -120,6 +120,72 @@ def _evidence_refs_from_envelopes(audit_paths: list[Path]) -> set[str]:
     return refs
 
 
+#: Run telemetry the SUPERVISOR authors inside the dispatching plan's own
+#: directory. These can never appear in ``touched_files`` — that set is built
+#: from the IMPLEMENTER's declared evidence refs — so without this exemption a
+#: volley blocks its own signoff on files it wrote seconds earlier (observed
+#: 2026-08-09 on plan 2026-08-09-002 F001, which reached signed_off and then
+#: terminated blocked).
+#:
+#: Deliberately NOT covered: ``plan.md``, ``features.json``,
+#: ``decisions.jsonl``. Those are the contract and the deliverable; dirty state
+#: in them is a real finding and must keep blocking.
+_SELF_AUTHORED_FILES: frozenset[str] = frozenset({"INBOX.md"})
+_SELF_AUTHORED_DIRS: tuple[str, ...] = ("audit/",)
+_SELF_AUTHORED_EVIDENCE_PREFIX = "evidence/git-state-"
+
+
+def _iter_git_state_paths(git_state: dict) -> list[str]:
+    """Every path the F001 sidecar mentions, across all of its buckets."""
+    paths: list[str] = []
+    for key in ("staged", "unstaged_modified"):
+        for entry in git_state.get(key) or []:
+            path = entry.get("path") if isinstance(entry, dict) else entry
+            if path:
+                paths.append(path)
+    for key in ("untracked", "deleted_staged", "deleted_unstaged"):
+        for entry in git_state.get(key) or []:
+            path = entry.get("path") if isinstance(entry, dict) else entry
+            if path:
+                paths.append(path)
+    return paths
+
+
+def self_authored_telemetry(git_state: dict, *, plan_dir: Path) -> set[str]:
+    """Paths in ``git_state`` that this very run wrote into its own plan dir.
+
+    Anchored on the plan directory's own NAME — the plan id — rather than on a
+    path relationship with ``repo_root``. That is deliberate: the supervisor
+    calls :func:`enforce` with ``repo_root=plan_dir`` (supervisor.py:1445), so
+    any prefix derived from ``plan_dir.relative_to(repo_root)`` collapses to
+    ``"."`` and matches nothing. The plan id is unique per plan, which also
+    gives the scoping this needs for free: a SIBLING plan's dirty telemetry
+    carries a different id, does not match, and stays a finding.
+
+    Returns exact path strings so the caller can union them into
+    ``touched_files`` without changing how Mode 5 compares.
+    """
+    plan_name = plan_dir.resolve().name
+    if not plan_name:
+        return set()
+
+    exempt: set[str] = set()
+    for path in _iter_git_state_paths(git_state):
+        if path.startswith(f"{plan_name}/"):
+            tail = path[len(plan_name) + 1 :]
+        elif f"/{plan_name}/" in path:
+            tail = path.split(f"/{plan_name}/", 1)[1]
+        else:
+            continue
+        if (
+            tail in _SELF_AUTHORED_FILES
+            or tail.startswith(_SELF_AUTHORED_DIRS)
+            or tail.startswith(_SELF_AUTHORED_EVIDENCE_PREFIX)
+        ):
+            exempt.add(path)
+    return exempt
+
+
 def _promote_mode5(
     report: CompletenessReport,
     *,
@@ -237,6 +303,10 @@ def enforce(
         return None
 
     touched_files = _evidence_refs_from_envelopes(audit_paths) | set(affected_paths or [])
+    # A run's own telemetry is touched by definition — it exists because this
+    # dispatch wrote it. Without this the gate blocks every volley that reaches
+    # signoff, since the implementer never declares supervisor-authored files.
+    touched_files |= self_authored_telemetry(git_state, plan_dir=plan_dir)
     raw_report = patch_completeness.check(git_state, repo_root, touched_files)
     promoted_report, unrelated_dirty_files = _promote_mode5(
         raw_report,

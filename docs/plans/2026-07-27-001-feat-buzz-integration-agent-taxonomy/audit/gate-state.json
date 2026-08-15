@@ -1,0 +1,161 @@
+{
+  "plan_id": "2026-07-27-001-feat-buzz-integration-agent-taxonomy",
+  "cleared_gates": [
+    "pre_impl",
+    "pre_merge"
+  ],
+  "history": [
+    {
+      "action": "pause",
+      "at": "2026-07-27T10:38:47Z",
+      "actor": "supervisor",
+      "pause_gates": [
+        "pre_impl"
+      ],
+      "stage": "pre_impl"
+    },
+    {
+      "action": "approve",
+      "gate": "pre_impl",
+      "at": "2026-07-27T10:38:47Z",
+      "actor": "supervisor:plan_status_active"
+    },
+    {
+      "action": "pause",
+      "at": "2026-07-27T10:47:42Z",
+      "actor": "supervisor",
+      "pause_gates": [
+        "pre_merge"
+      ],
+      "stage": "pre_merge"
+    },
+    {
+      "action": "approve",
+      "gate": "pre_merge",
+      "at": "2026-07-27T11:20:01Z",
+      "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:iteration_cap",
+      "at": "2026-07-27T12:11:58Z",
+      "actor": "supervisor",
+      "reason": "max_iterations=4 reached without signoff"
+    },
+    {
+      "action": "pause",
+      "at": "2026-07-27T12:14:00Z",
+      "actor": "supervisor",
+      "pause_gates": [
+        "breaker:iteration_cap"
+      ]
+    },
+    {
+      "action": "approve",
+      "gate": "breaker:iteration_cap",
+      "at": "2026-07-27T12:14:09Z",
+      "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:iteration_cap",
+      "at": "2026-07-28T06:19:17Z",
+      "actor": "supervisor",
+      "reason": "max_iterations=2 reached without signoff"
+    },
+    {
+      "action": "approve",
+      "gate": "breaker:iteration_cap",
+      "at": "2026-07-28T06:20:48Z",
+      "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:iteration_cap",
+      "at": "2026-07-28T07:30:40Z",
+      "actor": "supervisor",
+      "reason": "max_iterations=3 reached without signoff"
+    },
+    {
+      "action": "approve",
+      "gate": "breaker:iteration_cap",
+      "at": "2026-07-28T07:31:44Z",
+      "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:iteration_cap",
+      "at": "2026-07-28T15:42:49Z",
+      "actor": "supervisor",
+      "reason": "max_iterations=2 reached without signoff"
+    },
+    {
+      "action": "pause",
+      "at": "2026-07-28T15:44:51Z",
+      "actor": "supervisor",
+      "pause_gates": [
+        "breaker:iteration_cap"
+      ]
+    },
+    {
+      "action": "approve",
+      "gate": "breaker:iteration_cap",
+      "at": "2026-07-28T15:45:03Z",
+      "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:iteration_cap",
+      "at": "2026-07-28T16:38:46Z",
+      "actor": "supervisor",
+      "reason": "max_iterations=2 reached without signoff"
+    },
+    {
+      "action": "approve",
+      "gate": "breaker:iteration_cap",
+      "at": "2026-07-28T16:42:39Z",
+      "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:iteration_cap",
+      "at": "2026-07-28T16:55:31Z",
+      "actor": "supervisor",
+      "reason": "max_iterations=2 reached without signoff"
+    },
+    {
+      "action": "approve",
+      "gate": "breaker:iteration_cap",
+      "at": "2026-07-28T16:56:22Z",
+      "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:iteration_cap",
+      "at": "2026-07-28T17:01:37Z",
+      "actor": "supervisor",
+      "reason": "max_iterations=1 reached without signoff"
+    }
+  ],
+  "gate_events": [
+    {
+      "gate": "pre_impl",
+      "stage": "pre_impl",
+      "cleared_at": "2026-07-27T10:38:47Z",
+      "cleared_by": "supervisor:plan_status_active"
+    },
+    {
+      "gate": "pre_merge",
+      "stage": "pre_merge",
+      "cleared_at": "2026-07-27T11:20:01Z",
+      "cleared_by": "operator"
+    }
+  ],
+  "completed_stages": [
+    "pre_impl",
+    "pre_merge"
+  ],
+  "active_breakers": [
+    "breaker:iteration_cap"
+  ]
+}

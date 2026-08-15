@@ -15,7 +15,7 @@
       "exact_command": "dontpanic approve 2026-05-24-004-feat-event-messaging-v1 breaker:environmental_blocker",
       "human_required_reason": "operator action surfaced by dispatch_event",
       "id": "supervisor:verdict_blocked_reconciled:2026-05-24-004-feat-event-messaging-v1:F005",
-      "plain_consequence": "Auditor said `blocked` but every finding classified as advisory (`environmental_reproduction_failure`); supervisor promoted the terminal to `stopped_environmental_blocker`.",
+      "plain_consequence": null,
       "project_name": null,
       "reversible": false,
       "source": "supervisor",

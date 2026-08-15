@@ -1,0 +1,66 @@
+{
+  "schema_version": "1.0",
+  "status": "fail",
+  "findings": [
+    {
+      "mode": "test_file_untracked",
+      "files": [
+        "scripts/dontpanic_orchestrate/tests/test_f015_model_catalog.py"
+      ],
+      "reason": "A test file is untracked or unstaged_modified \u2014 pytest discovery on a fresh clone will not run it.",
+      "severity": "block",
+      "recommendation": "Run: git add scripts/dontpanic_orchestrate/tests/test_f015_model_catalog.py"
+    },
+    {
+      "mode": "unstaged_dirty_state",
+      "files": [
+        "README.md",
+        "USER.md",
+        "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/INBOX.md",
+        "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/operator-resolution-2026-07-27-001-feat-buzz-integration-agent-taxonomy.json",
+        "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/partials/2026-07-27-001-feat-buzz-integration-agent-taxonomy#claude#0.stdout.txt",
+        "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/plan-run-fingerprint.json",
+        "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/signoff-2026-07-27-001-feat-buzz-integration-agent-taxonomy.json",
+        "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/transcript.md",
+        "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/evidence/closeout-memo.md",
+        "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/evidence/git-state-0-auditor.json",
+        "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/evidence/git-state-0-implementer.json",
+        "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/features.json",
+        "scripts/dontpanic_doctor.py",
+        "scripts/dontpanic_orchestrate/cli.py",
+        "scripts/dontpanic_orchestrate/completion_dispatch.py",
+        "scripts/dontpanic_orchestrate/executors/base.py",
+        "scripts/dontpanic_orchestrate/global_config.py",
+        "scripts/dontpanic_orchestrate/project_config.py",
+        "scripts/dontpanic_orchestrate/sufficiency_auditor.py",
+        "scripts/dontpanic_orchestrate/supervisor.py"
+      ],
+      "reason": "Unstaged modifications present. F003 will require an operator note when files fall outside touched_files.",
+      "severity": "info",
+      "recommendation": "Run: git add -u for files that should ride along; otherwise pass --unrelated-dirty-state-note <reason> at dispatch time."
+    }
+  ],
+  "files": [
+    "scripts/dontpanic_orchestrate/tests/test_f015_model_catalog.py",
+    "README.md",
+    "USER.md",
+    "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/INBOX.md",
+    "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/operator-resolution-2026-07-27-001-feat-buzz-integration-agent-taxonomy.json",
+    "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/partials/2026-07-27-001-feat-buzz-integration-agent-taxonomy#claude#0.stdout.txt",
+    "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/plan-run-fingerprint.json",
+    "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/signoff-2026-07-27-001-feat-buzz-integration-agent-taxonomy.json",
+    "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/transcript.md",
+    "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/evidence/closeout-memo.md",
+    "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/evidence/git-state-0-auditor.json",
+    "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/evidence/git-state-0-implementer.json",
+    "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/features.json",
+    "scripts/dontpanic_doctor.py",
+    "scripts/dontpanic_orchestrate/cli.py",
+    "scripts/dontpanic_orchestrate/completion_dispatch.py",
+    "scripts/dontpanic_orchestrate/executors/base.py",
+    "scripts/dontpanic_orchestrate/global_config.py",
+    "scripts/dontpanic_orchestrate/project_config.py",
+    "scripts/dontpanic_orchestrate/sufficiency_auditor.py",
+    "scripts/dontpanic_orchestrate/supervisor.py"
+  ]
+}

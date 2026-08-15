@@ -18,7 +18,11 @@ Required:
 
 Optional layers (add as needed):
   2. Notification sink                ← see below — direct Discord webhook
-                                          (works without any broker)
+                                          (works without any broker).
+                                          Strongly recommended for multi-agent
+                                          work: a Buzz private community as
+                                          the notify surface — see § Buzz
+                                          setup below
   3. Broker runtime (pick ONE)        ← only if you want bidirectional
                                           commands from chat / dashboard /
                                           hosted agent surface
@@ -46,6 +50,7 @@ Optional layers (add as needed):
 |---|---|---|---|
 | **Solo dev, terminal only** | DontPanic core + agent CLIs | ~10 min | This doc → [`AGENT_QUICKSTART.md`](./AGENT_QUICKSTART.md) |
 | **Solo dev, want Discord notifications** | Above + receive-only Discord webhook (no broker) | +2 min | This doc → [`CONFIGURATION.md` § Notifications](./CONFIGURATION.md#notifications) |
+| **Multi-agent operator — Buzz private community (strongly recommended)** | Above + your own private Buzz community as the notify/coordination surface: plan status, gate requests, builder≠auditor agent identities in one room | +15 min | This doc → [§ Buzz setup](#buzz-strongly-recommended-private-community-setup) → [`ECOSYSTEM.md` § Buzz](./ECOSYSTEM.md#buzz-as-caller-and-notify-surface-strongly-recommended) |
 | **Personal multi-channel surface** | Above + OpenClaw as multi-channel router (Discord/Telegram/WhatsApp) with bidirectional commands | +1-2 days | This doc → OpenClaw adapter plan |
 | **Hosted-agent flow (Claude.ai managed agents)** | DontPanic events surfaced through Claude.ai's dashboard/email; approvals via Claude.ai chat → MCP | varies | This doc → [`AGENT_QUICKSTART.md`](./AGENT_QUICKSTART.md) → operator-side wiring |
 | **AI agent integrating DontPanic interactively** (Claude Code, Cursor, Codex CLI, Continue) | DontPanic core + agent-manifest + MCP server. No broker needed — agents read state in your active session | ~5 min | [`AGENT_QUICKSTART.md`](./AGENT_QUICKSTART.md) → [`ECOSYSTEM.md`](./ECOSYSTEM.md) |
@@ -129,6 +134,154 @@ gcloud auth application-default login
 firebase login
 dontpanic doctor
 ```
+
+## Buzz (Strongly Recommended): Private Community Setup
+
+If you run multi-agent work, Buzz signup and setup are **strongly
+recommended** — DontPanic works fine without it (local-first,
+offline-capable), but a private [Buzz](https://buzz.xyz) community gives you
+one room where plan status, gate requests, and your builder/auditor agent
+identities are all visible.
+
+> **Integration status:** both halves have shipped. `dontpanic doctor`
+> reads `~/.dontpanic/buzz.json` and reports missing Buzz config as an
+> **advisory WARN, never a failure** (CI/headless runs can silence it with
+> `DONTPANIC_SKIP_BUZZ=1`). The notify sink posts plan events into your
+> private community via the Buzz CLI (`buzz messages send`) and is
+> **fail-soft**: when `buzz.json`
+> is absent or the `buzz` binary is not installed, the sink silently stays quiet —
+> nothing breaks and nothing is required. You can also drive DontPanic
+> *from* Buzz with a thin workflow that shells out to the CLI — see the
+> caller sketch in
+> [`ECOSYSTEM.md` § Buzz](./ECOSYSTEM.md#buzz-as-caller-and-notify-surface-strongly-recommended).
+
+The default work surface is a **private community that you create and own**.
+The maintainers' Silex community is their own **private** dogfood workspace —
+it is not a public support surface and not something you join. The only
+public maintainer-owned surface is an optional DontPanic community that may
+come later for discovery and support. **You are never required to join or
+post into a maintainer-owned community**, and no DontPanic feature depends
+on one.
+
+First-hour checklist:
+
+1. Install the Buzz desktop app (you can move to a self-hosted relay later —
+   recommended for high-sensitivity or compliance-bound work).
+2. Create a **private** community (or reuse an existing private one you own).
+3. Create channels, e.g. `#dontpanic-status` and `#dontpanic-gates` (names
+   are suggestions, not prescribed).
+4. Create a reporter agent key (or use the Buzz CLI with `BUZZ_PRIVATE_KEY`)
+   used only for DontPanic notifications.
+5. Write `~/.dontpanic/buzz.json` so `dontpanic doctor` reports the Buzz
+   surface as configured and the notify sink starts posting. Keys:
+   `relay_url` (your **private** community's relay URL — in Buzz the relay
+   URL *is* the community/workspace authority, handed to the CLI as
+   `BUZZ_RELAY_URL`; there is no default, and never a public one — do not
+   paste a public support community's relay here), `channels` (channel
+   UUIDs from your private community; the sink posts to the first entry),
+   and `reporter_key_ref` (a reference such as an env var name — never the
+   private key itself; buzz.json stays secret-free and the fail-soft notify
+   sink resolves the reference at send time). Example:
+
+   ```json
+   {
+     "relay_url": "https://relay.your-team.example",
+     "channels": ["11111111-2222-4333-8444-555555555555"],
+     "reporter_key_ref": "env:BUZZ_PRIVATE_KEY"
+   }
+   ```
+
+   `relay_url` must point at a **private** community you own — never a
+   public support or discovery community. The sink only ever posts
+   projections (summaries, hashes, gate links) and never secrets, home
+   paths, or full transcripts, but private work belongs in a private room
+   regardless.
+
+   **Optional — Buzz agent ↔ worker-profile bindings (off by default).**
+   If your community has agent identities (say Fizz/Honey/Bumble) that
+   correspond to DontPanic worker profiles, an `agent_bindings` key maps
+   the Buzz agent id or display name to the local profile id so docs and
+   status can show the chain Buzz agent → profile → harness + model:
+
+   ```json
+   {
+     "relay_url": "https://relay.your-team.example",
+     "channels": ["11111111-2222-4333-8444-555555555555"],
+     "reporter_key_ref": "env:BUZZ_PRIVATE_KEY",
+     "agent_bindings": { "Fizz": "fizz", "Honey": "honey" }
+   }
+   ```
+
+   Inspect the join with `dontpanic workers buzz-bindings`. Bindings are
+   **display-only**: Buzz remains the UX for membership; DontPanic's
+   roles/profiles remain the dispatch authority, and model selection
+   stays single-sourced in the profile — the binding carries no
+   harness or model of its own. A binding never confers dispatch
+   authority (a Buzz name that happens to equal a profile id dispatches
+   via the profile table, never via the binding), an unbound agent
+   gains nothing, and no Buzz message auto-dispatches anything —
+   Buzz-initiated runs still go through the confirm-gated caller
+   recipe (`examples/buzz-caller/README.md`). The
+   notify reporter key above stays a separate thin identity, unrelated
+   to these bindings.
+
+   **Optional — Buzz gate bridge (off by default).** A `gate_bridge` key
+   lets an **allowlisted human** clear a *pending* DontPanic gate by
+   posting a **signed Nostr event** whose content is the exact ceremony
+   `dontpanic approve plan=<plan_id> gate=<gate>`. Reactions / emoji
+   **never** auto-confirm (ECOSYSTEM.md non-goal). Apply via
+   `dontpanic buzz-gate <plan> --payload <file|->` or
+   `dontpanic buzz-gate <plan> --poll` (shells out to configured
+   `poll_command` — typically the Buzz CLI; DontPanic still has no relay
+   client of its own):
+
+   ```json
+   {
+     "relay_url": "https://relay.your-team.example",
+     "channels": ["11111111-2222-4333-8444-555555555555"],
+     "reporter_key_ref": "env:BUZZ_PRIVATE_KEY",
+     "gate_bridge": {
+       "enabled": true,
+       "approver_pubkeys": ["<hex pubkey of a HUMAN operator>"],
+       "agent_pubkeys": ["<hex pubkeys of your agent identities>"],
+       "channel": "11111111-2222-4333-8444-555555555555",
+       "gate_kinds": ["pre_impl", "pre_merge"],
+       "poll_command": ["buzz", "timeline", "--json"],
+       "webhook_secret_ref": "env:BUZZ_GATE_WEBHOOK_SECRET"
+     }
+   }
+   ```
+
+   The bridge stays off unless `enabled: true`, `approver_pubkeys` is
+   non-empty, **and** `agent_pubkeys` is present as a list (empty list is
+   an explicit “no agent identities”; omitting the key fails closed).
+   `approver_pubkeys` lists **human** operator pubkeys only — any key in
+   `agent_pubkeys` is refused even if it also appears in the allowlist
+   (D006: agent keys may post status and request approval, never
+   self-clear). Cryptographic verification is **in-process** (BIP-340 /
+   NIP-01): the payload must wrap a raw signed event; the legacy
+   `sig_verified: true` flat shape is rejected. Webhook deliveries also
+   require a valid HMAC-SHA256 over the event id using
+   `webhook_secret_ref`. An accepted approval records the durable actor
+   `buzz:<pubkey>` in gate-state history, an INBOX `gate_cleared` event,
+   a consumed-event ledger entry, and a `decisions.jsonl` audit note.
+   Synthetic gates (`breaker:*`, `defer:*`, …) and any non-pending gate
+   always refuse — those stay on the operator CLI (`dontpanic approve`).
+6. Point your Buzz-side workflow (the caller sketch in `ECOSYSTEM.md`) at
+   the DontPanic CLI, with your relay URL, channels, and reporter key in the
+   workflow's own config. DontPanic's notify sink posts projections itself
+   using the same `buzz.json` (fail-soft when it or the `buzz` binary is
+   absent).
+7. Optionally join the public DontPanic community for help and recipes if
+   one exists — keep it separate from your private work community.
+
+Remember the split: your private community carries work (status, gates,
+agent membership); public communities carry support and discovery. The
+delivery contract only ever posts projections (summaries, hashes, gate
+links) — never secrets or full transcripts. See
+[`ECOSYSTEM.md` § Buzz](./ECOSYSTEM.md#buzz-as-caller-and-notify-surface-strongly-recommended)
+for the full community model, the Buzz-as-caller recipe, and the locked
+non-goals.
 
 ## Onboarding A New Agent Or A New Repo
 

@@ -1,0 +1,28 @@
+{
+  "task_id": "2026-08-13-001-feat-lock-outcome-slices-proof",
+  "signoff_id": "2026-08-13-001-feat-lock-outcome-slices-proof#signoff#2",
+  "iteration": 2,
+  "tier": "architectural",
+  "agents_in_panel": [
+    "claude",
+    "codex"
+  ],
+  "audits": [
+    "audit/claude-implementer-F005-i0.json",
+    "audit/codex-auditor-F005-i0.json",
+    "audit/claude-implementer-F005-i1.json",
+    "audit/codex-auditor-F005-i1.json",
+    "audit/claude-implementer-F005-i2.json",
+    "audit/codex-auditor-F005-i2.json"
+  ],
+  "vote_summary": {
+    "signed_off_count": 0,
+    "needs_changes_count": 3,
+    "blocked_count": 3,
+    "inconclusive_count": 0
+  },
+  "signoff": true,
+  "signoff_reason": "operator_resolved (class=spec_ambiguity): operator accepted the stopped_no_progress terminal as non-defect after review. See evidence/closeout-memo.md for rationale.",
+  "next_action": "merge",
+  "decided_at": "2026-08-14T22:53:05Z"
+}

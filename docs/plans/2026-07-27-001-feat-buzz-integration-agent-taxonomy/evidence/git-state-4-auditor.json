@@ -1,0 +1,28 @@
+{
+  "staged": [],
+  "unstaged_modified": [
+    {
+      "path": "README.md",
+      "status": "M"
+    },
+    {
+      "path": "USER.md",
+      "status": "M"
+    },
+    {
+      "path": "capabilities/README.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/USE_CASES.md",
+      "status": "M"
+    }
+  ],
+  "untracked": [
+    "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/",
+    "scripts/dontpanic_orchestrate/doc_drift.py",
+    "scripts/dontpanic_orchestrate/tests/test_doc_drift_guard_f002.py"
+  ],
+  "deleted_staged": [],
+  "deleted_unstaged": []
+}

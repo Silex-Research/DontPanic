@@ -328,6 +328,49 @@ def check_pydantic_models() -> CheckResult:
     return _ok("pydantic-models", "plan/features/audit/environments/signoff models import clean")
 
 
+# Plan statuses that mean "finished, one way or another". A terminal plan is
+# frozen history: it will not be edited again, so validating it against
+# schemas that keep tightening is a bet the repo always eventually loses. The
+# parent-plan gate therefore warns rather than fails on these — see
+# check_parent_plan_validates.
+_TERMINAL_PLAN_STATUSES: frozenset[str] = frozenset({"completed", "abandoned"})
+
+
+def is_terminal_plan_status(status: str | None) -> bool:
+    """True only for a status positively recognised as terminal.
+
+    Anything unrecognised — None, empty, a typo — is NOT terminal. Leniency is
+    granted on proof, never on ignorance: a plan whose status cannot be read
+    takes the strict path.
+    """
+    if not status:
+        return False
+    return status.strip().strip("\"'").lower() in _TERMINAL_PLAN_STATUSES
+
+
+def read_plan_status(plan_dir: Path) -> str | None:
+    """Read ``status:`` from plan.md's YAML frontmatter. None when unreadable.
+
+    Deliberately scans only the frontmatter block, so the word "abandoned"
+    appearing in the plan's prose can never be mistaken for its status.
+    """
+    plan_md = plan_dir / "plan.md"
+    try:
+        text = plan_md.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    lines = text.splitlines()
+    if not lines or lines[0].strip() != "---":
+        return None
+    for line in lines[1:]:
+        if line.strip() == "---":
+            break
+        if line.startswith("status:"):
+            value = line.split(":", 1)[1].strip().strip("\"'")
+            return value or None
+    return None
+
+
 def check_parent_plan_validates() -> CheckResult:
     if not PARENT_PLAN_DIR.is_dir():
         return _bad(
@@ -349,9 +392,22 @@ def check_parent_plan_validates() -> CheckResult:
         timeout=30,
     )
     if proc.returncode != 0:
+        detail = (proc.stderr.strip() or proc.stdout.strip())[:200]
+        status = read_plan_status(PARENT_PLAN_DIR)
+        if is_terminal_plan_status(status):
+            # Frozen history. Report it, do not block on it — otherwise every
+            # schema tightening retroactively breaks CI for a plan nobody will
+            # touch again. A live plan (below) still blocks: that is a contract
+            # in play, and a broken one is a real defect.
+            return _warn(
+                "parent-plan",
+                f"parent plan is {status} and no longer validates: {detail}",
+                "expected for frozen history after a schema tightening; "
+                "backfill only if you intend to reopen the plan",
+            )
         return _bad(
             "parent-plan",
-            f"validator rejected parent plan: {proc.stderr.strip()[:200]}",
+            f"validator rejected parent plan: {detail}",
             "review changes against agent-conventions v1.x schemas",
         )
     return _ok("parent-plan", "parent orchestration plan validates")
@@ -584,7 +640,7 @@ def _missing_cap_snippet(
         f'          "cap": {cap_value},\n'
         f'          "unit": "{cap_unit}",\n'
         f'          "_note": "{note}"\n'
-        f'        }}'
+        f"        }}"
     )
     return snippet
 
@@ -840,6 +896,14 @@ def check_registered_project(entry: object) -> list[CheckResult]:
         )
     )
 
+    # 7. Plan 2026-07-27-001 F015 i1 (codex audit finding 2): per-project
+    # configured-model catalog probe. The project's own roles / worker
+    # profiles / model_aliases may bind models the global check never sees;
+    # unknown stays advisory (WARN), only a harness probe refusal FAILs, so
+    # the F003 per-project clean-state contract is preserved for the
+    # pass-through defaults.
+    results.extend(check_model_catalog(project_path, name_prefix=f"project:{name}:"))
+
     # NOTE: the managed-block freshness check (Plan 2026-05-30-001 F005 AC6) is
     # intentionally NOT part of the --include-projects sweep — repo onboarding
     # is opt-in, so a non-onboarded registered project must not introduce a WARN
@@ -869,6 +933,7 @@ def _validate_roles_against_registry(
     sys.path.insert(0, str(REPO_ROOT / "scripts"))
     try:
         from dontpanic_orchestrate import project_config as pc
+        from dontpanic_orchestrate.config.roles import role_name
     finally:
         sys.path.pop(0)
 
@@ -877,7 +942,9 @@ def _validate_roles_against_registry(
 
     declared: list[tuple[str, str]] = []
     for role in ("implementer", "auditor", "goal_auditor"):
-        val = getattr(roles_obj, role, None)
+        # F015 i1: entries may be the F012 object shape ({name, model}) —
+        # validate the name, not the RoleSpec object.
+        val = role_name(getattr(roles_obj, role, None))
         if val:
             declared.append((role, val))
     if not declared:
@@ -886,7 +953,11 @@ def _validate_roles_against_registry(
     unknown = [(r, a) for r, a in declared if not pc.is_known_agent(a)]
     if unknown:
         details = ", ".join(f"roles.{r}={a!r}" for r, a in unknown)
-        return [_bad(name_prefix, f"{layer_label} role(s) not in AGENT_REGISTRY: {details}", remediation)]
+        return [
+            _bad(
+                name_prefix, f"{layer_label} role(s) not in AGENT_REGISTRY: {details}", remediation
+            )
+        ]
     joined = ", ".join(f"roles.{r}={a}" for r, a in declared)
     return [_ok(name_prefix, f"{layer_label} roles recognized: {joined}")]
 
@@ -909,16 +980,20 @@ def _check_managed_block(name: str, project_path: Path) -> CheckResult:
     # Plan 2026-05-30-001 F005 (codex audit finding #4): `projects add` refuses an
     # already-registered name without --force --yes, so the re-onboard remediation
     # must include them to be directly executable for the common registered case.
-    remediation = (
-        f"run `dontpanic projects add {name} {project_path} --onboard --force --yes` to (re)write the managed block"
-    )
+    remediation = f"run `dontpanic projects add {name} {project_path} --onboard --force --yes` to (re)write the managed block"
     agents_md = project_path / "AGENTS.md"
     if not agents_md.is_file():
-        return _warn(cname, f"{agents_md} is missing (repo not onboarded — no DontPanic managed block)", remediation)
+        return _warn(
+            cname,
+            f"{agents_md} is missing (repo not onboarded — no DontPanic managed block)",
+            remediation,
+        )
     try:
         text = agents_md.read_text()
     except OSError as exc:
-        return _bad(cname, f"{agents_md} is unreadable: {exc}", f"check file permissions on {agents_md}")
+        return _bad(
+            cname, f"{agents_md} is unreadable: {exc}", f"check file permissions on {agents_md}"
+        )
     match = ro.find_block(text, ro.BLOCK_AGENTS)
     if match is None:
         return _warn(
@@ -1038,15 +1113,63 @@ def check_agent_onboarding(skip_auth: bool = False) -> list[CheckResult]:
             parts.append(f"{agent_name}({'available' if avail else 'unavailable'})")
         results.append(_ok("agent:executors", f"registered worker executors: {', '.join(parts)}"))
 
+    # 3b. external goal-audit vendors (Plan 2026-07-27-001 F004, D001 B1):
+    # honest capability line for operator-only vendors like gemini — they are
+    # NOT dispatchable workers, but their goal/experience audits attach as
+    # first-class evidence via `dontpanic plan attach-goal-audit`. A vendor
+    # that later gains an executor (B2/F014) is reported on the dispatched
+    # path instead, so this line never contradicts agent:executors.
+    try:
+        sys.path.insert(0, str(REPO_ROOT / "scripts"))
+        try:
+            from dontpanic_orchestrate.external_goal_audit import (
+                KNOWN_EXTERNAL_AUDIT_VENDORS,
+            )
+        finally:
+            sys.path.pop(0)
+        external_only = [v for v in KNOWN_EXTERNAL_AUDIT_VENDORS if v not in AGENT_REGISTRY]
+        promoted = [v for v in KNOWN_EXTERNAL_AUDIT_VENDORS if v in AGENT_REGISTRY]
+        parts = []
+        if external_only:
+            parts.append(
+                f"{', '.join(external_only)}: operator-only, NOT dispatchable — attach "
+                "goal/experience audits via `dontpanic plan attach-goal-audit`"
+            )
+        if promoted:
+            parts.append(
+                f"{', '.join(promoted)}: now registered — dispatched path only "
+                "(external attach refuses)"
+            )
+        results.append(
+            _ok("agent:external-audit", "; ".join(parts) or "no external audit vendors declared")
+        )
+    except Exception as exc:  # noqa: BLE001 — capability line must never crash the doctor
+        results.append(
+            _warn(
+                "agent:external-audit",
+                f"could not resolve external goal-audit vendors: {exc}",
+                "check dontpanic_orchestrate.external_goal_audit imports",
+            )
+        )
+
     # 4. supported-command coverage: the manifest (or the default set) must
     # advertise the core dispatch command so an onboarded agent knows it can
     # orchestrate. Surface the full list for operator visibility.
     try:
-        commands = list(manifest.supported_commands) if manifest is not None else am._default_supported_commands()
+        commands = (
+            list(manifest.supported_commands)
+            if manifest is not None
+            else am._default_supported_commands()
+        )
     except Exception:  # noqa: BLE001
         commands = []
     if "orchestrate" in commands:
-        results.append(_ok("agent:commands", f"supported commands include 'orchestrate' ({', '.join(commands)})"))
+        results.append(
+            _ok(
+                "agent:commands",
+                f"supported commands include 'orchestrate' ({', '.join(commands)})",
+            )
+        )
     elif commands:
         results.append(
             _warn(
@@ -1145,7 +1268,9 @@ def check_config_home() -> CheckResult:
     states = hr.classify_homes()
     legacy_only, divergent = hr.split_brain_summary(states)
     if not legacy_only and not divergent:
-        return _ok("config-home", "canonical (~/.dontpanic) and legacy (~/.jarvis) homes are reconciled")
+        return _ok(
+            "config-home", "canonical (~/.dontpanic) and legacy (~/.jarvis) homes are reconciled"
+        )
     parts = []
     if legacy_only:
         parts.append(f"legacy-only (migratable): {', '.join(legacy_only)}")
@@ -1153,9 +1278,201 @@ def check_config_home() -> CheckResult:
         parts.append(f"divergent (needs manual merge): {', '.join(divergent)}")
     return _warn(
         "config-home",
-        "split-brain between canonical (~/.dontpanic) and legacy (~/.jarvis) homes — " + "; ".join(parts),
+        "split-brain between canonical (~/.dontpanic) and legacy (~/.jarvis) homes — "
+        + "; ".join(parts),
         "run `dontpanic reconcile homes --dry-run` to preview, then `--confirm` to migrate legacy-only files",
     )
+
+
+# Plan 2026-07-27-001 F009: Buzz setup/doctor surface. Buzz (the operator's
+# PRIVATE notify/coordination community) is strongly recommended but never a
+# hard dependency, so every outcome here except a fully valid config is an
+# advisory WARN — the probe is stripped from both strict-exit computations.
+BUZZ_SKIP_ENV = "DONTPANIC_SKIP_BUZZ"
+BUZZ_CONFIG_FILENAME = "buzz.json"
+# reporter_key_ref is a REFERENCE (env var name / keychain item), never key
+# material — buzz.json must stay secret-free like the rest of ~/.dontpanic.
+# In Buzz the relay URL IS the community/workspace authority (the CLI has no
+# separate community flag) — relay_url must be the operator's PRIVATE
+# community relay. Keep this key set in lock-step with
+# notify_buzz.EXPECTED_KEYS.
+BUZZ_EXPECTED_KEYS = ("relay_url", "channels", "reporter_key_ref")
+_BUZZ_REMEDIATION = (
+    "create a PRIVATE Buzz community you own (first-hour checklist: "
+    "docs/GETTING_STARTED.md § 'Buzz (Strongly Recommended): Private Community "
+    "Setup'), then write ~/.dontpanic/buzz.json with keys: relay_url (your "
+    "private community's relay URL — the relay is the community authority; "
+    "public communities are support-only, never the notify default), "
+    "channels (channel UUIDs; the sink posts to the first entry), "
+    "reporter_key_ref (a key reference such as an env var name — never the "
+    "private key itself); CI/headless: "
+    f"set {BUZZ_SKIP_ENV}=1 to silence this advisory"
+)
+
+
+def _buzz_config_default_path() -> Path:
+    """``<canonical home>/buzz.json`` — same home resolution as the rest of
+    the config surface ($DONTPANIC_HOME → ~/.dontpanic)."""
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    try:
+        from dontpanic_orchestrate import home_reconcile as hr
+    finally:
+        sys.path.pop(0)
+    return hr.canonical_home() / BUZZ_CONFIG_FILENAME
+
+
+def _buzz_value_usable(key: str, value: object) -> bool:
+    """True when a buzz.json value is actually usable: channels must be a
+    non-empty list of non-empty strings; every other expected key must be a
+    non-empty (non-whitespace) string."""
+    if key == "channels":
+        return (
+            isinstance(value, list)
+            and len(value) > 0
+            and all(isinstance(c, str) and c.strip() for c in value)
+        )
+    return isinstance(value, str) and bool(value.strip())
+
+
+def check_buzz_config(config_path: Path | None = None) -> CheckResult:
+    """Advisory Buzz-configured probe. Read-only: never writes a config
+    template (and so never seeds a default public community URL), and never
+    echoes config VALUES — only key names — so secrets can't leak into
+    doctor output."""
+    if os.environ.get(BUZZ_SKIP_ENV, "").strip().lower() in ("1", "true", "yes"):
+        return _ok("buzz-config", f"check skipped ({BUZZ_SKIP_ENV} set — CI/headless)")
+    path = config_path if config_path is not None else _buzz_config_default_path()
+    if not path.is_file():
+        return _warn(
+            "buzz-config",
+            "Buzz notify surface not configured (~/.dontpanic/buzz.json missing) "
+            "— strongly recommended for multi-agent work, never required",
+            _BUZZ_REMEDIATION,
+        )
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        return _warn(
+            "buzz-config",
+            "~/.dontpanic/buzz.json exists but is not valid JSON",
+            _BUZZ_REMEDIATION,
+        )
+    if not isinstance(data, dict):
+        return _warn(
+            "buzz-config",
+            "~/.dontpanic/buzz.json must be a JSON object",
+            _BUZZ_REMEDIATION,
+        )
+    missing = [k for k in BUZZ_EXPECTED_KEYS if k not in data]
+    if missing:
+        return _warn(
+            "buzz-config",
+            f"~/.dontpanic/buzz.json missing keys: {', '.join(missing)}",
+            _BUZZ_REMEDIATION,
+        )
+    # i0 audit finding: key presence alone let a null-valued (unusable) config
+    # PASS as configured. Only key NAMES appear in output — never values.
+    unusable = [k for k in BUZZ_EXPECTED_KEYS if not _buzz_value_usable(k, data[k])]
+    if unusable:
+        return _warn(
+            "buzz-config",
+            "~/.dontpanic/buzz.json has empty or wrong-typed values for keys: "
+            f"{', '.join(unusable)}",
+            _BUZZ_REMEDIATION,
+        )
+    return _ok("buzz-config", "buzz configured (~/.dontpanic/buzz.json)")
+
+
+# Plan 2026-07-27-001 F015 (D4): configured-model catalog probe. Freeform
+# model strings are allowed by design — a model the harness catalog does not
+# list is an advisory WARN ("unknown"), and only an authoritative harness
+# probe refusal (e.g. `ollama show` failing for a locally-bound model) is a
+# FAIL ("rejected"). Pass-through harnesses (claude/codex — no discovery
+# surface) PASS with a note. No network in the doctor path: API-backed
+# catalogs (openrouter) are consulted cache-only (allow_network=False).
+# i1 (codex audit finding 2): parameterized by project root so registered /
+# explicitly selected projects probe THEIR roles / profiles / aliases, not
+# this repo's; the no-arg call keeps the global (DontPanic-repo) surface.
+def check_model_catalog(
+    project_root: Path | None = None, *, name_prefix: str = ""
+) -> list[CheckResult]:
+    root = (project_root or REPO_ROOT).resolve()
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    try:
+        from dontpanic_orchestrate import model_catalog as mc
+        from dontpanic_orchestrate import worker_profiles as wp
+        from dontpanic_orchestrate.config import resolvers
+    finally:
+        sys.path.pop(0)
+
+    results: list[CheckResult] = []
+    for role in ("implementer", "auditor", "goal_auditor"):
+        check_name = f"{name_prefix}models:{role}"
+        try:
+            name = resolvers.resolve_role(root, role)
+            worker = wp.peek_worker(root, name)
+            harness = worker.harness if worker is not None else name
+            # i1 (codex audit finding 3): resolve_model's atomic harness
+            # check needs the harness the role actually dispatches to — the
+            # configured name may be a D015 alias or a worker-profile id,
+            # and passing it verbatim suppressed role-level models.
+            raw_model = (worker.model if worker is not None else None) or resolvers.resolve_model(
+                root, role, harness=harness
+            )
+            model = mc.resolve_alias(raw_model, root)
+        except Exception as exc:  # noqa: BLE001 — probe must never crash the doctor
+            results.append(
+                _warn(
+                    check_name,
+                    f"could not resolve the configured model: {exc}",
+                    "check roles.* / worker_profiles.* config (`dontpanic workers list`)",
+                )
+            )
+            continue
+        if model is None:
+            results.append(_ok(check_name, f"{name}: harness CLI default model"))
+            continue
+        alias_note = f" (alias {raw_model!r} -> {model!r})" if model != raw_model else ""
+        try:
+            probe = mc.probe_model(harness, model, allow_network=False)
+        except mc.UnknownHarnessError as exc:
+            results.append(
+                _warn(
+                    check_name,
+                    f"{name}: model {model!r} bound to unknown harness {harness!r}: {exc}",
+                    "assign a registered harness or a valid worker profile to the role",
+                )
+            )
+            continue
+        if probe.status == "rejected":
+            results.append(
+                _bad(
+                    check_name,
+                    f"{name} ({harness}): model {model!r} REJECTED by harness probe"
+                    f"{alias_note}: {probe.detail}",
+                    f"pull/fix the model or pick one from `dontpanic models list --harness {harness}`",
+                )
+            )
+        elif probe.status in ("ok", "pass_through"):
+            note = (
+                "pass-through — freeform model forwarded to the harness CLI unverified"
+                if probe.status == "pass_through"
+                else probe.detail
+            )
+            results.append(
+                _ok(check_name, f"{name} ({harness}): model {model!r}{alias_note} — {note}")
+            )
+        else:  # "unknown" | "unverifiable" — advisory, freeform is allowed
+            results.append(
+                _warn(
+                    check_name,
+                    f"{name} ({harness}): model {model!r}{alias_note} {probe.status} "
+                    f"to the harness catalog: {probe.detail}",
+                    f"verify with `dontpanic models list --harness {harness}` "
+                    "(freeform models are allowed; this is advisory)",
+                )
+            )
+    return results
 
 
 def check_project_onboarding(name_or_path: str) -> list[CheckResult]:
@@ -1253,10 +1570,30 @@ def check_registered_projects() -> list[CheckResult]:
 # `dashboard/app.tsx` or `jarvis_doctor.py`).
 _KNOWN_CODE_EXTS: frozenset[str] = frozenset(
     {
-        ".py", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs",
-        ".json", ".yaml", ".yml", ".toml", ".md", ".sh",
-        ".rs", ".go", ".rb", ".swift", ".kt", ".java",
-        ".html", ".css", ".scss", ".sql", ".jsonl",
+        ".py",
+        ".ts",
+        ".tsx",
+        ".js",
+        ".jsx",
+        ".mjs",
+        ".cjs",
+        ".json",
+        ".yaml",
+        ".yml",
+        ".toml",
+        ".md",
+        ".sh",
+        ".rs",
+        ".go",
+        ".rb",
+        ".swift",
+        ".kt",
+        ".java",
+        ".html",
+        ".css",
+        ".scss",
+        ".sql",
+        ".jsonl",
     }
 )
 # Backtick-quoted segment (multi-line / inline).
@@ -1550,7 +1887,7 @@ def _suggest_allowed_paths_fix(drifted: list[str], allowed: list[str]) -> str:
     suggested = f"{sample}/**"
     return (
         "add the parent dir glob to child_charter.allowed_paths "
-        f"(e.g. \"{suggested}\"), or remove the out-of-scope step. "
+        f'(e.g. "{suggested}"), or remove the out-of-scope step. '
         f"Detected prefixes: {prefixes}"
     )
 
@@ -1761,15 +2098,18 @@ def validate_plans_strict(
                 "(must start with --- and parse as a mapping)"
             )
             findings.append(
-                _bad(check_name, message, remediation) if strict
+                _bad(check_name, message, remediation)
+                if strict
                 else _warn(check_name, message, remediation)
             )
-            details.append({
-                "plan_id": plan_id,
-                "path": _path_str(plan_md),
-                "status": "parse_error",
-                "error": parse_err,
-            })
+            details.append(
+                {
+                    "plan_id": plan_id,
+                    "path": _path_str(plan_md),
+                    "status": "parse_error",
+                    "error": parse_err,
+                }
+            )
             continue
         if not _is_locked_plan(fm):
             continue
@@ -1781,11 +2121,13 @@ def validate_plans_strict(
         errors = list(validator.iter_errors(fm))
         if not errors:
             clean_count += 1
-            details.append({
-                "plan_id": plan_id,
-                "path": _path_str(plan_md),
-                "status": "clean",
-            })
+            details.append(
+                {
+                    "plan_id": plan_id,
+                    "path": _path_str(plan_md),
+                    "status": "clean",
+                }
+            )
             continue
         fail_count += 1
         # Surface the first 3 errors per plan so the operator gets a usable
@@ -1810,12 +2152,14 @@ def validate_plans_strict(
             findings.append(_bad(check_name, message, remediation))
         else:
             findings.append(_warn(check_name, message, remediation))
-        details.append({
-            "plan_id": plan_id,
-            "path": _path_str(plan_md),
-            "status": status_label,
-            "errors": error_records,
-        })
+        details.append(
+            {
+                "plan_id": plan_id,
+                "path": _path_str(plan_md),
+                "status": status_label,
+                "errors": error_records,
+            }
+        )
 
     # Summary always first so the rendered output reads "summary, then
     # details". When everything is green this is the only entry; the
@@ -1940,9 +2284,7 @@ def _classify_architecture_drift(
     total = len(union) or 1
     changed = len(added) + len(removed) + len(modified)
     unchanged = total - changed
-    missing_required = _missing_required_surfaces(
-        stored_map=stored, current_map=current_map
-    )
+    missing_required = _missing_required_surfaces(stored_map=stored, current_map=current_map)
     if missing_required:
         # Structural loss always trumps the ratio classifier: a vanished
         # subsystem is major drift regardless of how few files differ.
@@ -2043,7 +2385,9 @@ def check_architecture_drift(
     normal development and shouldn't block a doctor sweep.
     """
     repo_root = (repo_root or REPO_ROOT).resolve()
-    arch_path = (architecture_path or (repo_root / "docs" / "architecture" / "architecture.json")).resolve()
+    arch_path = (
+        architecture_path or (repo_root / "docs" / "architecture" / "architecture.json")
+    ).resolve()
 
     # Lazy import — keep the doctor importable without dragging in the
     # crawler module at module-load time.
@@ -2100,7 +2444,9 @@ def check_architecture_drift(
 
     prior_fp = prior.get("source_fingerprint") or {}
     stored_root = prior_fp.get("file_hashes_root")
-    stored_map = prior_fp.get("file_hashes") if isinstance(prior_fp.get("file_hashes"), dict) else None
+    stored_map = (
+        prior_fp.get("file_hashes") if isinstance(prior_fp.get("file_hashes"), dict) else None
+    )
 
     current_map: dict[str, str] = current_fp["file_hashes"]
     current_root = current_fp["file_hashes_root"]
@@ -2119,7 +2465,9 @@ def check_architecture_drift(
             "files_count_stored": prior_fp.get("files_count"),
             "recommendation": _architecture_drift_recommendation("fresh"),
         }
-        result = _ok(name, f"fresh — {current_fp['files_count']} tracked files match stored fingerprint")
+        result = _ok(
+            name, f"fresh — {current_fp['files_count']} tracked files match stored fingerprint"
+        )
         result.details = [details]
         return result
 
@@ -2181,9 +2529,7 @@ def check_architecture_drift(
         return result
 
     missing_suffix = (
-        f"; missing required surface(s): {', '.join(missing_required)}"
-        if missing_required
-        else ""
+        f"; missing required surface(s): {', '.join(missing_required)}" if missing_required else ""
     )
     message = (
         f"{state} — {changed_count}/{total} files differ ({pct:.1f}%): "
@@ -2273,9 +2619,7 @@ def check_dashboard_readiness(
         )
     else:
         if cache_path.is_file():
-            results.append(
-                _ok("dashboard-cache", f"what-now cache present at {cache_path}")
-            )
+            results.append(_ok("dashboard-cache", f"what-now cache present at {cache_path}"))
         else:
             results.append(
                 _warn(
@@ -2494,10 +2838,7 @@ def check_upgrade_readiness(
             return _warn(name, f"up to date with {latest}{behind_note}", UPGRADE_REMEDIATION)
         return _ok(name, msg)
 
-    msg = (
-        f"{pend_req} required + {pend_adv} advisory upgrade action(s) pending"
-        f"{behind_note}"
-    )
+    msg = f"{pend_req} required + {pend_adv} advisory upgrade action(s) pending{behind_note}"
     return _warn(name, msg, UPGRADE_REMEDIATION)
 
 
@@ -2692,9 +3033,7 @@ def acknowledge_upgrade(
         new_marker = dismiss_advisory(new_marker, item.item_id)
     # Stamp the consent instant on first write; never overwrite an existing stamp.
     if new_marker.first_initialized_at is None:
-        new_marker = new_marker.model_copy(
-            update={"first_initialized_at": now or _utc_now_iso()}
-        )
+        new_marker = new_marker.model_copy(update={"first_initialized_at": now or _utc_now_iso()})
 
     write_upgrade_state(new_marker, path=marker_path)  # SOLE marker writer (D015).
 
@@ -2843,6 +3182,14 @@ def run_all_checks(
     # computation in both CLI surfaces (a pending upgrade is guidance, never a
     # readiness blocker).
     results.append(check_upgrade_readiness(check_upstream=check_upstream))
+    # Plan 2026-07-27-001 F009: Buzz-configured probe. Advisory-only (Buzz is
+    # strongly recommended, never required) — stripped from both strict-exit
+    # computations so an install never fails solely because Buzz is absent.
+    results.append(check_buzz_config())
+    # Plan 2026-07-27-001 F015: configured-model catalog probe. Unknown models
+    # stay advisory WARN (freeform is allowed); a harness-probe rejection is a
+    # real FAIL, so this check is NOT stripped from the strict-exit matrix.
+    results.extend(check_model_catalog())
     return results
 
 
@@ -3249,6 +3596,7 @@ def main(argv: list[str] | None = None) -> int:
             from dontpanic_orchestrate.init.report_html import (
                 write_install_report,
             )
+
             pr = _load_prereq_registry()
             activation_context = pr.build_activation_context(REPO_ROOT)
             sweep = pr.run_sweep(
@@ -3278,12 +3626,15 @@ def main(argv: list[str] | None = None) -> int:
         # Plan 2026-06-21-001 F006: the upgrade-readiness probe is advisory —
         # a pending upgrade is guidance, not a readiness blocker — so it is
         # stripped here too (its WARN text + remediation still prints above).
+        # Plan 2026-07-27-001 F009: the buzz-config probe is advisory too —
+        # missing Buzz config is a strong recommendation, never a blocker.
         strict_inputs = [
             r
             for r in results
             if not r.name.startswith("dashboard-")
             and r.name != "skill-rubrics"
             and r.name != "upgrade-readiness"
+            and r.name != "buzz-config"
         ]
         return compute_strict_exit(strict_inputs)
     return 0 if all(r.ok for r in results) else 1

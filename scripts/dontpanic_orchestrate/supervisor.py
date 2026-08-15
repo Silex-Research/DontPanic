@@ -26,9 +26,11 @@ from dontpanic_orchestrate import (
     circuit_breakers,
     command_guard,
     completion_gate,
+    decision_brief,
     ec5_classifier,
     gate_pause,
     inbox,
+    model_catalog,
     nested_orchestration,
     notify,
     notify_event,
@@ -43,7 +45,10 @@ from dontpanic_orchestrate import (
     signoff_writer,
     sufficiency_gate,
     transcript,
+    verification_runner,
+    worker_profiles,
 )
+from dontpanic_orchestrate.config.resolvers import resolve_model
 from dontpanic_orchestrate.environments_loader import (
     check_firebaserc_consistency,
     find_repo_root_for_plan,
@@ -281,12 +286,43 @@ def _sync_pre_impl_for_active_plan(
     )
 
 
+def _attention_brief(
+    loaded: plan_loader.LoadedPlan | None,
+    feature_id: str | None,
+    *,
+    inbox_event: str,
+    pending_gates: list[str] | None = None,
+) -> decision_brief.DecisionBrief | None:
+    """Plan 2026-08-09-002 F005 — the brief for a non-gate attention event.
+
+    Every renderable ``needs_action`` event the supervisor emits goes through
+    here, so the impact-first copy is live on the production path rather than
+    only under a test that hands ``render()`` a brief. Returns ``None`` when
+    no ``LoadedPlan`` is in scope: a brief built from nothing would report the
+    plan id as "what changes", which is worse than the pre-existing copy the
+    renderer falls back to. Never raises — these notifications are advisory by
+    contract and must not take a dispatch down.
+    """
+    if loaded is None:
+        return None
+    try:
+        return decision_brief.build_for_attention(
+            loaded,
+            feature_id,
+            inbox_event=inbox_event,
+            pending_gates=pending_gates or [],
+        )
+    except Exception:  # noqa: BLE001 — advisory copy, never fatal
+        return None
+
+
 def _reconcile_gate_state_or_raise(
     plan_dir: Path,
     *,
     plan_id: str,
     declared_gates: list[Any],
     feature_id: str | None = None,
+    loaded: plan_loader.LoadedPlan | None = None,
 ) -> None:
     """Plan 2026-05-08-003 F001 — fail-loud gate-state reconciliation entry
     point. Wraps :func:`gate_pause.reconcile_gate_state` so every dispatch path
@@ -339,6 +375,9 @@ def _reconcile_gate_state_or_raise(
                     "stage": exc.stage or "",
                     "persisted_state_path": str(exc.persisted_state_path),
                 },
+                decision_brief=_attention_brief(
+                    loaded, feature_id, inbox_event="gate_state_reconciliation_failed"
+                ),
             ),
             plan_dir=plan_dir,
         )
@@ -351,6 +390,7 @@ def _trip_breaker(
     feature_id: str,
     kind: circuit_breakers.BreakerKind,
     reason: str,
+    loaded: plan_loader.LoadedPlan | None = None,
 ) -> None:
     """F006 — record the breaker hit. The 6 approval-required kinds add a
     synthetic gate; all 7 (including the global hard-stop) record an INBOX
@@ -395,6 +435,20 @@ def _trip_breaker(
             timestamp=dt.datetime.now(dt.timezone.utc),
             inbox_event="breaker_tripped",
             breaker_kind=kind.value,
+            # The six approval breakers name the gate the operator would
+            # clear; the global hard stop deliberately names none, and the
+            # brief then says so rather than promising a clearance that does
+            # not exist.
+            decision_brief=_attention_brief(
+                loaded,
+                feature_id,
+                inbox_event="breaker_tripped",
+                pending_gates=(
+                    [circuit_breakers.gate_name(kind)]
+                    if kind in circuit_breakers.APPROVAL_BREAKERS
+                    else []
+                ),
+            ),
         ),
         plan_dir=plan_dir,
     )
@@ -409,6 +463,7 @@ def _emit_gate_paused_discord(
     stage: str = "general",
     target_env: str | None = None,
     target_project: str | None = None,
+    loaded: plan_loader.LoadedPlan | None = None,
 ) -> None:
     """Plan 2026-05-01-002 F003 — gate-pause notification emit.
 
@@ -424,7 +479,59 @@ def _emit_gate_paused_discord(
     operator-actionable). evidence_uri points at the plan's INBOX.md so
     operators can drill down. Populates ``inbox_event='gate_hit'`` (per
     F002) and threads ``subtype`` (stage), ``target_env``, ``target_project``
-    so the translation table can render structured copy."""
+    so the translation table can render structured copy.
+
+    Plan 2026-08-09-002 F003: this is the pause-emission site, and the only
+    place on the live path where the plan title and the feature's declared
+    ``user_impact`` are both in scope — ``dispatch_event`` calls
+    ``event_copy.render(event)`` with no metadata arguments. So the
+    DecisionBrief is snapshotted here and rides along on the event, immutable,
+    for every sink to read. ``loaded`` is optional so callers that have no
+    LoadedPlan (none today) still emit a working pause notification."""
+    brief = (
+        decision_brief.build_for_gate_pause(
+            loaded,
+            feature_id,
+            stage=stage,
+            pending_gates=list(pending_gates),
+        )
+        if loaded is not None
+        else None
+    )
+    # Plan 2026-08-09-002 F005 (audit i2 finding 2): until now the only
+    # structured orchestration fact this emitter published was ``subtype``
+    # (the *stage*). F005 moves the plan label, gate and stage out of the
+    # headline and into a supporting reference line — and a fact the event
+    # never carried cannot be relocated, so the pause was rendering
+    # "stage `implement`" and silently dropping the gate the operator is being
+    # asked to clear.
+    #
+    # The gate is published under ``pending_gates`` rather than ``gate`` on
+    # purpose. ``event_copy._reference_gate_stage`` reads ``pending_gates``
+    # first, so the reference line now names the real gate; but
+    # ``event_copy._gather_fields`` derives the ``{gate}`` format field from
+    # ``gate`` / ``subtype`` only, so the rendered approval command still
+    # resolves through the subtype alias and stays byte-identical. That
+    # matters: F005 is prose-only and its acceptance 7 forbids moving any
+    # exact command (audit i0 finding 1 caught an earlier revision of this
+    # feature doing exactly that by publishing ``gate``). The approval command
+    # naming the stage rather than the gate remains a real defect, owned by
+    # plan 2026-08-10-001 F001/F002 which changes it on purpose and carries
+    # the before/after evidence. ``tests/tools/f005_emitter_command_probe.py``
+    # drives this emitter and pins the command against the pre-change capture
+    # in ``tests/fixtures/f005_prechange_emitter_commands.json``.
+    #
+    # Empty values are omitted rather than published as empty strings: a pause
+    # with no unmet gate has no gate to name, and the reference line stays
+    # quiet instead of printing an empty pair of backticks.
+    gate_reference = {
+        key: value
+        for key, value in (
+            ("pending_gates", ", ".join(pending_gates)),
+            ("stage", stage),
+        )
+        if value
+    }
     notify_event.dispatch_event(
         notify_event.NotifyEvent(
             kind="gate_paused",
@@ -443,6 +550,8 @@ def _emit_gate_paused_discord(
             subtype=stage,
             target_env=target_env,
             target_project=target_project,
+            technical_metadata=gate_reference,
+            decision_brief=brief,
         ),
         plan_dir=plan_dir,
     )
@@ -657,6 +766,7 @@ def _emit_budget_kind_specific_event(
     plan_id: str,
     bd_result: circuit_breakers.BudgetCeilingResult,
     feature_id: str,
+    loaded: plan_loader.LoadedPlan | None = None,
 ) -> None:
     """F006b fix#1: emit a kind-specific INBOX event BEFORE the generic
     breaker_tripped event from _trip_breaker. Keeps the F008 gate-pause
@@ -713,6 +823,9 @@ def _emit_budget_kind_specific_event(
                     "agent": bd_result.agent or "",
                     "window": bd_result.window or "",
                 },
+                decision_brief=_attention_brief(
+                    loaded, feature_id, inbox_event="calibration_required"
+                ),
             ),
             plan_dir=plan_dir,
         )
@@ -749,6 +862,9 @@ def _emit_budget_kind_specific_event(
                     "cap_unit": bd_result.cap_unit or "",
                     "observed_unit": bd_result.observed_unit or "",
                 },
+                decision_brief=_attention_brief(
+                    loaded, feature_id, inbox_event="unit_mismatch"
+                ),
             ),
             plan_dir=plan_dir,
         )
@@ -781,6 +897,9 @@ def _emit_budget_kind_specific_event(
                 timestamp=dt.datetime.now(dt.timezone.utc),
                 inbox_event="config_required",
                 technical_metadata={"cause": cause},
+                decision_brief=_attention_brief(
+                    loaded, feature_id, inbox_event="config_required"
+                ),
             ),
             plan_dir=plan_dir,
         )
@@ -1085,6 +1204,7 @@ def dispatch_single_agent(
         plan_id=loaded.plan_id,
         declared_gates=list(loaded.plan.human_gates or []),
         feature_id=feature_id,
+        loaded=loaded,
     )
     # Plan 2026-05-09-002 F002 — post-reconcile sync: when plan.status is
     # `active`, treat the lock D-entry + status flip as the authorizing
@@ -1113,6 +1233,13 @@ def dispatch_single_agent(
     else:
         plan_pick = str(agents_req[0]).split(".")[-1] if agents_req else None
         agent_name = plan_pick or resolved_defaults["implementer"]
+    # F013 — the configured value may be a worker-profile id. Resolve
+    # profile → harness (+ profile model override) BEFORE the quota gate and
+    # executor resolution so quota, argv, and audits key on the real harness;
+    # role/capability gates refuse clearly here instead of KeyError-ing in
+    # AGENT_REGISTRY. Legacy harness names pass through (profile_id=None).
+    worker = worker_profiles.resolve_worker(loaded.plan_dir, agent_role, agent_name)
+    agent_name = worker.harness
     if project_match is not None:
         # Stamp last_used_at on the resolved registered project so
         # `jarvis projects list` reflects real recency. Best-effort —
@@ -1195,6 +1322,7 @@ def dispatch_single_agent(
             stage="general",
             target_env=effective_env,
             target_project=effective_project,
+            loaded=loaded,
         )
         raise PausedOnGate(
             f"single-agent paused on gates {gate_check.unmet}; "
@@ -1228,6 +1356,16 @@ def dispatch_single_agent(
             subprocess_env=exec_env.subprocess_env(),
             cwd=registry_repo_root,
             permission_policy=_derive_permission_policy(agent_role),
+            # F013 profile model wins; else F012 role-level model override
+            # (per-call > project > global); None keeps the harness CLI
+            # default. i2: harness threads the actually-dispatched agent so a
+            # model paired with a different vendor in a deeper config layer
+            # is suppressed, not forwarded. F015: config model_aliases resolve
+            # single-hop on the effective model; freeform strings pass through.
+            model=model_catalog.resolve_alias(
+                worker.model or resolve_model(loaded.plan_dir, agent_role, harness=agent_name),
+                loaded.plan_dir,
+            ),
         )
 
         # F003: resolve executor through AGENT_REGISTRY rather than
@@ -1281,9 +1419,7 @@ def dispatch_single_agent(
                 f"{plan_drift.STAGE_IMPLEMENTER}: "
                 f"{', '.join(_drift.report.changed_files)}"
             )
-            raise PausedOnDrift(
-                _drift.pause_reason or _drift.report.headline(loaded.plan_id)
-            )
+            raise PausedOnDrift(_drift.pause_reason or _drift.report.headline(loaded.plan_id))
 
         result = executor.dispatch(task)
 
@@ -1295,6 +1431,10 @@ def dispatch_single_agent(
                 *([nested_marker] if nested_marker else []),
                 f"read ~/.jarvis/quota_state.json ({agent_name} pct={quota_pct})",
                 f"{agent_name} dispatch (binary={getattr(executor, 'binary', None) or '?'})",
+                # F013 — evidence records the resolved dispatch identity.
+                f"worker_profile={worker.profile_id or '(none)'} "
+                f"harness={worker.harness} "
+                f"model={task.model or '(harness default)'}",
                 f"captured stdout {len(result.raw_response)} bytes",
                 f"subprocess exit {0 if result.success else 'nonzero'}",
                 f"execution_env_root={exec_env.root}",
@@ -1398,6 +1538,9 @@ def _emit_volley_terminal(
                 "final_status": result.final_status,
                 "rounds": result.rounds,
             },
+            decision_brief=_attention_brief(
+                loaded, feature_id, inbox_event="volley_terminal"
+            ),
         ),
         plan_dir=plan_dir,
     )
@@ -1435,9 +1578,7 @@ def _emit_volley_terminal(
             # git-state sidecar.
             try:
                 feature_dicts = [f.model_dump() for f in loaded.features.features]
-                git_state_path = (
-                    plan_dir / "evidence" / f"git-state-{iteration}-implementer.json"
-                )
+                git_state_path = plan_dir / "evidence" / f"git-state-{iteration}-implementer.json"
                 # The dispatch DIFF is the git-state sidecar only (staged ∪
                 # unstaged_modified ∪ untracked). `affected_paths` is a plan
                 # DECLARATION, not what the patch actually touched, so it is
@@ -1614,8 +1755,7 @@ def dispatch_volley(
         return VolleyResult(
             "paused_on_drift",
             0,
-            _dispatch_drift.pause_reason
-            or _dispatch_drift.report.headline(loaded.plan_id),
+            _dispatch_drift.pause_reason or _dispatch_drift.report.headline(loaded.plan_id),
             [],
         )
 
@@ -1644,6 +1784,7 @@ def dispatch_volley(
         plan_id=loaded.plan_id,
         declared_gates=list(loaded.plan.human_gates or []),
         feature_id=feature_id,
+        loaded=loaded,
     )
     # Plan 2026-05-09-002 F002 — same post-reconcile sync as
     # dispatch_single_agent so a status=active plan dispatched via the
@@ -1679,6 +1820,74 @@ def dispatch_volley(
     plan_aud = str(agents_req[1]).split(".")[-1] if len(agents_req) >= 2 else None
     impl_name = implementer_agent or plan_impl or resolved["implementer"]
     aud_name = auditor_agent or plan_aud or resolved["auditor"]
+    audit_paths: list[Path] = []
+
+    # F006 — global circuit breaker. Hard stop when ≥3 iteration_cap hits in
+    # the last 24h across any plan. Evaluated BEFORE **any** agent resolution —
+    # worker profiles (F013 i1) as well as AGENT_REGISTRY executors — so a
+    # tripped breaker reliably halts dispatch and runs its INBOX/notify/signoff
+    # path. F013 i1 later hoisted resolve_worker above this check, which put an
+    # UnknownWorkerError in front of the breaker and re-opened exactly the hole
+    # fix#2 closed: a misconfigured worker masked a tripped global breaker.
+    global_state = circuit_breakers.evaluate_global()
+    if global_state.tripped:
+        reason = (
+            f"global circuit breaker tripped: {global_state.hits_in_window} "
+            f"iteration_cap hits in the last "
+            f"{global_state.window_seconds // 3600}h "
+            f"(threshold {global_state.threshold})"
+        )
+        _trip_breaker(
+            loaded.plan_dir,
+            loaded.plan_id,
+            feature_id,
+            circuit_breakers.BreakerKind.GLOBAL_CIRCUIT_BREAKER,
+            reason,
+            loaded=loaded,
+        )
+        return _emit_volley_terminal(
+            VolleyResult(
+                circuit_breakers.TERMINAL_STATUS[
+                    circuit_breakers.BreakerKind.GLOBAL_CIRCUIT_BREAKER
+                ],
+                0,
+                reason,
+                audit_paths,
+            ),
+            loaded=loaded,
+            feature_id=feature_id,
+            agents_in_panel=[impl_name, aud_name],
+        )
+
+    # F013 i1 (codex audit i0 high finding): the configured value may be a
+    # worker-profile id (or a D015 harness alias). Resolve BOTH roles through
+    # resolve_worker BEFORE quota, admission, and executor resolution, so the
+    # volley path keys everything on the real harness — parity with the
+    # single-agent path. Gate refusals surface here as WorkerProfileError
+    # with an operator-fixable message instead of a registry KeyError.
+    # …but a worker-profile problem must not PREEMPT the safety gates. The
+    # gate-pause check (breaker:* / defer:* / unmet declared gates) runs after
+    # admission reconcile further down, so raising here would let a
+    # misconfigured worker mask an active breaker — the same class of bug
+    # fix#2 closed for the global breaker. Resolve optimistically; carry any
+    # failure forward and raise it at executor resolution, by which point the
+    # breaker and gate checks have already had their say.
+    _worker_error: worker_profiles.WorkerProfileError | None = None
+    impl_worker = aud_worker = None
+    try:
+        impl_worker = worker_profiles.resolve_worker(loaded.plan_dir, "implementer", impl_name)
+        aud_worker = worker_profiles.resolve_worker(loaded.plan_dir, "auditor", aud_name)
+    except worker_profiles.WorkerProfileError as exc:
+        _worker_error = exc
+    else:
+        impl_name = impl_worker.harness
+        aud_name = aud_worker.harness
+    if impl_worker is not None and (impl_worker.profile_id or aud_worker.profile_id):
+        print(
+            f"[volley] worker profiles: impl={impl_worker.profile_id or '(legacy)'}"
+            f"→{impl_worker.harness} aud={aud_worker.profile_id or '(legacy)'}"
+            f"→{aud_worker.harness}"
+        )
     if project_match is not None:
         # Stamp last_used_at on the resolved registered project so
         # `jarvis projects list` reflects real recency. Best-effort —
@@ -1694,7 +1903,6 @@ def dispatch_volley(
         loop_caps = loaded.plan.loop_caps
         cap = loop_caps.max_iterations if loop_caps and loop_caps.max_iterations is not None else 1
 
-    audit_paths: list[Path] = []
     prior_aud_path: Path | None = None
     prior_aud_status: str | None = None
     # Plan 2026-05-30-002 F001 (D029 fix): retain the prior round's full auditor
@@ -1712,38 +1920,6 @@ def dispatch_volley(
     )
     print(registry_log)
 
-    # F006 — global circuit breaker. Hard stop when ≥3 iteration_cap hits in
-    # the last 24h across any plan. Evaluated BEFORE executor resolution so a
-    # tripped breaker reliably halts dispatch even when AGENT_REGISTRY can't
-    # produce the named agents (KeyError previously masked the breaker).
-    global_state = circuit_breakers.evaluate_global()
-    if global_state.tripped:
-        reason = (
-            f"global circuit breaker tripped: {global_state.hits_in_window} "
-            f"iteration_cap hits in the last "
-            f"{global_state.window_seconds // 3600}h "
-            f"(threshold {global_state.threshold})"
-        )
-        _trip_breaker(
-            loaded.plan_dir,
-            loaded.plan_id,
-            feature_id,
-            circuit_breakers.BreakerKind.GLOBAL_CIRCUIT_BREAKER,
-            reason,
-        )
-        return _emit_volley_terminal(
-            VolleyResult(
-                circuit_breakers.TERMINAL_STATUS[
-                    circuit_breakers.BreakerKind.GLOBAL_CIRCUIT_BREAKER
-                ],
-                0,
-                reason,
-                audit_paths,
-            ),
-            loaded=loaded,
-            feature_id=feature_id,
-            agents_in_panel=[impl_name, aud_name],
-        )
 
     # F007 Slice 2 — pre-dispatch admission reconcile. Evaluates runtime
     # dispatch class (p0 from plan.tier, interactive from --mode/env, else
@@ -1869,6 +2045,7 @@ def dispatch_volley(
             stage="upfront",
             target_env=effective_env,
             target_project=effective_project,
+            loaded=loaded,
         )
         print(f"[volley] PAUSED on gates: {gate_check.unmet}")
         return VolleyResult(
@@ -1880,6 +2057,10 @@ def dispatch_volley(
             audit_paths,
         )
 
+    # Deferred from worker resolution above: the breaker and gate checks have
+    # now run, so an unresolvable worker is the real reason we stop here.
+    if _worker_error is not None:
+        raise _worker_error
     impl_executor = _resolve_executor(impl_name)
     aud_executor = _resolve_executor(aud_name)
 
@@ -1982,7 +2163,9 @@ def dispatch_volley(
         def _trip_and_return(
             kind: circuit_breakers.BreakerKind, reason: str, rounds: int
         ) -> VolleyResult:
-            _trip_breaker(loaded.plan_dir, loaded.plan_id, feature_id, kind, reason)
+            _trip_breaker(
+                loaded.plan_dir, loaded.plan_id, feature_id, kind, reason, loaded=loaded
+            )
             return _emit_volley_terminal(
                 VolleyResult(circuit_breakers.TERMINAL_STATUS[kind], rounds, reason, audit_paths),
                 loaded=loaded,
@@ -2109,6 +2292,7 @@ def dispatch_volley(
                         loaded.plan_id,
                         bd_result,
                         feature_id,
+                        loaded=loaded,
                     )
                     return _trip_and_return(
                         circuit_breakers.BreakerKind.BUDGET_CEILING,
@@ -2126,7 +2310,9 @@ def dispatch_volley(
                 # across resume boundaries. Only fires on iteration 0; iteration
                 # 1+ within the same loop has by-construction already passed the
                 # check.
-                if iteration == 0 and not gate_pause.is_stage_completed(loaded.plan_dir, "pre_impl"):
+                if iteration == 0 and not gate_pause.is_stage_completed(
+                    loaded.plan_dir, "pre_impl"
+                ):
                     # Plan 2026-05-08-003 F002 — narrow auto-clear carve-out
                     # for direct operator CLI dispatch in eligible dev/test
                     # contexts. On success, the helper records a normal
@@ -2194,6 +2380,7 @@ def dispatch_volley(
                                 stage="pre_impl",
                                 target_env=effective_env,
                                 target_project=effective_project,
+                                loaded=loaded,
                             )
                             print(f"[volley] PAUSED on pre_impl gates: {pre_impl_info.pending}")
                             return VolleyResult(
@@ -2208,9 +2395,7 @@ def dispatch_volley(
                 # Implementer round
                 current_stage = "implementer"
                 # F009 — plan-drift check BEFORE the (paid) implementer call.
-                _drift_pause = _drift_pause_or_none(
-                    plan_drift.STAGE_IMPLEMENTER, iteration
-                )
+                _drift_pause = _drift_pause_or_none(plan_drift.STAGE_IMPLEMENTER, iteration)
                 if _drift_pause is not None:
                     return _drift_pause
                 try:
@@ -2231,7 +2416,9 @@ def dispatch_volley(
                         agents_in_panel=[impl_name, aud_name],
                     )
                 print(impl_quota_line)
-                _maybe_emit_quota_warn(loaded.plan_dir, loaded.plan_id, impl_name, impl_pct, feature_id)
+                _maybe_emit_quota_warn(
+                    loaded.plan_dir, loaded.plan_id, impl_name, impl_pct, feature_id
+                )
 
                 impl_audit_path = _run_round(
                     loaded=loaded,
@@ -2259,6 +2446,7 @@ def dispatch_volley(
                     target_env=effective_env,
                     target_project=effective_project,
                     cwd=registry_repo_root,
+                    worker=impl_worker,
                 )
                 audit_paths.append(impl_audit_path)
 
@@ -2271,7 +2459,9 @@ def dispatch_volley(
                     impl_envelope = json.loads(impl_audit_path.read_text())
                 except (OSError, json.JSONDecodeError):
                     impl_envelope = None
-                is_timeout_with_work = circuit_breakers._envelope_is_timeout_with_work(impl_envelope)
+                is_timeout_with_work = circuit_breakers._envelope_is_timeout_with_work(
+                    impl_envelope
+                )
                 if is_timeout_with_work:
                     transcript.append_note(
                         loaded.plan_dir,
@@ -2287,9 +2477,7 @@ def dispatch_volley(
                 # Auditor round
                 current_stage = "auditor"
                 # F009 — plan-drift check BEFORE the (paid) auditor call.
-                _drift_pause = _drift_pause_or_none(
-                    plan_drift.STAGE_AUDITOR, iteration
-                )
+                _drift_pause = _drift_pause_or_none(plan_drift.STAGE_AUDITOR, iteration)
                 if _drift_pause is not None:
                     return _drift_pause
                 try:
@@ -2310,7 +2498,37 @@ def dispatch_volley(
                         agents_in_panel=[impl_name, aud_name],
                     )
                 print(aud_quota_line)
-                _maybe_emit_quota_warn(loaded.plan_dir, loaded.plan_id, aud_name, aud_pct, feature_id)
+                _maybe_emit_quota_warn(
+                    loaded.plan_dir, loaded.plan_id, aud_name, aud_pct, feature_id
+                )
+
+                # Supervisor-run regression (2026-08-15). The auditor's sandbox
+                # is read-only by design (D012) so it can collect but never
+                # execute tests — five consecutive audits on plan
+                # 2026-08-13-001 reported exactly that, and nothing else in the
+                # harness ran tests either. Run the plan-declared command here,
+                # on the trusted host, and hand the auditor the output. Opt-in:
+                # no `verification` block means nothing runs. Never fatal — a
+                # broken runner must not eat the volley, and its status reaches
+                # the auditor either way.
+                verification_result = None
+                _v_spec = verification_runner.spec_from_plan(loaded.plan)
+                if _v_spec is not None:
+                    try:
+                        verification_result = verification_runner.run_verification(
+                            loaded.plan_dir,
+                            _v_spec,
+                            iteration=iteration,
+                            repo_root=registry_repo_root or loaded.plan_dir,
+                            role="supervisor",
+                            env=round_subprocess_env,
+                        )
+                        print(
+                            f"[volley] verification: {verification_result.status} "
+                            f"({_v_spec.command})"
+                        )
+                    except Exception as exc:  # noqa: BLE001 — advisory, never fatal
+                        print(f"[volley] verification runner failed: {exc}")
 
                 aud_audit_path = _run_round(
                     loaded=loaded,
@@ -2327,6 +2545,9 @@ def dispatch_volley(
                         implementer_audit_path=impl_audit_path,
                         target_env=effective_env,
                         target_project=effective_project,
+                        verification_block=verification_runner.render_context_block(
+                            verification_result
+                        ),
                     ),
                     extra_validation=[
                         *([nested_marker] if nested_marker else []),
@@ -2338,6 +2559,7 @@ def dispatch_volley(
                     target_env=effective_env,
                     target_project=effective_project,
                     cwd=registry_repo_root,
+                    worker=aud_worker,
                 )
                 audit_paths.append(aud_audit_path)
 
@@ -2382,9 +2604,7 @@ def dispatch_volley(
                     # produces the rendered DontPanic-branded title via
                     # notify_event.
                     try:
-                        _vm_display_name = (
-                            loaded.feature(feature_id).get("description", "") or None
-                        )
+                        _vm_display_name = loaded.feature(feature_id).get("description", "") or None
                     except KeyError:
                         _vm_display_name = None
                     notify_event.dispatch_event(
@@ -2410,6 +2630,9 @@ def dispatch_volley(
                                 "audit_path": str(mismatch.audit_path),
                                 "iteration": iteration,
                             },
+                            decision_brief=_attention_brief(
+                                loaded, feature_id, inbox_event="verdict_mismatch"
+                            ),
                         ),
                         plan_dir=loaded.plan_dir,
                     )
@@ -2477,6 +2700,7 @@ def dispatch_volley(
                             stage="pre_merge",
                             target_env=effective_env,
                             target_project=effective_project,
+                            loaded=loaded,
                         )
                         print(f"[volley] PAUSED on pre_merge gates: {pre_merge_info.pending}")
                         return VolleyResult(
@@ -2492,9 +2716,7 @@ def dispatch_volley(
                     # If the plan changed during this volley, do NOT persist a
                     # success signoff against stale context; pause for refresh /
                     # human ack instead (AC2/AC4/AC5).
-                    _drift_pause = _drift_pause_or_none(
-                        plan_drift.STAGE_SIGNOFF, iteration + 1
-                    )
+                    _drift_pause = _drift_pause_or_none(plan_drift.STAGE_SIGNOFF, iteration + 1)
                     if _drift_pause is not None:
                         return _drift_pause
 
@@ -2539,7 +2761,9 @@ def dispatch_volley(
                     except Exception as _arch_exc:  # noqa: BLE001 — never crash terminal
                         print(f"[volley] architecture regen hook skipped: {_arch_exc}")
                     return _emit_volley_terminal(
-                        VolleyResult("signed_off", iteration + 1, "auditor signed off", audit_paths),
+                        VolleyResult(
+                            "signed_off", iteration + 1, "auditor signed off", audit_paths
+                        ),
                         loaded=loaded,
                         feature_id=feature_id,
                         agents_in_panel=[impl_name, aud_name],
@@ -2730,6 +2954,16 @@ def dispatch_volley(
                                 technical_metadata={
                                     "original_verdict": "blocked",
                                 },
+                                decision_brief=_attention_brief(
+                                    loaded,
+                                    feature_id,
+                                    inbox_event="verdict_blocked_reconciled",
+                                    pending_gates=[
+                                        circuit_breakers.gate_name(
+                                            circuit_breakers.BreakerKind.ENVIRONMENTAL_BLOCKER
+                                        )
+                                    ],
+                                ),
                             ),
                             plan_dir=loaded.plan_dir,
                         )
@@ -2841,6 +3075,16 @@ def dispatch_volley(
                                 blocking=bool(env_classification.blocking),
                                 iteration_count=iteration + 1,
                                 feature_display_name=_eb_display_name,
+                                decision_brief=_attention_brief(
+                                    loaded,
+                                    feature_id,
+                                    inbox_event="environmental_blocker_short_circuit",
+                                    pending_gates=[
+                                        circuit_breakers.gate_name(
+                                            circuit_breakers.BreakerKind.ENVIRONMENTAL_BLOCKER
+                                        )
+                                    ],
+                                ),
                             ),
                             plan_dir=loaded.plan_dir,
                         )
@@ -2969,9 +3213,7 @@ def dispatch_volley(
                     # Plan 2026-05-24-004 F002 — Discord sink advisory. INBOX
                     # above is the truth-of-record.
                     try:
-                        _np_display_name = (
-                            loaded.feature(feature_id).get("description", "") or None
-                        )
+                        _np_display_name = loaded.feature(feature_id).get("description", "") or None
                     except KeyError:
                         _np_display_name = None
                     # Plan 2026-05-24-004 F003 (audit i0 finding #1): fan to
@@ -2996,6 +3238,11 @@ def dispatch_volley(
                             aggregate_class=classification.aggregate.value,
                             blocking=bool(classification.blocking),
                             feature_display_name=_np_display_name,
+                            decision_brief=_attention_brief(
+                                loaded,
+                                feature_id,
+                                inbox_event="no_progress_classification",
+                            ),
                         ),
                         plan_dir=loaded.plan_dir,
                     )
@@ -3180,18 +3427,13 @@ def dispatch_volley(
         )
 
 
-def _format_recovery_command(
-    *, plan_id: str | None, feature_id: str, reason_class: str
-) -> str:
+def _format_recovery_command(*, plan_id: str | None, feature_id: str, reason_class: str) -> str:
     """Render the operator-facing close-out command. Uses the real plan_id
     when supervisor-internal callers can provide it; falls back to ``<id>`` for
     legacy callers (kept so F003 backstop tests stay green when they
     instantiate the helper without a plan_id)."""
     plan_token = plan_id or "<id>"
-    return (
-        f"dontpanic close --operator-resolved {plan_token} {feature_id} "
-        f"--reason {reason_class}"
-    )
+    return f"dontpanic close --operator-resolved {plan_token} {feature_id} --reason {reason_class}"
 
 
 def _write_backstop_checkpoint(
@@ -3491,7 +3733,15 @@ def _run_round(
     target_env: str | None = None,
     target_project: str | None = None,
     cwd: Path | None = None,
+    worker: worker_profiles.ResolvedWorker | None = None,
 ) -> Path:
+    # F013 — profile-level model wins over the F012 role-level override.
+    # F015 — config model_aliases resolve single-hop on the effective model.
+    effective_model = model_catalog.resolve_alias(
+        (worker.model if worker is not None else None)
+        or resolve_model(loaded.plan_dir, role, harness=agent_name),
+        loaded.plan_dir,
+    )
     task = DispatchTask(
         plan_id=loaded.plan_id,
         plan_dir=loaded.plan_dir,
@@ -3505,6 +3755,11 @@ def _run_round(
         subprocess_env=dict(subprocess_env) if subprocess_env else {},
         cwd=cwd,
         permission_policy=_derive_permission_policy(role),
+        # F013 profile model > F012 role-level model override (per-call >
+        # project > global); None keeps the harness CLI default. i2: harness
+        # threads the actually-dispatched agent so a model paired with a
+        # different vendor in a deeper config layer is suppressed.
+        model=effective_model,
     )
     # Override the prompt builder by monkey-patching at task level —
     # cleaner: pass prompt directly. For now, executors build their own;
@@ -3538,6 +3793,9 @@ def _run_round(
         feature_id=feature["id"],
         validation_performed=[
             f"{agent_name} {role} round (iteration {iteration})",
+            # F013 — dispatch identity evidence: profile id, harness, model.
+            f"worker: profile_id={worker.profile_id if worker else None} "
+            f"harness={agent_name} model={effective_model or '(harness default)'}",
             *extra_validation,
             f"captured stdout {len(result.raw_response)} bytes",
         ],

@@ -19,9 +19,18 @@
         "waived_with_reason"
       ],
       "evidence_refs": [
-        "evidence/test-runs/v1_1-suite-verbose.txt",
-        "evidence/test-runs/full-sweep-summary.txt",
-        "scripts/dontpanic_orchestrate/tests/test_convergence_policy_v1_1.py"
+        {
+          "type": "test_output",
+          "uri": "evidence/test-runs/v1_1-suite-verbose.txt"
+        },
+        {
+          "type": "test_output",
+          "uri": "evidence/test-runs/full-sweep-summary.txt"
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_convergence_policy_v1_1.py"
+        }
       ]
     },
     {
@@ -38,9 +47,18 @@
         "F001"
       ],
       "evidence_refs": [
-        "evidence/test-runs/v1_1-suite-verbose.txt",
-        "evidence/test-runs/full-sweep-summary.txt",
-        "scripts/dontpanic_orchestrate/tests/test_convergence_policy_v1_1.py"
+        {
+          "type": "test_output",
+          "uri": "evidence/test-runs/v1_1-suite-verbose.txt"
+        },
+        {
+          "type": "test_output",
+          "uri": "evidence/test-runs/full-sweep-summary.txt"
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_convergence_policy_v1_1.py"
+        }
       ]
     },
     {
@@ -64,9 +82,18 @@
         "F002"
       ],
       "evidence_refs": [
-        "evidence/test-runs/v1_1-suite-verbose.txt",
-        "evidence/test-runs/full-sweep-summary.txt",
-        "scripts/dontpanic_orchestrate/tests/test_convergence_policy_v1_1.py"
+        {
+          "type": "test_output",
+          "uri": "evidence/test-runs/v1_1-suite-verbose.txt"
+        },
+        {
+          "type": "test_output",
+          "uri": "evidence/test-runs/full-sweep-summary.txt"
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_convergence_policy_v1_1.py"
+        }
       ]
     }
   ]

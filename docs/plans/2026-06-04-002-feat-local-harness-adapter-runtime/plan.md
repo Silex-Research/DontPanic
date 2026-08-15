@@ -5,7 +5,7 @@ type: infra
 tier: cross-cutting
 status: draft
 date: "2026-06-04"
-goal_type: new_feature
+goal_type: infra
 description: >
   Generic adapter layer that lets a LOCAL agent harness (OpenClaw, Hermes, or any
   future local harness) operate DontPanic safely — discover the command surface,

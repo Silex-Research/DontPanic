@@ -310,7 +310,10 @@ def test_inbox_gate_hit_template_recommends_approve_and_resume_all() -> None:
     print("\n[test] inbox_gate_hit_template_recommends_approve_and_resume_all ...")
     with tempfile.TemporaryDirectory() as td:
         repo = Path(td)
-        plan_dir = _make_plan(repo, "2026-05-02-710-infra-template", ["pre_impl", "pre_merge"])
+        # on_escalation is an upfront (non-lifecycle) gate so dispatch
+        # pauses before executor resolution. pre_impl/pre_merge are staged
+        # later and would require a live claude binary on PATH in CI.
+        plan_dir = _make_plan(repo, "2026-05-02-710-infra-template", ["on_escalation"])
         # Drive the supervisor's pause path by calling dispatch_volley with
         # an unmet gate. The volley pauses before any executor runs and
         # writes the `gate_hit` event we want to inspect.

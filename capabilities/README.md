@@ -128,3 +128,9 @@ only valid agent runtime. Core onboarding should eventually express
 "at least one configured `agent_cli` capability" rather than requiring a
 specific provider. Codex, Gemini, Grok, and Ollama manifests should
 follow this shape as their setup contracts are normalized.
+
+An `agent_cli` manifest describes a runtime's setup/verify contract; it
+does not make that agent a dispatchable worker. Dispatchability comes
+from registration in `executors.AGENT_REGISTRY` (today: `claude`,
+`codex`). Gemini and Grok are operator-only runtimes — `dontpanic agent
+status` reports the live classification.

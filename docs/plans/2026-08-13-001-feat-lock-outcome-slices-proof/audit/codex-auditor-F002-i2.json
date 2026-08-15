@@ -1,0 +1,50 @@
+{
+  "task_id": "2026-08-13-001-feat-lock-outcome-slices-proof",
+  "audit_id": "2026-08-13-001-feat-lock-outcome-slices-proof#codex#2",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 2,
+  "started_at": "2026-08-13T21:29:53Z",
+  "completed_at": "2026-08-13T21:33:38Z",
+  "validation_performed": [
+    "codex auditor round (iteration 2)",
+    "worker: profile_id=None harness=codex model=(harness default)",
+    "quota gate aud=37.022385",
+    "reviewing implementer audit at claude-implementer-F002-i2.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-08-13-001-feat-lock-outcome-slices-proof-hrv70p0y target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 525581 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1441989,
+    "tokens_out": 15824,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 4 (see structured target_context.commands_run)\n\n[F002] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nOverall verdict: **needs_changes**. The implementer correctly declared `{Repo: DontPanic, Env: dev, Project: (none)}`; structured `project: null` is equivalent, and none of its five commands use forbidden shapes.\n\nFINDING (high, correctness): Issue: `close_obligations()` drops a new or replacement live slice when it occupies the same numeric index as a locked slice. Evidence: obligations are merged by index; the probe replaced locked `F001/walk` with live `F002/request`, but only the old F001 obligation remained. Recommendation: match slices by stable identity and retain both locked and unmatched live obligations; test replacement, prepend, and reorder cases.\n\nFINDING (high, correctness): Issue: locked obligations remain erasable by deleting or corrupting `outcome-score.json` alongside deleting/editing the live contract. Evidence: `read_score_sidecar()` treats missing or malformed data as legacy absence, after which close uses only the live contract; no durable marker distinguishes a grandfathered plan from deleted lock evidence. Recommendation: record that a sidecar is expected and refuse close or require relock when it is missing/corrupt, while explicitly grandfathering older locks.\n\nChecks run:\n\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_outcome_score_f002.py scripts/dontpanic_orchestrate/tests/test_plan_lock_required_capabilities_f005.py scripts",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_outcome_score_f002.py scripts/dontpanic_orchestrate/tests/test_plan_lock_required_capabilities_f005.py scripts/dontpanic_orchestrate/tests/test_convergence_lock_wiring_f005.py scripts/dontpanic_orchestrate/tests/test_plan_review_pre_lock_gate_f004.py scripts/dontpanic_orchestrate/tests/test_sufficiency_gate.py scripts/dontpanic_orchestrate/tests/test_f002_operator_finish_close.py scripts/dontpanic_orchestrate/tests/test_completion_gate.py -q",
+      "ruff check --no-cache scripts/dontpanic_orchestrate/outcome_score.py scripts/dontpanic_orchestrate/cli.py scripts/dontpanic_orchestrate/completion_gate.py scripts/dontpanic_orchestrate/tests/test_outcome_score_f002.py",
+      "ruff check --no-cache scripts/dontpanic_orchestrate/outcome_score.py scripts/dontpanic_orchestrate/tests/test_outcome_score_f002.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -c 'from pathlib import Path; from dontpanic_orchestrate import outcome_score as o; live=o.SliceScore(index=1,audience=\"operator\",kind=\"reliability\",capability=\"A newly inserted replacement slice.\",feature_ids=(\"F002\",),declared_method=\"request\",metric=\"the replacement request returns 200\",inferred_method=\"walk\"); score=o.OutcomeScore(plan_id=\"probe\",plan_dir=Path(\".\"),outcome=o.OUTCOME_PRESENT,slices=o.SLICES_SINGLE,proofs=o.PROOFS_ONE_PER_SLICE,slice_scores=(live,)); o._locked_slice_records=lambda _p:{1:{\"index\":1,\"audience\":\"operator\",\"kind\":\"reliability\",\"capability\":\"The original locked slice remains provable.\",\"proof_refs\":[\"F001\"],\"declared_method\":\"walk\",\"method_checked_at_close\":\"walk\"}}; obligations=o.close_obligations(Path(\".\"),score); print([(x.feature_ids,x.method,x.drift) for x in obligations]); assert not any(x.feature_ids==(\"F002\",) for x in obligations)'"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F002",
+      "issue": "Issue: `close_obligations()` drops a new or replacement live slice when it occupies the same numeric index as a locked slice. Evidence: obligations are merged by index; the probe replaced locked `F001/walk` with live `F002/request`, but only the old F001 obligation remained. Recommendation: match slices by stable identity and retain both locked and unmatched live obligations; test replacement, prepend, and reorder cases.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F002",
+      "issue": "Issue: locked obligations remain erasable by deleting or corrupting `outcome-score.json` alongside deleting/editing the live contract. Evidence: `read_score_sidecar()` treats missing or malformed data as legacy absence, after which close uses only the live contract; no durable marker distinguishes a grandfathered plan from deleted lock evidence. Recommendation: record that a sidecar is expected and refuse close or require relock when it is missing/corrupt, while explicitly grandfathering older l",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

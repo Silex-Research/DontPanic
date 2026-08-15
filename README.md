@@ -23,9 +23,38 @@ Local-first and multi-vendor by design: Claude Code, Codex, Gemini, Grok, local
 models, OpenClaw / Hermes workflows, and any MCP-enabled tool. No vendor lock-in;
 no data egress you didn't ask for.
 
+That multi-vendor line is design intent. What's dispatchable today is narrower,
+and DontPanic keeps the two honest with two agent classes. **Dispatchable
+workers** — agents DontPanic can send work to — are the registered executors:
+**Claude and Codex** as full coding harnesses (implementer / auditor /
+goal_auditor), plus **OpenRouter and Ollama** as audit-only harnesses
+(auditor / goal_auditor; the implementer role is refused until a harness
+proves a file_edit + tool_use sandbox). OpenRouter needs `OPENROUTER_API_KEY`
+in the environment; Ollama needs the local `ollama` binary with a pulled
+model. **Operator-only runtimes** — Gemini and Grok today — can run the
+DontPanic CLI, lock plans, and approve gates, but cannot be dispatched as
+workers. `dontpanic agent status` and `dontpanic agent brief` are the machine
+source of truth for this split; the full agent-by-capability table is in
+[`docs/AGENT_CAPABILITY_MATRIX.md`](./docs/AGENT_CAPABILITY_MATRIX.md).
+
 **Status:** public alpha, single-operator. Ready for source installs by people
 comfortable with local agent CLIs. (Team/RBAC governance is not built yet — the
 gates today are *your* gates.)
+
+### Harness · model · profile (quick map)
+
+DontPanic no longer collapses “which agent” into a single registry string:
+
+| Layer | What it is | Where to look |
+|-------|------------|---------------|
+| **Harness** | Stable transport adapter (`claude`, `codex`, `openrouter`, `ollama`) | `dontpanic agent status`, [capability matrix](./docs/AGENT_CAPABILITY_MATRIX.md) |
+| **Model** | Catalog data (vendor id, OpenRouter slug, Ollama tag) — never a registry key | `dontpanic models list --harness <id>` |
+| **Worker profile** | Named harness + model + allowed roles | `dontpanic workers list` |
+| **Role** | implementer / auditor / goal_auditor (capability-gated) | `dontpanic roles show` |
+
+Optional Buzz surfaces (off by default): agent↔profile bindings and a signed
+gate bridge — see [`docs/GETTING_STARTED.md`](./docs/GETTING_STARTED.md) and
+[`docs/CONFIGURATION.md`](./docs/CONFIGURATION.md).
 
 ## The problem
 
@@ -143,6 +172,24 @@ As the run goes, DontPanic writes durable artifacts under the plan directory:
 3. **Cross-model audit** — a different model family reviews the result.
 4. **Human gate** — risky changes pause with evidence and a clear choice.
 5. **Approve** — only approved work moves toward merge.
+
+## What "locked" means
+
+A plan doesn't lock because someone declared it ready. It locks when it names an
+outcome — who can now do something they could not before, in plain language.
+
+A fix inherits its parent's outcome and declares only what it changes, so small
+work doesn't restate the world.
+
+Slices scale to the work. A feature that can be tested or deployed on its own is
+already a slice: give it a cheap proof — a `walk`, a `request`, a `named_test`,
+or a `probe` — and it counts as one. A plan whose features each carry a proof
+needs nothing further to state its outcome. One slice is usually a sitting; a
+stack of them is days.
+
+Proofs you skip are not lock-time homework. They are recorded as accepted gaps
+and checked at close. And a lock that cannot record its score refuses rather
+than reporting success: the plan stays draft and the exit code is nonzero.
 
 ## Why not just Claude Code (or any single agent)?
 
@@ -263,9 +310,13 @@ Agent CLIs authenticate themselves. DontPanic never stores API keys.
 
 DontPanic distinguishes two roles. An **operator** is a human or interactive
 agent that *runs* DontPanic — locks plans, approves gates, reads guidance. A
-**worker** is an agent DontPanic *dispatches* to implement or audit (claude,
-codex, and so on). A worker has to be a registered executor; an operator-only
-agent can't be assigned the `implementer` or `auditor` roles.
+**worker** is an agent DontPanic *dispatches* to implement or audit. A worker
+has to be a registered executor — today that's `claude` and `codex` (coding
+harnesses) plus the audit-only `openrouter` and `ollama` harnesses; `gemini`
+and `grok` are known operator-only runtimes — and an operator-only agent can't
+be assigned the `implementer` or `auditor` roles, while an audit-only harness
+is refused the `implementer` role. When in doubt,
+`dontpanic agent status` reports the live worker/operator classification.
 
 New agent — read the brief and check readiness:
 
@@ -445,8 +496,9 @@ Optional, depending on which agents and evidence surfaces you wire:
 - **Codex CLI** — a common cross-vendor auditor
 - **gcloud SDK / firebase-tools** — only for Firebase-backed projects or backend evidence
 - **jq** — handy for inspecting JSON evidence
-- **ollama** — local OSS models for safety and embeddings
-- **gemini CLI** — multimodal and long-context review
+- **ollama** — local OSS models as a dispatchable audit-only harness (needs the `ollama` binary and a pulled model tag); also handy for safety checks and embeddings
+- **OPENROUTER_API_KEY** — enables the `openrouter` audit-only harness (hosted chat-completions API; no local binary)
+- **gemini CLI** — multimodal and long-context review as an operator-only runtime (not a dispatchable executor)
 - **terminal-notifier** — desktop pings; `INBOX.md` is still the durable channel
 
 The editable install pulls runtime Python dependencies from `pyproject.toml`.
@@ -494,7 +546,9 @@ layer's contract:
 Identity & governance        ← SOUL.md, AGENTS.md, USER.md
 Routing & contracts          ← claude/RESOLVER.md, claude/shared/
 Execution units              ← claude/skills/, docs/plans/<id>/
-Multi-agent panel & bounds   ← Claude / Codex / Gemini / Grok / OSS, plus circuit breakers
+Multi-agent panel & bounds   ← workers: Claude / Codex (coding), OpenRouter /
+                               Ollama (audit-only); operator-only: Gemini /
+                               Grok — plus circuit breakers
 ```
 
 Plans live in `docs/plans/<YYYY-MM-DD-NNN-type-name>/` with `features.json` as
@@ -558,7 +612,20 @@ dontpanic agent status      # can_operate / can_be_dispatched / can_orchestrate
 `agent status` reports three independent capabilities. Any agent that can run the
 commands can **operate** DontPanic; only agents registered as executors can be
 **dispatched** as workers. If you're an unsupported agent, operate DontPanic —
-don't configure yourself as a worker.
+don't configure yourself as a worker. The full agent × capability table —
+including operator surfaces like OpenCode and the recommended low-cost
+topology — is in
+[`docs/AGENT_CAPABILITY_MATRIX.md`](./docs/AGENT_CAPABILITY_MATRIX.md).
+
+Behind those names, agent identity splits into four distinct concepts —
+**harness** (the stable code adapter behind each registry key), **model**
+(catalog data such as vendor ids and tags; a model id is never a registry
+key), **worker profile** (operator config binding harness + model + allowed
+roles), and **role** (the slot a profile holds: implementer / auditor /
+goal_auditor, gated by capability flags). New model versions never require a
+new registry entry; see the
+[vocabulary section](./docs/AGENT_CAPABILITY_MATRIX.md#vocabulary-harness-vs-model-vs-profile-vs-role)
+of the capability matrix.
 
 See [`docs/ECOSYSTEM.md`](./docs/ECOSYSTEM.md) for non-goals and caller patterns,
 [`docs/DISCOVERABILITY.md`](./docs/DISCOVERABILITY.md) for the publish-readiness
@@ -737,7 +804,10 @@ skills/ + registry/        ← unit of work, plus cross-project knowledge
         ↓
 plans/ + features.json     ← executable contract for any non-trivial work
         ↓
-Claude / Codex / Gemini / Grok / OSS  ← the panel that implements and audits
+Claude / Codex / OpenRouter / Ollama   ← the dispatchable panel (Claude/Codex
+                                         implement and audit; OpenRouter/Ollama
+                                         audit-only)
+Gemini / Grok (operator-only)          ← run the CLI; not dispatched as workers
         ↓
 CAWP tiers + quotas + dashboard       ← the throttle and the readout
 ```
@@ -777,21 +847,25 @@ First-use baseline:
 
 Supervisor and executor panel (shipped):
 
-- [x] Single-agent and volley dispatch (Claude, Codex, Gemini, Grok, Ollama executors)
+- [x] Single-agent and volley dispatch (registered executors today: Claude and Codex as coding harnesses, plus OpenRouter and Ollama as audit-only harnesses — Gemini and Grok are operator-only runtimes; `dontpanic agent status` is the source of truth)
 - [x] 8 circuit breakers (budget_ceiling, iteration_cap, no_progress, diminishing_returns, convergence_collapse, wall_clock, environmental_blocker, global_circuit_breaker)
 - [x] Vendor-native quota tracker (`scripts/quota_check.py` v2 schema)
 - [x] Operator caps and Claude calibration (`~/.dontpanic/quota_caps.json`, `~/.dontpanic/quota_calibration.json`)
 - [x] Engagement surface (`INBOX.md`, `signoff-<plan-id>.json`, `transcript.md`, `gate-state.json`)
-- [x] CLI surface: `dispatch-from-plan`, `quota-caps`, `calibrate-claude`, `approve`, `resume`, `ps`, `claude-touch`
+- [x] CLI surface: `dispatch-from-plan`, `roles`, `workers`, `models`, `approve`, `resume`, `ps`, `buzz-gate`, `quota-caps`, `calibrate-claude`, `claude-touch`
+- [x] Worker profiles + model catalog (`dontpanic workers …`, `dontpanic models list|aliases`) — harness adapters stay stable; model ids are data
+- [x] Optional Buzz bridge: `dontpanic buzz-gate --payload|--poll` (signed ceremony, off by default) + `workers buzz-bindings`
 - [x] Goal Governance V1 lock/close gates (`dontpanic plan lock`, `dontpanic plan audit`, `dontpanic plan close`)
 - [x] Runtime evidence collectors for web, iOS, Android, and backend observability
 
 Operator-local prerequisites (per machine):
 
-- [ ] Codex / Gemini / Grok CLIs authed (only the agents your plans use)
+- [ ] Worker CLIs authed — Claude and/or Codex, whichever your plans dispatch; Gemini / Grok CLIs only if you use them as operator surfaces
+- [ ] Audit-only harness prerequisites — `OPENROUTER_API_KEY` exported for the `openrouter` harness; a local `ollama` install with a pulled model tag for the `ollama` harness (`dontpanic doctor --agent` probes both)
 - [ ] `terminal-notifier` installed (`brew install terminal-notifier`) for desktop pings — optional; INBOX.md is the durable channel
 - [ ] `~/.dontpanic/quota_caps.json` initialized (`quota-caps init`) and Claude calibrated (`calibrate-claude --dashboard-pct N`)
 - [ ] Re-calibrate Claude weekly (`quota_check.py` warns at >7 days)
+- [ ] Buzz signup + a **private** community you own (strongly recommended for multi-agent work, never required): write `~/.dontpanic/buzz.json` with `relay_url`, `channels`, `reporter_key_ref` — `dontpanic doctor` reports missing Buzz config as an advisory WARN, never a failure; CI/headless can silence it with `DONTPANIC_SKIP_BUZZ=1` (checklist: [`docs/GETTING_STARTED.md` § Buzz](./docs/GETTING_STARTED.md#buzz-strongly-recommended-private-community-setup))
 - [ ] gcloud/firebase authenticated only for Firebase-backed projects or backend evidence capture
 - [ ] BigQuery billing export configured (manual, Console only) — optional, only for app-level $ tracking
 

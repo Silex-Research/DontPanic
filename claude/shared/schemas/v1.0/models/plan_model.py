@@ -325,6 +325,31 @@ class ExternalRef(BaseModel):
     )
 
 
+class Verification(BaseModel):
+    """v1.19.0 — the regression the SUPERVISOR runs, not the auditor.
+
+    The auditor's sandbox is read-only by design (D012) so the kernel, not a
+    prompt, guarantees it cannot mutate the repo. The cost is that it can
+    collect tests but never execute them, which let features sign off with no
+    executed proof. The supervisor runs this command between the implementer
+    and the auditor and hands the auditor the output to judge.
+
+    Opt-in: an absent block means nothing runs. The command is shlex-split,
+    executed with shell=False, and checked by command_guard first.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    command: constr(min_length=1) = Field(
+        ...,
+        description="e.g. 'python3 -m pytest scripts/dontpanic_orchestrate/tests -q'.",
+    )
+    cwd: str | None = Field(
+        None,
+        description="Relative to the repo root; must resolve inside it. Default '.'.",
+    )
+
+
 class Plan(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -395,6 +420,14 @@ class Plan(BaseModel):
             "'child_commit', 'parent_commit', or 'manual' (see "
             "CommitPolicy.mode); absent commit_policy = supervisor falls "
             "through to default behavior (operator-explicit commit)."
+        ),
+    )
+    verification: Verification | None = Field(
+        None,
+        description=(
+            "v1.19.0 — optional regression command the supervisor executes "
+            "between implementer and auditor so executed-test evidence exists "
+            "without granting the read-only auditor sandbox write access."
         ),
     )
     external_refs: list[ExternalRef] | None = Field(

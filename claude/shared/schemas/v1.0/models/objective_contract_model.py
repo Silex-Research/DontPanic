@@ -51,6 +51,71 @@ class Kind(Enum):
     data = 'data'
 
 
+class ProofMethod(Enum):
+    """How a slice's cheap proof is taken.
+
+    Closed set on purpose: anything needing a warehouse, a dashboard, or a
+    quarter of data is not a cheap proof and does not belong in a lock.
+    """
+
+    walk = 'walk'
+    request = 'request'
+    named_test = 'named_test'
+    probe = 'probe'
+
+
+class ProofSurface(Enum):
+    """Where a proof is taken. Mirrors the plan-level `surfaces` enum.
+
+    Kept in lockstep with plan.schema.json and objective_contract.schema.json;
+    asserted identical by scripts/test_objective_contract_proof.py.
+    """
+
+    web = 'web'
+    ios = 'ios'
+    android = 'android'
+    backend = 'backend'
+    infra = 'infra'
+    security = 'security'
+    data = 'data'
+    ux = 'ux'
+    ml = 'ml'
+    docs = 'docs'
+    external_api_wrap = 'external-api-wrap'
+
+
+class Proof(BaseModel):
+    """The cheap first-principle proof for one slice.
+
+    Distinct from `proof_refs`: those point at features that were built, this
+    names the measurement that would falsify delivery. Optional at the schema
+    layer — absence is valid, and the lock/close scorer (plan 2026-08-13-001
+    F002) decides inferred vs accepted-gap vs close-time failure.
+    """
+
+    model_config = ConfigDict(extra='forbid')
+    metric: str = Field(..., min_length=10)
+    method: ProofMethod
+    surface: ProofSurface | None = None
+
+    @model_validator(mode='before')
+    @classmethod
+    def _reject_explicit_nulls(cls, data: object) -> object:
+        """Mirror the schema, which types these fields with no `null` member.
+
+        Pydantic would otherwise read an explicit `null` as "use the default"
+        and accept a document the JSON Schema rejects; the two validators are
+        independent implementations and must return the same verdict.
+        """
+        if isinstance(data, dict):
+            for key in ('metric', 'method', 'surface'):
+                if key in data and data[key] is None:
+                    raise ValueError(
+                        f'{key} must be omitted rather than set to null'
+                    )
+        return data
+
+
 class ProofRef(BaseModel):
     """Typed reference to the evidence that proves a delivered capability.
 
@@ -78,7 +143,25 @@ class Delivers(BaseModel):
     audience: Audience
     kind: Kind
     capability: str = Field(..., min_length=10)
+    proof: Proof | None = None
+    """
+    Optional cheap proof for THIS slice — the metric that would show the
+    capability is true, and how it is taken. Absence stays valid here; lock and
+    close decide what a missing proof costs (plan 2026-08-13-001 F002).
+    """
     proof_refs: list[ProofRef] = Field(..., min_length=1)
+
+    @model_validator(mode='before')
+    @classmethod
+    def _reject_explicit_null_proof(cls, data: object) -> object:
+        """`proof` is absent or an object — the schema gives it no null member.
+
+        Scoped to `proof` because that is what this contract owns; the fields
+        above predate it and are left as they were.
+        """
+        if isinstance(data, dict) and data.get('proof', ...) is None:
+            raise ValueError('proof must be omitted rather than set to null')
+        return data
 
 
 class UserJourney(BaseModel):
@@ -172,7 +255,27 @@ class ObjectiveContract(BaseModel):
     """
     Audience-first outcome statements (what becomes true, for whom, what kind of capability, which features prove it). Required (non-empty) at plan schema_version >= 1.1, enforced by the plan-level validator; advisory below that. Complements user_journeys.
     """
+    inherits: constr(
+        pattern=r'^\d{4}-\d{2}-\d{2}-\d{3}-(feat|fix|refactor|migration|infra)-[a-z0-9-]+$'
+    ) | None = None
+    """
+    Optional plan id this contract deltas from. On a child or fix plan whose
+    outcome is the parent's outcome, the parent names what becomes true and
+    this contract's delivers[] carries only the delta — one slice, not a
+    restatement. delivers[] stays required and non-empty at plan
+    schema_version >= 1.1 (a delta IS a delivers[]); what inherits licenses is
+    omitting the FULL set, not omitting the block. Whether the pointer resolves
+    is a lock-time concern, not a schema one (plan 2026-08-13-001 F002).
+    """
     cluster_overrides: str | None = None
     """
     Optional override notes for the Goal Governance V1 §6.3 cluster coherence rule. Free-form for v1; future versions may structure this. Only set when the default rule (subsystem_and_journey intersection) doesn't fit the plan's gap-clustering pattern.
     """
+
+    @model_validator(mode='before')
+    @classmethod
+    def _reject_explicit_null_inherits(cls, data: object) -> object:
+        """`inherits` is absent or a plan id — the schema gives it no null."""
+        if isinstance(data, dict) and data.get('inherits', ...) is None:
+            raise ValueError('inherits must be omitted rather than set to null')
+        return data

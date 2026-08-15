@@ -1,0 +1,16 @@
+{
+  "task_id": "2026-08-09-002-feat-decision-brief-at-gates",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "infra",
+      "description": "Move the retry backoff constant into the shared config module",
+      "acceptance": "The existing retry unit tests pass unchanged",
+      "passes": false,
+      "user_impact": {
+        "audience": "none"
+      }
+    }
+  ]
+}

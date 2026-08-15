@@ -1,0 +1,319 @@
+{
+  "task_id": "2026-08-09-002-feat-decision-brief-at-gates",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "schema",
+      "phase": 0,
+      "description": "Define an optional impact block in the agent-conventions feature contract, with requirements conditional on its audience value and a digest binding the declaration to the description it was written against",
+      "steps": [
+        "Add an optional object to the feature contract carrying four keys: an audience enum (end_user, operator, agent, none), a summary string, a surfaces array reusing the plan-level enum, and a digest over the feature description",
+        "Conditional semantics per D003: audience 'none' is a complete declaration on its own, so the summary and surfaces keys MUST be absent or empty; any other audience requires a summary of at least 10 characters and a non-empty surfaces array",
+        "Express with if/then/else so the JSON Schema and the Pydantic model agree rather than drifting",
+        "The digest is the staleness anchor replacing D005's original timestamp approach, which was unavailable because the contract carries no feature-modified timestamp",
+        "Scope stops at the definition. Version bump, subtree pull, and revalidation belong to F002"
+      ],
+      "acceptance": "(1) A fixture declaring audience 'none' with neither summary nor surfaces is accepted. (2) A fixture declaring audience 'none' that also carries a summary is rejected. (3) An end-user fixture missing its summary is rejected. (4) An end-user fixture whose summary is under 10 characters is rejected. (5) An end-user fixture with an empty surfaces array is rejected. (6) The JSON Schema and the Pydantic model return the same verdict on all five fixtures.",
+      "passes": true,
+      "depends_on": [],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=signed_off_adjacent)"
+        },
+        {
+          "type": "test_output",
+          "uri": "evidence/f001-user-impact-contract-test.txt",
+          "note": "6 fixtures x 2 validators agree; 4 null cases rejected by both; surface enum in lockstep with plan.schema.json"
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F001-i0.json",
+          "note": "auditor verdict signed_off (iteration 0)"
+        }
+      ],
+      "verified_by": [
+        "operator",
+        "codex"
+      ],
+      "verified_at": "2026-08-09T22:17:15Z"
+    },
+    {
+      "id": "F002",
+      "category": "infra",
+      "phase": 0,
+      "description": "Publish the contract change: bump the agent-conventions version, subtree-pull it into DontPanic, and prove the addition is backward-compatible against every plan already on disk",
+      "steps": [
+        "Bump the agent-conventions VERSION and commit in that repo",
+        "Subtree-pull the new version into DontPanic claude/shared/",
+        "Re-run the validator over every existing plan directory under docs/plans",
+        "No existing plan is edited as part of this feature — backward compatibility means they pass untouched"
+      ],
+      "acceptance": "(1) No plan directory's validation outcome changes: the same plan set validated against the pre-change and post-change schema yields an identical per-plan exit code. (2) git status shows no existing plan file modified by this feature. (3) The subtree-pulled schema in DontPanic is byte-identical to the one committed in agent-conventions.",
+      "passes": true,
+      "depends_on": [
+        "F001"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=operator_verified)"
+        },
+        {
+          "type": "test_output",
+          "uri": "evidence/f002-validation-outcome-parity.txt",
+          "note": "AC1: 117 plans x schema 1.15.0/1.16.0, identical per-plan exit codes, 0 outcome changes"
+        },
+        {
+          "type": "test_output",
+          "uri": "evidence/f002-all-plan-validation-1.16.0.txt",
+          "note": "full post-pull validation run"
+        },
+        {
+          "type": "commit",
+          "uri": "2693583",
+          "note": "AC3: subtree pull to v1.16.0; schema + model byte-identical to agent-conventions"
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F002-i0.json",
+          "note": "auditor needs_changes at i0; its recommendation was executed"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-08-10T01:11:46Z"
+    },
+    {
+      "id": "F003",
+      "category": "functional",
+      "phase": 1,
+      "description": "Snapshot a typed brief onto NotifyEvent at pause-emission time, because notify_event calls render with no plan or feature metadata and any feature reading those parameters alone would be dead code in production",
+      "steps": [
+        "Confirm the gap first: event_copy.render is invoked from notify_event with only the event argument, so its optional metadata parameters are never populated on the production path",
+        "Define a frozen dataclass carrying the three brief elements, a reversibility flag, and a status field distinguishing declared, undeclared, and possibly-stale",
+        "Build it at the supervisor pause-emission site where plan and feature records are in scope, and attach it to NotifyEvent as an immutable snapshot",
+        "Compute the status by comparing the feature description's current digest against the one recorded in F001's impact block",
+        "This feature stops at the snapshot. Reading it in any sink belongs to F006 and F007"
+      ],
+      "acceptance": "(1) A pause emitted through the real supervisor path produces a NotifyEvent carrying a populated brief with no caller passing metadata arguments to render. (2) The attached dataclass is frozen and equality-comparable. (3) Status is declared when the recorded digest matches the current description. (4) Status is possibly-stale when the digests differ. (5) Status is undeclared when F001's impact block is absent. (6) pytest tests/test_decision_brief_delivery.py covers all five and passes.",
+      "passes": true,
+      "depends_on": [
+        "F002"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=signed_off_adjacent)"
+        },
+        {
+          "type": "test_output",
+          "uri": "evidence/f003-regression-attribution.txt",
+          "note": "AC6 6/6; with-change vs baseline full sweep (zero regressions); fresh-checkout import verification"
+        },
+        {
+          "type": "commit",
+          "uri": "54d54e2",
+          "note": "decision_brief.py + test + notify_event.py + supervisor.py staged together"
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F003-i0.json",
+          "note": "verdict signed_off, no findings; sandbox prevented independent test execution"
+        }
+      ],
+      "verified_by": [
+        "operator",
+        "codex"
+      ],
+      "verified_at": "2026-08-10T02:48:31Z"
+    },
+    {
+      "id": "F004",
+      "category": "functional",
+      "phase": 1,
+      "description": "Widen the copy contract with distinct fields so product context and decision context each have their own slot, keeping plain_consequence's documented meaning intact rather than repurposing it",
+      "steps": [
+        "Add three fields to the template row type and to RenderedEvent, all defaulting to None so every existing table row keeps compiling: what the change is, who feels it, and which audience",
+        "Keep plain_consequence for its documented meaning and populate it from the brief's decision-consequence element, never from product impact",
+        "Correct the current aliasing in operator_console, which assigns plain_consequence the value of the rendered detail and so fills the plain-language slot with orchestration prose",
+        "Stop hardcoding the reversible flag to False for event-derived items; carry the brief's value instead",
+        "Leave technical_metadata untouched"
+      ],
+      "acceptance": "(1) RenderedEvent exposes the three new fields with None defaults and every existing template row still constructs. (2) Round-tripping a brief through render and into ActionItem preserves the decision-consequence element exactly, for each of three distinct briefs, so the mapping is proven rather than a single fixture matching. (3) For every renderable kind, plain_consequence differs from the rendered detail string — a regression asserting the current aliasing is gone across the whole table, not one example. (4) The reversible flag on an event-derived ActionItem tracks the brief across both True and False, rather than the hardcoded False it carries today. (5) pytest tests/test_event_copy_brief_fields.py covers all four and passes.",
+      "passes": true,
+      "depends_on": [
+        "F003"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=signed_off_adjacent)"
+        },
+        {
+          "type": "test_output",
+          "uri": "evidence/f004-verification.txt",
+          "note": "56 tests; AC2 3 distinct briefs w/ distinctness+rewrite-sensitivity guards; AC3 15 table-derived kinds; zero regressions vs same-scope baseline"
+        },
+        {
+          "type": "commit",
+          "uri": "8285970",
+          "note": "event_copy + operator_console + 17 fixtures + new test + D015"
+        },
+        {
+          "type": "audit_json",
+          "uri": "audit/codex-auditor-F004-i2.json",
+          "note": "signed_off, no findings; auditor executed test bodies directly under sandbox"
+        }
+      ],
+      "verified_by": [
+        "operator",
+        "codex"
+      ],
+      "verified_at": "2026-08-10T14:14:38Z"
+    },
+    {
+      "id": "F005",
+      "category": "functional",
+      "phase": 1,
+      "description": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line",
+      "steps": [
+        "Enumerate the renderable kinds — those whose disposition is LIVE or DASHBOARD_ACTION. INBOX_ONLY and AUDIT_ONLY kinds never reach render and are outside this feature",
+        "Rewrite each renderable headline in the NEEDS_ACTION band to lead with what changes and who feels it, falling back to the current copy shape when impact is undeclared",
+        "Move the plan label, gate, and stage to a supporting reference line per USER.md",
+        "Keep every exact command and the honest-commands rule unchanged — this feature changes prose only",
+        "Preserve every fact the old copy carried; demotion means relocated, never dropped"
+      ],
+      "acceptance": "(1) All 27 INBOX kinds still resolve to exactly one disposition and the existing totality test stays green. (2) Every kind that rendered before still renders. (3) Every renderable NEEDS_ACTION variant carries a brief. (4) Events with no feature in scope, and plan-level events, receive a distinct fallback rather than a feature-shaped one. (5) Rendered headlines for renderable NEEDS_ACTION kinds contain the impact line and do not open with the plan identifier. (6) A field-level diff against the pre-change render shows no previously-present fact absent. (7) Every exact command is byte-identical before and after. (8) pytest tests/test_event_copy_impact_first.py covers all seven and passes.",
+      "passes": true,
+      "depends_on": [
+        "F004"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=signed_off_adjacent)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-08-11T10:45:11Z"
+    },
+    {
+      "id": "F006",
+      "category": "functional",
+      "phase": 1,
+      "description": "Honesty rules for undeclared and stale impact plus a non-blocking advisory at plan lock, so the renderer states what it does not know and never synthesizes a claim",
+      "steps": [
+        "When status is undeclared, render the literal sentence 'User impact not declared for this feature.' and no substitute prose",
+        "When status is possibly-stale, render the declared summary explicitly marked as written against an earlier version, never presented as current",
+        "Add a source-level assertion that no approval template body is ever populated from model output at render time, per D002",
+        "Add an advisory at the plan lock path naming features whose plan declares a user-facing surface but carries no impact block",
+        "The advisory prints and exits 0 — it never refuses the lock, per D004 — and states the file to edit"
+      ],
+      "acceptance": "(1) A gate on a feature with no impact block renders the exact undeclared sentence and no synthesized prose. (2) A stale declaration renders marked as stale rather than current. (3) The source-level non-generative assertion holds across every approval template. (4) plan lock on a fixture whose plan declares a user-facing surface and omits the impact block prints an advisory naming each such feature and exits 0. (5) plan lock on the same fixture with the impact block declared prints no advisory and exits 0. (6) pytest tests/test_event_copy_undeclared_impact.py covers all five and passes.",
+      "passes": true,
+      "depends_on": [
+        "F004"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=environmental_reproduction_failure)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-08-13T13:43:12Z"
+    },
+    {
+      "id": "F007",
+      "category": "functional",
+      "phase": 2,
+      "description": "CLI and INBOX read the same brief snapshot, so the operator sees the same three elements at the moment of deciding as in the record",
+      "steps": [
+        "Thread the brief through the approve and resume prompts so it appears while the operator decides, not only in the notification that summoned them",
+        "Wire inbox.py to read the frozen snapshot rather than re-deriving from plan artifacts",
+        "Apply the truncation priority from D006: the impact line survives, supporting detail shortens",
+        "Confirm the existing secret scrubbing still runs over the new fields at both emit points"
+      ],
+      "acceptance": "(1) The approve prompt for a synthetic gate shows the same three brief elements as the INBOX entry for that gate. (2) Both read the single snapshot rather than recomputing, asserted by mutating the snapshot and observing both outputs change. (3) A summary exceeding the cap keeps its impact line and truncates supporting detail. (4) Secret scrubbing passes over both payloads with a token-shaped string planted in the summary. (5) pytest tests/test_brief_cli_inbox_parity.py covers all four and passes.",
+      "passes": false,
+      "depends_on": [
+        "F005",
+        "F006"
+      ]
+    },
+    {
+      "id": "F008",
+      "category": "functional",
+      "phase": 2,
+      "description": "Notification sinks and the dashboard card render the same brief, with the dashboard as the single unabridged surface",
+      "steps": [
+        "Wire notify.py and notify_discord.py to read the frozen snapshot",
+        "Wire the dashboard ActionItem card to render the brief unabridged",
+        "Apply per-surface truncation: the notification sinks abbreviate, the dashboard does not",
+        "Confirm secret scrubbing runs over the new fields at every emit point"
+      ],
+      "acceptance": "(1) The Discord payload, the terminal notification, and the dashboard card carry the same three brief elements for one synthetic gate, modulo declared truncation. (2) The dashboard rendering is unabridged while both notification sinks are capped. (3) Truncation preserves the impact line in every capped sink. (4) Secret scrubbing passes over all three payloads with a token-shaped string planted in the summary. (5) pytest tests/test_brief_sink_parity.py covers all four and passes.",
+      "passes": false,
+      "depends_on": [
+        "F007"
+      ]
+    },
+    {
+      "id": "F009",
+      "category": "doc",
+      "phase": 2,
+      "description": "Worked before-and-after example built on an in-repo fixture, plus authoring guidance for writing a useful impact declaration",
+      "steps": [
+        "Build the example as a DontPanic-owned fixture under tests/fixtures/, modelled on the shape of the Glam sticky-first gate with provenance recorded in the fixture header — this plan's Target is DontPanic and agent-conventions, so authoring into a third repo is outside its authority",
+        "Capture the fixture gate rendered under the old templates and the new ones, side by side under evidence/",
+        "Write guidance covering the four audience values and what separates a useful summary from a restated description",
+        "Reference the guidance from the plan-artifacts skill so it reaches authors at plan-writing time",
+        "Record in USER.md that the builder-facing preference now has enforcement behind it"
+      ],
+      "acceptance": "(1) evidence/ holds a before and an after rendering of the fixture gate. (2) The fixture header records what it was modelled on. (3) A reader given only the after rendering can state what changes, who feels it, and what approving does, without opening plan.md. (4) The authoring guidance exists and the plan-artifacts skill references it. (5) git status shows no file modified outside DontPanic and agent-conventions.",
+      "passes": false,
+      "depends_on": [
+        "F008"
+      ]
+    },
+    {
+      "id": "F010",
+      "category": "doc",
+      "phase": 3,
+      "description": "Update the root README and CHANGELOG so a new reader sees that approval gates now lead with what changes and who feels it, not only plan and gate identifiers",
+      "steps": [
+        "Add one capabilities-at-a-glance or What-it-does line: gates ask in product terms (what changes, who feels it, what approving does) and fall back honestly when impact is undeclared",
+        "Add a root CHANGELOG entry under the current unreleased section naming the operator-visible change",
+        "Do not rewrite the README hook or vendor matrix; this is a capability addition, not a north-star restyle",
+        "Release-impact advisory should list readme and root_changelog; both files must be in the feature's evidence"
+      ],
+      "acceptance": "(1) README states in operator language that approval prompts lead with outcome and audience when declared. (2) CHANGELOG.md has a dated or Unreleased entry for this plan's operator-visible change. (3) Neither file claims intake exists or restyles the product. (4) A reader of README alone can tell this is different from 'paused at gate pre_merge'.",
+      "passes": false,
+      "depends_on": [
+        "F005",
+        "F006"
+      ],
+      "user_impact": {
+        "audience": "operator",
+        "summary": "The GitHub README now says gates ask what you are approving in product terms, so a new reader sees the capability this plan actually shipped.",
+        "surfaces": [
+          "docs"
+        ],
+        "description_hash": "10f931585ed43c8b3e24ba9a997a20b8b9bf17c012f25a6a7e8df79eaa3ec0f4"
+      }
+    }
+  ]
+}

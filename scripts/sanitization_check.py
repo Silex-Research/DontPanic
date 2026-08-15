@@ -89,6 +89,12 @@ _DISCORD_WEBHOOK_RE = re.compile(
     r"https?://discord(?:app)?\.com/api/webhooks/\d{17,20}/[A-Za-z0-9_\-]{60,}"
 )
 
+# Nostr secret key (bech32 nsec). Used by Buzz / Nostr agents; must never
+# reach a notify relay body. Bech32 alphabet is lowercase only (qpzry9x8gf…);
+# allow mixed case for accidental paste variants.
+# source: https://github.com/nostr-protocol/nips/blob/master/19.md (bech32 entities)
+_NOSTR_NSEC_RE = re.compile(r"nsec1[02-9ac-hj-np-z]{58,}", re.IGNORECASE)
+
 SECRET_REGEXES: tuple[re.Pattern[str], ...] = (
     _AWS_ACCESS_KEY_RE,
     _GH_PAT_RE,
@@ -99,6 +105,7 @@ SECRET_REGEXES: tuple[re.Pattern[str], ...] = (
     _PEM_PRIVATE_KEY_RE,
     _JWT_RE,
     _DISCORD_WEBHOOK_RE,
+    _NOSTR_NSEC_RE,
 )
 
 # Path-prefix allowlist (relative to repo root). Plan dirs retain

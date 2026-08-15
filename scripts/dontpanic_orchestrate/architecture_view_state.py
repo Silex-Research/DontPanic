@@ -442,6 +442,48 @@ _COMMAND_CATALOG: tuple[dict[str, Any], ...] = (
         "module_path": "scripts/dontpanic_orchestrate/project_config.py",
         "summary": "Edit a key in a project's runtime defaults file.",
     },
+    # ── models (F015) ─────────────────────────────────────────────────
+    {
+        "name": "dontpanic models list",
+        "module_path": "scripts/dontpanic_orchestrate/models_cli.py",
+        "summary": "Discover a harness's model catalog (ollama list / OpenRouter cache / documented pass-through).",
+    },
+    {
+        "name": "dontpanic models aliases",
+        "module_path": "scripts/dontpanic_orchestrate/models_cli.py",
+        "summary": "Print the merged model_aliases table (global config overlaid by project config).",
+    },
+    # ── workers + Buzz bridge (F013 / F016 / F008) ─────────────────────
+    {
+        "name": "dontpanic workers list",
+        "module_path": "scripts/dontpanic_orchestrate/workers_cli.py",
+        "summary": "List named worker profiles (harness + model + allowed roles).",
+    },
+    {
+        "name": "dontpanic workers add",
+        "module_path": "scripts/dontpanic_orchestrate/workers_cli.py",
+        "summary": "Create a named worker profile; refuses unknown harnesses and widen-only capability overrides.",
+    },
+    {
+        "name": "dontpanic workers set",
+        "module_path": "scripts/dontpanic_orchestrate/workers_cli.py",
+        "summary": "Update one field on a worker profile.",
+    },
+    {
+        "name": "dontpanic workers show",
+        "module_path": "scripts/dontpanic_orchestrate/workers_cli.py",
+        "summary": "Show one profile's effective capabilities and holdable roles.",
+    },
+    {
+        "name": "dontpanic workers buzz-bindings",
+        "module_path": "scripts/dontpanic_orchestrate/workers_cli.py",
+        "summary": "Display optional Buzz agent → profile → harness+model bindings (off by default; no dispatch).",
+    },
+    {
+        "name": "dontpanic buzz-gate",
+        "module_path": "scripts/dontpanic_orchestrate/buzz_gate_bridge.py",
+        "summary": "Apply an allowlisted signed Buzz approval to a pending gate (--payload or --poll).",
+    },
 )
 
 

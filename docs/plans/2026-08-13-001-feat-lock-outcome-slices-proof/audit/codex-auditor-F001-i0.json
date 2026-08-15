@@ -1,0 +1,46 @@
+{
+  "task_id": "2026-08-13-001-feat-lock-outcome-slices-proof",
+  "audit_id": "2026-08-13-001-feat-lock-outcome-slices-proof#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-08-13T15:57:52Z",
+  "completed_at": "2026-08-13T16:00:53Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "worker: profile_id=None harness=codex model=(harness default)",
+    "quota gate aud=37.022385",
+    "reviewing implementer audit at claude-implementer-F001-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-08-13-001-feat-lock-outcome-slices-proof-82uhrmod target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 242805 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 2536539,
+    "tokens_out": 12804,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 7 (see structured target_context.commands_run)\n\n[F001] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nVerdict: **signed_off**. All five acceptance criteria are satisfied. The implementer’s target declaration matches the structured context, no forbidden command shapes were found, all 120 existing-plan exit codes remain identical, and the subtree matches every tracked `agent-conventions` file.\n\nFINDING (advisory, documentation): The implementer audit incorrectly claims its summary omitted `Env: dev`; the declaration is visibly present and matches `target_context.env`. Recommendation: remove that stale self-finding.\n\nChecks run:\n\n$ python3 claude/shared/scripts/test_objective_contract_proof.py  \nFailed under ambient Python because `jsonschema` was unavailable; rerun successfully with the repository environment.\n\n$ .venv/bin/python claude/shared/scripts/test_objective_contract_proof.py  \nPassed: 10 fixtures across both validators, all method/null/enum parity checks.\n\n$ .venv/bin/python claude/shared/scripts/test_objective_contract.py  \nPassed: all 14 end-to-end cases.\n\n$ .venv/bin/python claude/shared/scripts/test_user_impact_contract.py  \nPassed.\n\n$ .venv/bin/python claude/shared/scripts/test_validator_dispatch.py  \nPassed.\n\n$ diff -u docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/F001-validation-exit-codes-after.txt <(for plan_dir in docs/plans/*/; do plan_id=${plan_dir%/}; plan_id=${plan_id##*/}; .venv/bin/python claude/shared/schemas/v1.0/validate.py \"$plan_dir\" >/dev/null; printf '%s %s\\n' \"$plan_id\" \"$?\"; done",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "python3 claude/shared/scripts/test_objective_contract_proof.py",
+      ".venv/bin/python claude/shared/scripts/test_objective_contract_proof.py",
+      ".venv/bin/python claude/shared/scripts/test_objective_contract.py",
+      ".venv/bin/python claude/shared/scripts/test_user_impact_contract.py",
+      ".venv/bin/python claude/shared/scripts/test_validator_dispatch.py",
+      "diff -u docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/F001-validation-exit-codes-after.txt <(for plan_dir in docs/plans/*/; do plan_id=${plan_dir%/}; plan_id=${plan_id##*/}; .venv/bin/python claude/shared/schemas/v1.0/validate.py \"$plan_dir\" >/dev/null; printf '%s %s\\n' \"$plan_id\" \"$?\"; done)",
+      "actual=$(for plan_dir in docs/plans/*/; do plan_id=${plan_dir%/}; plan_id=${plan_id##*/}; .venv/bin/python claude/shared/schemas/v1.0/validate.py \"$plan_dir\" >/dev/null; printf '%s %s\\n' \"$plan_id\" \"$?\"; done); expected=$(<docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/evidence/F001-validation-exit-codes-after.txt); [[ \"$actual\" == \"$expected\" ]] && printf '%s\\n' 'current inventory matches saved after evidence'"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "advisory",
+      "category": "documentation",
+      "feature_id": "F001",
+      "issue": "The implementer audit incorrectly claims its summary omitted `Env: dev`; the declaration is visibly present and matches `target_context.env`. Recommendation: remove that stale self-finding. Checks run: $ python3 claude/shared/scripts/test_objective_contract_proof.py Failed under ambient Python because `jsonschema` was unavailable; rerun successfully with the repository environment. $ .venv/bin/python claude/shared/scripts/test_objective_contract_proof.py Passed: 10 fixtures across both validator",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "signed_off"
+}

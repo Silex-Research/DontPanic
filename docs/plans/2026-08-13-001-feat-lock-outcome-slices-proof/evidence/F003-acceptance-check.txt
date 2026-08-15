@@ -1,0 +1,25 @@
+F003 acceptance verification — 2026-08-14, operator-executed
+
+Done by hand, not by volley: F003's own steps say "This feature is a cheap
+slice: single-agent or operator edit is enough; do not run a three-round
+adversarial volley unless the prose is disputed."
+
+  AC1 README states outcome + slices + proof + inherit : True
+  AC2 no intake / PRD-authoring claim                  : True
+  AC3 CHANGELOG has a dated entry                      : True
+  AC4 new block shorter than Why-not (160 < 173 words) : True
+
+Every claim in the README block was checked against landed behaviour before
+being written, not against the plan's intent:
+
+  - lock refuses only when no outcome is reachable (F002)
+  - a feature carrying a proof counts as a slice (F002, schema `proof`)
+  - proof methods walk|request|named_test|probe (objective_contract schema,
+    enforced by both validator arms)
+  - skipped proofs become accepted gaps checked at close (F002)
+  - close matches obligations by proving features, not position (F004)
+  - a lock that cannot record its score refuses: draft + nonzero exit (F005,
+    confirmed in _record_outcome_score_before_flip returning 3)
+
+The README deliberately does not claim intake or PRD authoring, and does not
+restate what lock does NOT yet do.

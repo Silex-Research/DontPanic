@@ -15,7 +15,7 @@
       "exact_command": "dontpanic approve 2026-05-24-004-feat-event-messaging-v1 pre_impl",
       "human_required_reason": "operator action surfaced by dispatch_event",
       "id": "supervisor:gate_hit:2026-05-24-004-feat-event-messaging-v1:F005",
-      "plain_consequence": "Supervisor paused at gate `pre_impl` (stage `pre_impl`). Operator must approve before dispatch continues.",
+      "plain_consequence": null,
       "project_name": null,
       "reversible": false,
       "source": "supervisor",

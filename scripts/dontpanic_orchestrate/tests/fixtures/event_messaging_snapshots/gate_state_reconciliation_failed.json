@@ -15,7 +15,7 @@
       "exact_command": null,
       "human_required_reason": "operator action surfaced by dispatch_event",
       "id": "supervisor:gate_state_reconciliation_failed:2026-05-24-004-feat-event-messaging-v1:F005",
-      "plain_consequence": "Persisted gate state contradicts plan declaration (`stale_clearance`, gate=`pre_impl`, stage=`pre_impl`). There is no canonical reconcile subcommand; inspect the persisted state file and INBOX entry before re-dispatching.",
+      "plain_consequence": null,
       "project_name": null,
       "reversible": false,
       "source": "supervisor",

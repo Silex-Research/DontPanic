@@ -1,0 +1,25 @@
+{
+  "gate": "pre_dispatch_sizing",
+  "plan_id": "2026-07-27-001-feat-buzz-integration-agent-taxonomy",
+  "feature_id": "F013",
+  "reason": "Worker profiles span schema+CLI+dispatch",
+  "surfaces": [
+    "cli",
+    "orchestration",
+    "schema"
+  ],
+  "ac_count": 1,
+  "overridden_flags": [
+    {
+      "kind": "over_surface",
+      "severity": "block",
+      "evidence": "surfaces: cli, orchestration, schema"
+    },
+    {
+      "kind": "likely_timeout",
+      "severity": "block",
+      "evidence": "3 surfaces x 1 ACs exceeds a single 600s dispatch"
+    }
+  ],
+  "recorded_at": "2026-07-28T14:15:37Z"
+}

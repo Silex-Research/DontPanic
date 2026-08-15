@@ -1,0 +1,129 @@
+{
+  "task_id": "2026-08-09-003-feat-sim-harness-multi-trial",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "schema",
+      "phase": 0,
+      "description": "Scenario file format and loader so a new simulated situation is a data change rather than a source edit",
+      "steps": [
+        "Define a scenario file carrying: an id, the plan fixture to seed, the scripted reply per role and iteration, optional environment perturbations, and the terminal state the scenario expects",
+        "Write a JSON Schema for it and validate on load, so a malformed scenario fails at load with a pointer rather than midway through a trial",
+        "Loader resolves fixtures relative to the scenario file so a scenario directory is self-contained and relocatable",
+        "Port the currently hardcoded synthetic plan in the smoke module into the first scenario file, proving the format can express what exists today",
+        "Scope stops at loading and validation. Executing a scenario is F004"
+      ],
+      "acceptance": "(1) A scenario file that omits a required key is rejected at load with a message naming the key. (2) A scenario referencing a fixture path that does not exist is rejected at load, not at run time. (3) The ported existing synthetic plan loads and its parsed form carries the same plan id, feature count, and scripted replies as the hardcoded version. (4) A scenario directory copied to a different absolute path still loads. (5) pytest tests/test_scenario_loader.py covers all four and passes.",
+      "passes": false,
+      "depends_on": []
+    },
+    {
+      "id": "F002",
+      "category": "tooling",
+      "phase": 1,
+      "description": "Scripted executors replaying a scenario's declared replies behind the existing BaseExecutor interface, so the supervisor cannot distinguish simulation from a real run",
+      "steps": [
+        "Generalize MockClaudeExecutor and MockCodexExecutor to read their replies from the loaded scenario rather than from module constants",
+        "Support per-iteration replies so a scenario can script disagreement then convergence, which is the shape the real F001 volley took",
+        "Support malformed replies: truncated JSON, a narrative verdict contradicting the structured status, and an envelope missing required keys",
+        "Keep both classes subclassing BaseExecutor with is_available returning True, so executor resolution in the supervisor is exercised unchanged",
+        "No supervisor edits. If a scenario cannot be expressed without changing dispatch_volley, record that as a finding rather than patching"
+      ],
+      "acceptance": "(1) A scenario scripting needs_changes then signed_off drives two iterations and terminates signed off. (2) A scenario scripting a truncated envelope reaches the supervisor's existing malformed-envelope handling rather than raising out of the executor. (3) A scenario scripting a narrative verdict that contradicts the structured status triggers the existing mismatch detection. (4) Both executors are instances of BaseExecutor and report available. (5) git diff shows no file under the orchestrator package modified other than the smoke package and its tests. (6) pytest tests/test_scripted_executors.py covers the first four and passes.",
+      "passes": false,
+      "depends_on": [
+        "F001"
+      ]
+    },
+    {
+      "id": "F003",
+      "category": "tooling",
+      "phase": 1,
+      "description": "Chaos injection \u2014 executor timeout, non-zero exit, and quota exhaustion \u2014 so recovery paths are exercised rather than assumed",
+      "steps": [
+        "Add declarable perturbations to the scenario format: raise a timeout on the Nth call, exit non-zero, or report quota exhausted",
+        "Perturbations fire deterministically by call index, not randomly, so a failing trial is reproducible from the scenario alone",
+        "Record what the supervisor actually did in response, without asserting what it should do \u2014 this feature observes, F004's graders judge",
+        "Cover the three perturbations above only; broader fault injection is deferred",
+        "Document in the module docstring that a chaos scenario asserting recovery behavior encodes current behavior, not a requirement"
+      ],
+      "acceptance": "(1) A timeout perturbation on the first implementer call produces a trial record naming the perturbation and the supervisor's resulting terminal state. (2) The same scenario run twice produces the same perturbation sequence. (3) A non-zero exit perturbation does not raise out of the harness. (4) A quota-exhausted perturbation reaches the existing admission path rather than being swallowed by the executor. (5) pytest tests/test_chaos_perturbations.py covers all four and passes.",
+      "passes": false,
+      "depends_on": [
+        "F002"
+      ]
+    },
+    {
+      "id": "F004",
+      "category": "tooling",
+      "phase": 2,
+      "description": "Multi-trial runner executing one scenario N times with per-trial isolation, so a flake and a defect become distinguishable",
+      "steps": [
+        "Run a scenario N times, each trial getting its own execution environment and its own copy of the plan fixture",
+        "A trial that raises is recorded as an errored trial and does not abort the remaining trials",
+        "Collect per trial: terminal state, iteration count, perturbations fired, duration, and the token counts the transcript already carries",
+        "Trials run sequentially in v0 \u2014 concurrency is deferred, since a shared home directory is the kind of hidden coupling this harness exists to expose",
+        "Default N is 1 so existing callers see no behavior change"
+      ],
+      "acceptance": "(1) A scenario run with N=20 produces 20 trial records. (2) A scenario whose fixture is mutated during trial 3 leaves trial 4's outcome unchanged, proving isolation. (3) A trial that raises is recorded as errored and trials after it still run. (4) Each trial record carries terminal state, iteration count, duration, and token counts. (5) Default invocation runs exactly one trial. (6) pytest tests/test_multi_trial_runner.py covers all five and passes.",
+      "passes": false,
+      "depends_on": [
+        "F003"
+      ]
+    },
+    {
+      "id": "F005",
+      "category": "observability",
+      "phase": 2,
+      "description": "Run artifact reporting reliability and cost across trials, so results are reported as a distribution rather than a single outcome",
+      "steps": [
+        "Write one machine-readable run artifact per invocation carrying every trial record plus the aggregate",
+        "Aggregate reports the fraction of trials reaching the expected terminal state, the probability at least one of k trials succeeds, and the probability all k succeed",
+        "Aggregate also reports total and per-trial token counts and wall-clock duration, since a harness that reports quality without cost invites optimizing the wrong axis",
+        "Report the exact trial count rather than a rounded rate, so a 3-of-5 result cannot read as a 60% guarantee",
+        "Run the existing secret scrubbing over the artifact before writing"
+      ],
+      "acceptance": "(1) A 20-trial run writes one artifact containing 20 trial records and one aggregate block. (2) With 20 of 20 reaching the expected state the success fraction is exactly 1 and the all-succeed probability is exactly 1. (3) With 10 of 20 the artifact reports both the raw counts and the derived probabilities, and the raw counts are present rather than only a percentage. (4) Token and duration totals in the aggregate equal the sum over trial records. (5) Secret scrubbing passes over the artifact with a token-shaped string planted in a scenario id. (6) pytest tests/test_run_artifact.py covers all five and passes.",
+      "passes": false,
+      "depends_on": [
+        "F004"
+      ]
+    },
+    {
+      "id": "F006",
+      "category": "functional",
+      "phase": 2,
+      "description": "Opt-in flags on the existing smoke subcommand for scenario selection and trial count, with today's default behavior preserved exactly",
+      "steps": [
+        "Add two optional flags to the existing smoke subcommand: one selecting a scenario file, one setting a trial count",
+        "With neither flag present, the command does exactly what it does today \u2014 same scenario, one trial, same output shape",
+        "Record a baseline of today's output and exit code before the change, and compare against it afterward",
+        "Flag parsing rejects a trial count below one and a scenario path that does not exist, both before any trial starts"
+      ],
+      "acceptance": "(1) With no flags, the command's terminal state and exit code match a baseline recorded before this feature. (2) A trial count below one is rejected before any trial starts. (3) A scenario path that does not exist is rejected before any trial starts. (4) pytest tests/test_smoke_cli_flags.py covers all three and passes.",
+      "passes": false,
+      "depends_on": [
+        "F005"
+      ]
+    },
+    {
+      "id": "F007",
+      "category": "functional",
+      "phase": 2,
+      "description": "Exit-code contract for multi-trial runs plus a one-line summary naming the artifact, keeping the command usable as a check",
+      "steps": [
+        "A multi-trial run exits non-zero when any trial misses its expected terminal state",
+        "A multi-trial run exits zero when every trial reaches it",
+        "The three exit codes that ship today keep their current meanings and stay reachable",
+        "Print one summary line naming trials run, trials reaching the expected state, and the artifact path",
+        "Update the agent commands guidance so the flags are discoverable"
+      ],
+      "acceptance": "(1) A run where one trial misses its expected terminal state exits non-zero. (2) A run where every trial reaches it exits zero. (3) All three previously shipping exit codes remain reachable with unchanged meanings. (4) The summary line names an artifact path and that path exists on disk. (5) pytest tests/test_smoke_exit_contract.py covers all four and passes.",
+      "passes": false,
+      "depends_on": [
+        "F006"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "task_id": "2026-07-27-001-feat-buzz-integration-agent-taxonomy",
+  "audit_id": "2026-07-27-001-feat-buzz-integration-agent-taxonomy#codex#2",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 2,
+  "started_at": "2026-07-28T16:06:56Z",
+  "completed_at": "2026-07-28T16:08:58Z",
+  "validation_performed": [
+    "codex auditor round (iteration 2)",
+    "worker: profile_id=None harness=codex model=(harness default)",
+    "quota gate aud=37.022385",
+    "reviewing implementer audit at claude-implementer-F016-i2.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-07-27-001-feat-buzz-integration-agent-taxonomy-igzdt_ta target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 1608364 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1071740,
+    "tokens_out": 11345,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 6 (see structured target_context.commands_run)\n\n[F016] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nOverall verdict: **signed_off**. No findings. The implementer correctly declared the target context, structured metadata matches the prose, and no recorded command has a forbidden shape. F016’s docs, status output, off-by-default behavior, dispatch-authority boundary, and F007 confirm gate are implemented as claimed. The full pytest run could not start because the read-only audit environment has no writable temporary directory; however, all 22 tests collected, Ruff passed, formatting passed, and an independent authority-invariant smoke passed.\n\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_f016_buzz_agent_bindings.py -q -p no:cacheprovider\n$ ruff check --no-cache scripts/dontpanic_orchestrate/buzz_bindings.py scripts/dontpanic_orchestrate/workers_cli.py scripts/dontpanic_orchestrate/tests/test_f016_buzz_agent_bindings.py\n$ ruff format --check --no-cache scripts/dontpanic_orchestrate/buzz_bindings.py scripts/dontpanic_orchestrate/workers_cli.py scripts/dontpanic_orchestrate/tests/test_f016_buzz_agent_bindings.py\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_f016_buzz_agent_bindings.py --collect-only -q -s -p no:cacheprovider\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c 'from dontpanic_orchestrate import buzz_bindings as bb, worker_profiles as wp; from dontpanic_orchestrate.config.worker_profiles import W",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_f016_buzz_agent_bindings.py -q -p no:cacheprovider",
+      "ruff check --no-cache scripts/dontpanic_orchestrate/buzz_bindings.py scripts/dontpanic_orchestrate/workers_cli.py scripts/dontpanic_orchestrate/tests/test_f016_buzz_agent_bindings.py",
+      "ruff format --check --no-cache scripts/dontpanic_orchestrate/buzz_bindings.py scripts/dontpanic_orchestrate/workers_cli.py scripts/dontpanic_orchestrate/tests/test_f016_buzz_agent_bindings.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -m pytest scripts/dontpanic_orchestrate/tests/test_f016_buzz_agent_bindings.py --collect-only -q -s -p no:cacheprovider",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c 'from dontpanic_orchestrate import buzz_bindings as bb, worker_profiles as wp; from dontpanic_orchestrate.config.worker_profiles import WorkerProfile; profiles={\"fizz\": WorkerProfile(harness=\"claude\", model=\"fizz-model\"), \"honey\": WorkerProfile(harness=\"claude\", model=\"honey-model\")}; bb.load_agent_bindings=lambda config_path=None: {\"Fizz\":\"fizz\",\"fizz\":\"honey\",\"Ghost\":\"nobody\"}; wp.load_profiles=lambda project_path=None: profiles; rows=bb.resolve_agent_bindings(); assert [(r.buzz_agent,r.profile_id,r.bound,r.model) for r in rows] == [(\"Fizz\",\"fizz\",True,\"fizz-model\"),(\"Ghost\",\"nobody\",False,None),(\"fizz\",\"honey\",True,\"honey-model\")]; assert not wp.is_dispatchable_name(\"Fizz\"); assert not wp.is_dispatchable_name(\"Ghost\"); assert wp.resolve_worker(None,\"implementer\",\"fizz\").model == \"fizz-model\"; print(\"binding join and dispatch-authority invariants passed\")'",
+      "git diff --check HEAD -- docs/AGENT_CAPABILITY_MATRIX.md docs/GETTING_STARTED.md scripts/dontpanic_orchestrate/workers_cli.py; rg -n \"confirm=true|auto-confirm|never auto|human confirm|confirm-gated\" examples/buzz-caller/README.md docs/GETTING_STARTED.md docs/AGENT_CAPABILITY_MATRIX.md; if rg -n \"A bound Buzz agent name is never dispatchable\" docs/GETTING_STARTED.md docs/AGENT_CAPABILITY_MATRIX.md scripts/dontpanic_orchestrate/buzz_bindings.py; then exit 1; else printf 'obsolete dispatch wording absent\\n'; fi"
+    ]
+  },
+  "findings": [],
+  "audit_status": "signed_off"
+}

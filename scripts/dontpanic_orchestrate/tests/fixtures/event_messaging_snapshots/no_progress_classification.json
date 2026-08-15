@@ -15,7 +15,7 @@
       "exact_command": "dontpanic resume 2026-05-24-004-feat-event-messaging-v1 --all",
       "human_required_reason": "operator action surfaced by dispatch_event",
       "id": "supervisor:no_progress_classification:2026-05-24-004-feat-event-messaging-v1:F005",
-      "plain_consequence": "Auditor verdict taxonomy `implementation_defect` (blocking=true); recommended: review the audit envelope before re-dispatch.",
+      "plain_consequence": null,
       "project_name": null,
       "reversible": false,
       "source": "supervisor",

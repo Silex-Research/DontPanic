@@ -1,0 +1,55 @@
+{
+  "task_id": "2026-08-09-002-feat-decision-brief-at-gates",
+  "audit_id": "2026-08-09-002-feat-decision-brief-at-gates#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-08-13T03:22:06Z",
+  "completed_at": "2026-08-13T03:25:53Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "worker: profile_id=None harness=codex model=(harness default)",
+    "quota gate aud=37.022385",
+    "reviewing implementer audit at claude-implementer-F006-i1.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-08-09-002-feat-decision-brief-at-gates-w0z9i_fg target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 1391292 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 2244852,
+    "tokens_out": 16369,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 9 (see structured target_context.commands_run)\n\n[F006] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nOverall verdict: **needs_changes**. The implementer correctly declared the target; structured context is `env=dev`, `project=null`, and `commands_run=[]`, so no forbidden commands occurred. Its audit actually reports a timeout/blocked state, not verified completion.\n\nFINDING (high, test_coverage): The required `tests/test_event_copy_undeclared_impact.py` does not exist. Evidence: focused collection exited 4 with “file or directory not found.” Recommendation: add the mandated suite covering acceptance items 1–5 and demonstrate it passes.\n\nFINDING (high, correctness): The source-level non-generative assertion does not inspect render-path provenance. Evidence: `copy_expressions_checked` remains zero, and an in-memory mutation assigning `event.model_output` directly to rendered `why` still produced `violations=()`. Recommendation: implement the declared AST provenance/event-attribute checks and add a negative mutation test proving model-derived approval copy is rejected.\n\nDirect probes confirmed the undeclared and stale rendering behavior and both advisory output cases work. Full pytest execution was otherwise constrained by the read-only environment’s lack of a writable temporary directory. `git diff --check` passed.\n\nCommands/checks invoked:\n\n$ coderabbit --version  \n$ coderabbit auth status --agent  \n$ PYTHONDONTWRITEBYTECODE=1 pytest tests/test_event_copy_undeclared_impact.py -q -p no:cacheprovider  \n$ PYTHONDONTWRITEBYTECODE=1 py",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "coderabbit --version",
+      "coderabbit auth status --agent",
+      "PYTHONDONTWRITEBYTECODE=1 pytest tests/test_event_copy_undeclared_impact.py -q -p no:cacheprovider",
+      "PYTHONDONTWRITEBYTECODE=1 pytest -s tests/test_event_copy_undeclared_impact.py -q -p no:cacheprovider",
+      "PYTHONDONTWRITEBYTECODE=1 pytest -s tests/test_event_copy_impact_first.py -q -p no:cacheprovider",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=.. python -c 'from pathlib import Path; from dontpanic_orchestrate import event_copy as e; s=Path(e.__file__).read_text(); needle=\"why = \\\" \\\".join(part for part in (why, honesty, reference) if part).strip()\"; mutant=s.replace(needle, needle+\"\\n        why = getattr(event, \\\"model_output\\\", why)\", 1); base=e.scan_non_generative_copy(); changed=e.scan_non_generative_copy(mutant); print(\"base_violations=\", base.violations); print(\"base_copy_expressions_checked=\", base.copy_expressions_checked); print(\"mutation_applied=\", mutant != s); print(\"mutant_violations=\", changed.violations); print(\"mutant_copy_expressions_checked=\", changed.copy_expressions_checked)'",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=.. python -c 'from types import SimpleNamespace as N; from dontpanic_orchestrate.decision_brief import BriefStatus, DecisionBrief; from dontpanic_orchestrate.event_copy import render; base=dict(kind=\"gate_paused\", inbox_event=\"gate_hit\", plan_id=\"P1\", feature_id=\"F006\", subtype=\"pre_impl\", technical_metadata={}); u=DecisionBrief(what_changes=\"Change X\", user_impact=None, affected_audience=None, decision_consequence=\"Approve X\", reversible=True, status=BriefStatus.UNDECLARED); s=DecisionBrief(what_changes=\"Change X\", user_impact=\"Old declared summary\", affected_audience=\"end_user\", decision_consequence=\"Approve X\", reversible=True, status=BriefStatus.POSSIBLY_STALE); ru=render(N(**base, decision_brief=u)); rs=render(N(**base, decision_brief=s)); print(\"undeclared_title=\", ru.title); print(\"undeclared_detail=\", ru.detail); print(\"undeclared_slot=\", ru.user_impact); print(\"stale_title=\", rs.title); print(\"stale_detail=\", rs.detail); print(\"stale_slot=\", rs.user_impact)'",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=.. python -c 'import contextlib, io; from pathlib import Path; from types import SimpleNamespace as N; from dontpanic_orchestrate import cli; original=cli.plan_loader.load; missing=N(surfaces=[\"web\"], features=N(features=[{\"id\":\"F1\",\"description\":\"One\"},{\"id\":\"F2\",\"description\":\"Two\"}])); declared=N(surfaces=[\"web\"], features=N(features=[{\"id\":\"F1\",\"description\":\"One\",\"user_impact\":{\"audience\":\"none\"}},{\"id\":\"F2\",\"description\":\"Two\",\"user_impact\":{\"audience\":\"none\"}}])); out1=io.StringIO(); out2=io.StringIO(); cli.plan_loader.load=lambda _: missing; exec(\"with contextlib.redirect_stdout(out1): cli._emit_plan_lock_undeclared_impact_advisory(Path(\\\"/fixture\\\"))\"); cli.plan_loader.load=lambda _: declared; exec(\"with contextlib.redirect_stdout(out2): cli._emit_plan_lock_undeclared_impact_advisory(Path(\\\"/fixture\\\"))\"); cli.plan_loader.load=original; print(\"missing_output=\", repr(out1.getvalue())); print(\"declared_output=\", repr(out2.getvalue()))'",
+      "git -C /Users/bayesian/Code/DontPanic/docs diff --check"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "test_coverage",
+      "feature_id": "F006",
+      "issue": "The required `tests/test_event_copy_undeclared_impact.py` does not exist. Evidence: focused collection exited 4 with “file or directory not found.” Recommendation: add the mandated suite covering acceptance items 1–5 and demonstrate it passes.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F006",
+      "issue": "The source-level non-generative assertion does not inspect render-path provenance. Evidence: `copy_expressions_checked` remains zero, and an in-memory mutation assigning `event.model_output` directly to rendered `why` still produced `violations=()`. Recommendation: implement the declared AST provenance/event-attribute checks and add a negative mutation test proving model-derived approval copy is rejected. Direct probes confirmed the undeclared and stale rendering behavior and both advisory outpu",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

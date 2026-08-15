@@ -22,7 +22,9 @@
         "worktree_path",
         "wrong_worktree_refusal"
       ],
-      "verified_by": "scripts/dontpanic_orchestrate/tests/test_worktree_guard_f001.py (29 tests)"
+      "verified_by": [
+        "scripts/dontpanic_orchestrate/tests/test_worktree_guard_f001.py (29 tests)"
+      ]
     },
     {
       "id": "F002",
@@ -47,7 +49,9 @@
       "depends_on": [
         "F001"
       ],
-      "verified_by": "scripts/dontpanic_orchestrate/tests/test_worktree_remove_f002.py (26 tests)"
+      "verified_by": [
+        "scripts/dontpanic_orchestrate/tests/test_worktree_remove_f002.py (26 tests)"
+      ]
     },
     {
       "id": "F003",
@@ -63,7 +67,9 @@
         "worktree_path"
       ],
       "depends_on": [],
-      "verified_by": "scripts/dontpanic_orchestrate/tests/test_worktree_local_config_f003.py (14 tests)"
+      "verified_by": [
+        "scripts/dontpanic_orchestrate/tests/test_worktree_local_config_f003.py (14 tests)"
+      ]
     }
   ]
 }

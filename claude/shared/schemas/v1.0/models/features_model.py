@@ -48,6 +48,199 @@ class Type(Enum):
     file = 'file'
 
 
+class Audience(Enum):
+    end_user = 'end_user'
+    operator = 'operator'
+    agent = 'agent'
+    none = 'none'
+
+
+class ImpactSurface(Enum):
+    """Mirrors the plan-level `surfaces` enum in plan.schema.json.
+
+    Kept in lockstep with features.schema.json's `$defs/user_impact` — the two
+    JSON enums are asserted identical by scripts/test_user_impact_contract.py.
+    """
+
+    web = 'web'
+    ios = 'ios'
+    android = 'android'
+    backend = 'backend'
+    infra = 'infra'
+    security = 'security'
+    data = 'data'
+    ux = 'ux'
+    ml = 'ml'
+    docs = 'docs'
+    external_api_wrap = 'external-api-wrap'
+
+
+class ProofMethod(Enum):
+    """How a feature's cheap proof is taken.
+
+    Identical to `objective_contract.schema.json`'s `delivers[].proof.method`
+    — the two enums are kept in lockstep so a slice means the same thing
+    whether it was declared in the contract or carried by the feature.
+    """
+
+    walk = 'walk'
+    request = 'request'
+    named_test = 'named_test'
+    probe = 'probe'
+
+
+class ProofSurface(Enum):
+    """Where a proof is taken. Mirrors the plan-level `surfaces` enum."""
+
+    web = 'web'
+    ios = 'ios'
+    android = 'android'
+    backend = 'backend'
+    infra = 'infra'
+    security = 'security'
+    data = 'data'
+    ux = 'ux'
+    ml = 'ml'
+    docs = 'docs'
+    external_api_wrap = 'external-api-wrap'
+
+
+class Proof(BaseModel):
+    """The cheap first-principle proof a feature carries on its own.
+
+    A feature carrying one is scored as a slice in its own right (plan
+    2026-08-13-001 F002), so a plan whose features each carry a proof states
+    an outcome without any `delivers[]`. Same shape as the contract-level
+    `delivers[].proof`.
+    """
+
+    model_config = ConfigDict(extra='forbid')
+    metric: str = Field(..., min_length=10)
+    method: ProofMethod
+    surface: ProofSurface | None = None
+
+    @model_validator(mode='before')
+    @classmethod
+    def _reject_explicit_nulls(cls, data: object) -> object:
+        """Mirror the schema, which types these fields with no `null` member."""
+        if isinstance(data, dict):
+            for key in ('metric', 'method', 'surface'):
+                if key in data and data[key] is None:
+                    raise ValueError(
+                        f'{key} must be omitted rather than set to null'
+                    )
+        return data
+
+
+class UserImpact(BaseModel):
+    """Declared user impact — who feels this feature and how.
+
+    Hand-maintained mirror of the `if/then/else` in features.schema.json.
+    datamodel-codegen drops JSON Schema conditionals, so the conditional
+    semantics of D003 live in `_check_audience_conditional` below rather than
+    in generated field constraints.
+
+    The optional fields below are absent-or-typed, never explicitly null: the
+    JSON Schema types them `string`/`array` with no `"null"` member, so a
+    literal `null` is a schema violation. `_reject_explicit_nulls` keeps the
+    Pydantic side from silently coercing that null to a default and returning
+    the opposite verdict.
+    """
+
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    audience: Audience = Field(
+        ...,
+        description=(
+            "Who experiences the change. 'none' means genuinely internal work "
+            'with no external consequence, and is a complete declaration on '
+            'its own.'
+        ),
+    )
+    summary: str | None = Field(
+        None,
+        description=(
+            'One plain-language line naming what the audience experiences '
+            "differently. Required (>=10 chars) unless audience is 'none'."
+        ),
+    )
+    surfaces: list[ImpactSurface] | None = Field(
+        None,
+        description=(
+            'Where the impact lands. Required (non-empty) unless audience is '
+            "'none'."
+        ),
+    )
+    description_hash: constr(pattern=r'^[a-f0-9]{64}$') | None = Field(
+        None,
+        description=(
+            'SHA-256 hex digest of the UTF-8 encoded feature `description` '
+            'this declaration was written against. Staleness anchor per D005: '
+            'a mismatch marks the brief possibly-stale rather than presenting '
+            'an old claim as current. Required whenever the declaration '
+            "carries a claim (audience other than 'none'). Optional under "
+            "audience 'none', which asserts no external consequence and so "
+            'has no claim that can go stale.'
+        ),
+    )
+
+    @model_validator(mode='before')
+    @classmethod
+    def _reject_explicit_nulls(cls, data: object) -> object:
+        """Mirror the schema, which types these fields with no `null` member.
+
+        Pydantic would otherwise read an explicit `null` as "use the default"
+        and accept a document the JSON Schema rejects — the two validators must
+        return the same verdict, which is the whole point of the block.
+        """
+        if isinstance(data, dict):
+            for key in ('summary', 'surfaces', 'description_hash'):
+                if key in data and data[key] is None:
+                    raise ValueError(
+                        f'{key} must be omitted rather than set to null'
+                    )
+        return data
+
+    @model_validator(mode='after')
+    def _check_audience_conditional(self) -> UserImpact:
+        """D003 — 'none' is the whole declaration; anything else owes detail."""
+        if self.audience is Audience.none:
+            if self.summary:
+                raise ValueError(
+                    "audience 'none' is a complete declaration on its own — "
+                    'summary must be absent or empty'
+                )
+            if self.surfaces:
+                raise ValueError(
+                    "audience 'none' is a complete declaration on its own — "
+                    'surfaces must be absent or empty'
+                )
+        else:
+            if self.summary is None or len(self.summary) < 10:
+                raise ValueError(
+                    f"audience '{self.audience.value}' requires a summary of "
+                    'at least 10 characters'
+                )
+            if not self.surfaces:
+                raise ValueError(
+                    f"audience '{self.audience.value}' requires a non-empty "
+                    'surfaces array'
+                )
+            if not self.description_hash:
+                raise ValueError(
+                    f"audience '{self.audience.value}' requires a "
+                    'description_hash — D005 binds the claim to the '
+                    'description it was written against, and F003 has no '
+                    "'digest unknown' state to fall back to"
+                )
+
+        if self.surfaces is not None and len(set(self.surfaces)) != len(self.surfaces):
+            raise ValueError('surfaces must not contain duplicates')
+
+        return self
+
+
 class EvidenceRef(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
@@ -134,6 +327,41 @@ class Feature(BaseModel):
     tier_override: TierOverride | None = Field(
         None, description='Force different audit tier for this feature only'
     )
+    user_impact: UserImpact | None = Field(
+        None,
+        description=(
+            'Optional declared user impact — who feels this feature and how. '
+            'Consumed by the decision brief rendered at human approval gates. '
+            'Optional by design (D003): a feature that declares nothing '
+            "renders 'user impact not declared' rather than a synthesized "
+            'claim.'
+        ),
+    )
+    proof: Proof | None = Field(
+        None,
+        description=(
+            'Optional cheap first-principle proof this feature carries on its '
+            'own. A feature that carries one is scored as a slice in its own '
+            'right by the lock/close scorer, so a plan whose features each '
+            'carry a proof needs no delivers[] to state an outcome. Absence '
+            'means the feature is not a slice, not that it is invalid.'
+        ),
+    )
+
+    @model_validator(mode='before')
+    @classmethod
+    def _reject_explicit_null_user_impact(cls, data: object) -> object:
+        """`user_impact` is absent or an object — the schema gives it no null.
+
+        Scoped to `user_impact` because that is what this contract owns; the
+        legacy optional fields above predate it and are left as they were.
+        """
+        if isinstance(data, dict) and data.get('user_impact', ...) is None:
+            raise ValueError(
+                'user_impact must be omitted rather than set to null'
+            )
+        return data
+
 
 
 class Features(BaseModel):
@@ -143,3 +371,57 @@ class Features(BaseModel):
     task_id: str = Field(..., description='Parent plan ID')
     schema_version: Literal['1.0']
     features: list[Feature] = Field(..., min_length=1)
+
+
+# ── evidence on `passes: true` (D008) ───────────────────────────────────────
+#
+# `features.schema.json` has always required verified_by + verified_at +
+# non-empty evidence_refs when passes is true. The Pydantic arm did not, so an
+# unbacked flip validated clean fleet-wide.
+#
+# This lives as a FUNCTION rather than a raising @model_validator, and the
+# distinction is load-bearing. The model is the READ path: plan_loader.load()
+# calls Features.model_validate. When the rule raised there, 39 checked-in
+# plans became unreadable and every fleet-walking surface either crashed or
+# silently dropped them — planning_readiness.analyze_repo returns an empty set,
+# so features vanish from "what can I dispatch" with no signal at all.
+#
+# History predates the rule, and backfilling does not solve the class: the next
+# schema tightening breaks the reader again. So enforcement belongs where a
+# claim is asserted, not where it is read. validate.py calls this, which keeps
+# the gap closed for `dontpanic doctor`, CI, and plan-lock alike.
+
+_EVIDENCE_FIELDS = ("verified_by", "verified_at", "evidence_refs")
+
+
+def evidence_gaps(feature) -> list[str]:
+    """Return the evidence fields a `passes: true` feature fails to supply.
+
+    Empty list means "backed" (or `passes` is false — an open feature is not
+    asked to justify itself). Accepts a dict or a parsed ``Feature``.
+    """
+    get = feature.get if isinstance(feature, dict) else lambda k, d=None: getattr(feature, k, d)
+    if not get("passes"):
+        return []
+    missing = []
+    for field in _EVIDENCE_FIELDS:
+        value = get(field)
+        # An empty list is not a citation — the JSON Schema says minItems 1.
+        if value is None or (isinstance(value, (list, tuple)) and not value):
+            missing.append(field)
+    if not missing:
+        return []
+    fid = get("id") or "?"
+    return [
+        f"feature {fid} claims passes=true but is missing {', '.join(missing)} — "
+        "a flip to true must name who verified it, when, and at least one "
+        "evidence_ref. An empty list is not evidence."
+    ]
+
+
+def evidence_gaps_for_document(data: dict) -> list[str]:
+    """All evidence gaps across a features.json payload, in file order."""
+    gaps: list[str] = []
+    for feature in (data or {}).get("features") or []:
+        gaps.extend(evidence_gaps(feature))
+    return gaps

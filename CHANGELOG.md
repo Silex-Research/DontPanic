@@ -60,6 +60,34 @@ behavioral surface change with the date, a short summary, and a
 Surfaces affected: <comma-separated list — see docs/RELEASE_IMPACT.md>
 ```
 
+## 2026-08-14 — Lock scores the outcome, and slices scale to the work (plan 2026-08-13-001)
+
+### Added
+
+- A plan locks when it names an **outcome** — who can now do something they could
+  not before. A fix may `inherit` its parent's outcome and declare only the delta.
+- A feature can carry its own cheap **proof** (`walk`, `request`, `named_test`,
+  `probe`). A feature that is independently testable or deployable is already a
+  slice, so a plan whose features each carry a proof needs no separate slice list.
+  Slices are a sizing decision, not required ceremony.
+- Proofs you skip are recorded as **accepted gaps** and checked at close, rather
+  than blocking the lock.
+
+### Changed
+
+- Lock **refuses** when it cannot record its score: the plan stays draft and the
+  exit code is nonzero. It previously warned "lock proceeds unrecorded" and
+  returned success — an exit-zero lock that had just said its gaps went unrecorded.
+- Close holds you to the obligations recorded **at lock time**, matched by the
+  features a slice names as its proof rather than by position, so renumbering or
+  reordering slices no longer changes what close asks for.
+
+### Fixed
+
+- A deleted or corrupted lock record is no longer indistinguishable from a plan
+  locked before lock records existed. Missing-with-a-receipt, corrupt, and altered
+  all refuse close; genuinely legacy plans close exactly as before.
+
 ## 2026-06-22 — Upgrade-readiness layer in `dontpanic doctor` (plan 2026-06-21-001)
 
 ### Added

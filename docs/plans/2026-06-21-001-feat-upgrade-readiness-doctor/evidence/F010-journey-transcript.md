@@ -1,7 +1,7 @@
 # F010 — after-git-pull update journey (real doctor CLI, out-of-process)
 
-instance home: /Users/bayesian/.dontpanic-f010-e2e-74843/home
-fixture project (cwd): /Users/bayesian/.dontpanic-f010-e2e-74843/fixture-project
+instance home: /Users/bayesian/.dontpanic-f010-e2e-94822/home
+fixture project (cwd): /Users/bayesian/.dontpanic-f010-e2e-94822/fixture-project
 
 ## 1. Fresh update (no marker): plain `dontpanic doctor --skip-auth --json`
 $ python -m dontpanic_orchestrate doctor --skip-auth --json
@@ -61,7 +61,7 @@ stdout:
     {
       "name": "sa-key-age",
       "ok": true,
-      "message": "/Users/bayesian/.dontpanic-f010-e2e-74843/home/.secrets not present (no SA keys to age-check)",
+      "message": "/Users/bayesian/.dontpanic-f010-e2e-94822/home/.secrets not present (no SA keys to age-check)",
       "remediation": "",
       "warn": false
     },
@@ -110,14 +110,14 @@ stdout:
     {
       "name": "quota-caps",
       "ok": true,
-      "message": "/Users/bayesian/.dontpanic-f010-e2e-74843/home-env/.jarvis/quota_state.json not present \u2014 run `python3 scripts/quota_check.py` to populate",
+      "message": "/Users/bayesian/.dontpanic-f010-e2e-94822/home-env/.jarvis/quota_state.json not present \u2014 run `python3 scripts/quota_check.py` to populate",
       "remediation": "",
       "warn": false
     },
     {
       "name": "global-config",
       "ok": true,
-      "message": "/Users/bayesian/.dontpanic-f010-e2e-74843/home/config.json not present (first-run zero state \u2014 defaults will fall through to hardcoded)",
+      "message": "/Users/bayesian/.dontpanic-f010-e2e-94822/home/config.json not present (first-run zero state \u2014 defaults will fall through to hardcoded)",
       "remediation": "",
       "warn": false
     },
@@ -131,22 +131,22 @@ stdout:
     {
       "name": "project:fixture-project:path",
       "ok": true,
-      "message": "path exists: /Users/bayesian/.dontpanic-f010-e2e-74843/fixture-project",
+      "message": "path exists: /Users/bayesian/.dontpanic-f010-e2e-94822/fixture-project",
       "remediation": "",
       "warn": false
     },
     {
       "name": "project:fixture-project:config",
       "ok": true,
-      "message": "/Users/bayesian/.dontpanic-f010-e2e-74843/fixture-project/.dontpanic/dontpanic.json not present (per-project config is optional)",
+      "message": "/Users/bayesian/.dontpanic-f010-e2e-94822/fixture-project/.dontpanic/dontpanic.json not present (per-project config is optional)",
       "remediation": "",
       "warn": false
     },
     {
       "name": "project:fixture-project:plans-dir",
       "ok": true,
-      "message": "declared plans dir not present: /Users/bayesian/.dontpanic-f010-e2e-74843/fixture-project/docs/plans (parent dir also missing)",
-      "remediation": "create the directory or update plans_dir in /Users/bayesian/.dontpanic-f010-e2e-74843/fixture-project/.dontpanic/dontpanic.json",
+      "message": "declared plans dir not present: /Users/bayesian/.dontpanic-f010-e2e-94822/fixture-project/docs/plans (parent dir also missing)",
+      "remediation": "create the directory or update plans_dir in /Users/bayesian/.dontpanic-f010-e2e-94822/fixture-project/.dontpanic/dontpanic.json",
       "warn": true
     },
     {
@@ -171,6 +171,27 @@ stdout:
       "warn": false
     },
     {
+      "name": "project:fixture-project:models:implementer",
+      "ok": true,
+      "message": "claude: harness CLI default model",
+      "remediation": "",
+      "warn": false
+    },
+    {
+      "name": "project:fixture-project:models:auditor",
+      "ok": true,
+      "message": "codex: harness CLI default model",
+      "remediation": "",
+      "warn": false
+    },
+    {
+      "name": "project:fixture-project:models:goal_auditor",
+      "ok": true,
+      "message": "codex: harness CLI default model",
+      "remediation": "",
+      "warn": false
+    },
+    {
       "name": "config-home",
       "ok": true,
       "message": "canonical (~/.dontpanic) and legacy (~/.jarvis) homes are reconciled",
@@ -180,7 +201,7 @@ stdout:
     {
       "name": "validate-plans-strict",
       "ok": true,
-      "message": "109 locked plan(s) under docs/plans validate clean against plan.schema.json",
+      "message": "113 locked plan(s) under docs/plans validate clean against plan.schema.json",
       "remediation": "",
       "warn": false,
       "details": [
@@ -728,21 +749,41 @@ stdout:
           "plan_id": "2026-06-21-001-feat-upgrade-readiness-doctor",
           "path": "plans/2026-06-21-001-feat-upgrade-readiness-doctor/plan.md",
           "status": "clean"
+        },
+        {
+          "plan_id": "2026-06-22-001-fix-dashboard-live-agents-projection",
+          "path": "plans/2026-06-22-001-fix-dashboard-live-agents-projection/plan.md",
+          "status": "clean"
+        },
+        {
+          "plan_id": "2026-07-27-001-feat-buzz-integration-agent-taxonomy",
+          "path": "plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/plan.md",
+          "status": "clean"
+        },
+        {
+          "plan_id": "2026-08-09-002-feat-decision-brief-at-gates",
+          "path": "plans/2026-08-09-002-feat-decision-brief-at-gates/plan.md",
+          "status": "clean"
+        },
+        {
+          "plan_id": "2026-08-09-004-feat-agent-graders-task-corpus",
+          "path": "plans/2026-08-09-004-feat-agent-graders-task-corpus/plan.md",
+          "status": "clean"
         }
       ]
     },
     {
       "name": "architecture-drift",
       "ok": true,
-      "message": "stale_major \u2014 407/771 files differ (52.8%): added=335 removed=0 modified=72",
+      "message": "stale_major \u2014 484/828 files differ (58.5%): added=392 removed=0 modified=92",
       "remediation": "python -m dontpanic_orchestrate architecture regen",
       "warn": true,
       "details": [
         {
           "state": "stale_major",
-          "architecture_path": "/Users/bayesian/Documents/GitHub/DontPanic/docs/architecture/architecture.json",
+          "architecture_path": "/Users/bayesian/Code/DontPanic/docs/architecture/architecture.json",
           "stored_fingerprint": "b3dc608f06b214efadeb9b17c1dba1f212100a4f606a7aef3019c39b08d41306",
-          "current_fingerprint": "3b152cb29e0407af6fd93a0c0420e3001ba957997369e42864e0de8f96f8a68e",
+          "current_fingerprint": "e17c065444c88ffb5635b0a7279f83670d2723fe5f5dbbbd0b8fce83bde53f58",
           "changed_files": {
             "added": [
               "claude/shared/schemas/v1.0/models/experience_readiness.py",
@@ -765,14 +806,19 @@ stdout:
               "docs/plans/2026-06-04-003-feat-integration-operator-actions/features.json",
               "docs/plans/2026-06-04-003-feat-integration-operator-actions/plan.md",
               "docs/plans/2026-06-04-004-feat-dashboard-state-fidelity/features.json",
-              "\u2026 +315 more"
+              "\u2026 +372 more"
             ],
             "removed": [],
             "modified": [
               "claude/shared/VERSION",
               "claude/shared/schemas/v1.0/capability.schema.json",
+              "claude/shared/schemas/v1.0/features.schema.json",
               "claude/shared/schemas/v1.0/models/features_model.py",
               "claude/shared/schemas/v1.0/models/objective_contract_model.py",
+              "claude/shared/schemas/v1.0/models/plan_model.py",
+              "claude/shared/schemas/v1.0/objective_contract.schema.json",
+              "claude/shared/schemas/v1.0/plan.schema.json",
+              "claude/shared/schemas/v1.0/validate.py",
               "docs/plans/2026-04-19-001-infra-cross-agent-orchestration/plan.md",
               "docs/plans/2026-04-29-001-feat-changelog-skill/features.json",
               "docs/plans/2026-04-29-001-feat-changelog-skill/plan.md",
@@ -784,12 +830,7 @@ stdout:
               "scripts/dontpanic_orchestrate/active_supervisors.py",
               "scripts/dontpanic_orchestrate/agent_brief.py",
               "scripts/dontpanic_orchestrate/agent_manifest.py",
-              "scripts/dontpanic_orchestrate/agent_surface.py",
-              "scripts/dontpanic_orchestrate/architecture_view_state.py",
-              "scripts/dontpanic_orchestrate/capabilities.py",
-              "scripts/dontpanic_orchestrate/circuit_breakers.py",
-              "scripts/dontpanic_orchestrate/cli.py",
-              "\u2026 +52 more"
+              "\u2026 +72 more"
             ]
           },
           "changed_files_list": [
@@ -813,11 +854,16 @@ stdout:
             "added: docs/plans/2026-06-04-003-feat-integration-operator-actions/features.json",
             "added: docs/plans/2026-06-04-003-feat-integration-operator-actions/plan.md",
             "added: docs/plans/2026-06-04-004-feat-dashboard-state-fidelity/features.json",
-            "added: \u2026 +315 more",
+            "added: \u2026 +372 more",
             "modified: claude/shared/VERSION",
             "modified: claude/shared/schemas/v1.0/capability.schema.json",
+            "modified: claude/shared/schemas/v1.0/features.schema.json",
             "modified: claude/shared/schemas/v1.0/models/features_model.py",
             "modified: claude/shared/schemas/v1.0/models/objective_contract_model.py",
+            "modified: claude/shared/schemas/v1.0/models/plan_model.py",
+            "modified: claude/shared/schemas/v1.0/objective_contract.schema.json",
+            "modified: claude/shared/schemas/v1.0/plan.schema.json",
+            "modified: claude/shared/schemas/v1.0/validate.py",
             "modified: docs/plans/2026-04-19-001-infra-cross-agent-orchestration/plan.md",
             "modified: docs/plans/2026-04-29-001-feat-changelog-skill/features.json",
             "modified: docs/plans/2026-04-29-001-feat-changelog-skill/plan.md",
@@ -829,18 +875,13 @@ stdout:
             "modified: scripts/dontpanic_orchestrate/active_supervisors.py",
             "modified: scripts/dontpanic_orchestrate/agent_brief.py",
             "modified: scripts/dontpanic_orchestrate/agent_manifest.py",
-            "modified: scripts/dontpanic_orchestrate/agent_surface.py",
-            "modified: scripts/dontpanic_orchestrate/architecture_view_state.py",
-            "modified: scripts/dontpanic_orchestrate/capabilities.py",
-            "modified: scripts/dontpanic_orchestrate/circuit_breakers.py",
-            "modified: scripts/dontpanic_orchestrate/cli.py",
-            "modified: \u2026 +52 more"
+            "modified: \u2026 +72 more"
           ],
-          "changed_files_total": 407,
-          "unchanged_files": 364,
-          "files_count_current": 771,
+          "changed_files_total": 484,
+          "unchanged_files": 344,
+          "files_count_current": 828,
           "files_count_stored": 436,
-          "drift_pct": 52.79,
+          "drift_pct": 58.45,
           "missing_required": [],
           "recommendation": "major drift (\u22655% files changed). Run `python -m dontpanic_orchestrate architecture regen` before downstream consumers (Plan 4.5 `dontpanic new`, F004 supervisor regen hook) read a stale snapshot."
         }
@@ -856,7 +897,7 @@ stdout:
     {
       "name": "dashboard-cache",
       "ok": true,
-      "message": "what-now cache missing at /Users/bayesian/.dontpanic-f010-e2e-74843/home/dashboard/what-now.json",
+      "message": "what-now cache missing at /Users/bayesian/.dontpanic-f010-e2e-94822/home/dashboard/what-now.json",
       "remediation": "run: dontpanic dashboard build",
       "warn": true
     },
@@ -880,11 +921,39 @@ stdout:
       "message": "1 required + 0 advisory upgrade action(s) pending",
       "remediation": "run `dontpanic doctor --upgrade` to see required actions + their commands (required actions clear only when their probe passes)",
       "warn": true
+    },
+    {
+      "name": "buzz-config",
+      "ok": true,
+      "message": "Buzz notify surface not configured (~/.dontpanic/buzz.json missing) \u2014 strongly recommended for multi-agent work, never required",
+      "remediation": "create a PRIVATE Buzz community you own (first-hour checklist: docs/GETTING_STARTED.md \u00a7 'Buzz (Strongly Recommended): Private Community Setup'), then write ~/.dontpanic/buzz.json with keys: relay_url (your private community's relay URL \u2014 the relay is the community authority; public communities are support-only, never the notify default), channels (channel UUIDs; the sink posts to the first entry), reporter_key_ref (a key reference such as an env var name \u2014 never the private key itself); CI/headless: set DONTPANIC_SKIP_BUZZ=1 to silence this advisory",
+      "warn": true
+    },
+    {
+      "name": "models:implementer",
+      "ok": true,
+      "message": "claude: harness CLI default model",
+      "remediation": "",
+      "warn": false
+    },
+    {
+      "name": "models:auditor",
+      "ok": true,
+      "message": "codex: harness CLI default model",
+      "remediation": "",
+      "warn": false
+    },
+    {
+      "name": "models:goal_auditor",
+      "ok": true,
+      "message": "codex: harness CLI default model",
+      "remediation": "",
+      "warn": false
     }
   ],
-  "passed": 31,
+  "passed": 38,
   "failed": 0,
-  "warnings": 5,
+  "warnings": 6,
   "architecture_drift": {
     "state": "stale_major",
     "changed_files": [
@@ -908,11 +977,16 @@ stdout:
       "added: docs/plans/2026-06-04-003-feat-integration-operator-actions/features.json",
       "added: docs/plans/2026-06-04-003-feat-integration-operator-actions/plan.md",
       "added: docs/plans/2026-06-04-004-feat-dashboard-state-fidelity/features.json",
-      "added: \u2026 +315 more",
+      "added: \u2026 +372 more",
       "modified: claude/shared/VERSION",
       "modified: claude/shared/schemas/v1.0/capability.schema.json",
+      "modified: claude/shared/schemas/v1.0/features.schema.json",
       "modified: claude/shared/schemas/v1.0/models/features_model.py",
       "modified: claude/shared/schemas/v1.0/models/objective_contract_model.py",
+      "modified: claude/shared/schemas/v1.0/models/plan_model.py",
+      "modified: claude/shared/schemas/v1.0/objective_contract.schema.json",
+      "modified: claude/shared/schemas/v1.0/plan.schema.json",
+      "modified: claude/shared/schemas/v1.0/validate.py",
       "modified: docs/plans/2026-04-19-001-infra-cross-agent-orchestration/plan.md",
       "modified: docs/plans/2026-04-29-001-feat-changelog-skill/features.json",
       "modified: docs/plans/2026-04-29-001-feat-changelog-skill/plan.md",
@@ -924,12 +998,7 @@ stdout:
       "modified: scripts/dontpanic_orchestrate/active_supervisors.py",
       "modified: scripts/dontpanic_orchestrate/agent_brief.py",
       "modified: scripts/dontpanic_orchestrate/agent_manifest.py",
-      "modified: scripts/dontpanic_orchestrate/agent_surface.py",
-      "modified: scripts/dontpanic_orchestrate/architecture_view_state.py",
-      "modified: scripts/dontpanic_orchestrate/capabilities.py",
-      "modified: scripts/dontpanic_orchestrate/circuit_breakers.py",
-      "modified: scripts/dontpanic_orchestrate/cli.py",
-      "modified: \u2026 +52 more"
+      "modified: \u2026 +72 more"
     ],
     "changed_files_categorized": {
       "added": [
@@ -953,14 +1022,19 @@ stdout:
         "docs/plans/2026-06-04-003-feat-integration-operator-actions/features.json",
         "docs/plans/2026-06-04-003-feat-integration-operator-actions/plan.md",
         "docs/plans/2026-06-04-004-feat-dashboard-state-fidelity/features.json",
-        "\u2026 +315 more"
+        "\u2026 +372 more"
       ],
       "removed": [],
       "modified": [
         "claude/shared/VERSION",
         "claude/shared/schemas/v1.0/capability.schema.json",
+        "claude/shared/schemas/v1.0/features.schema.json",
         "claude/shared/schemas/v1.0/models/features_model.py",
         "claude/shared/schemas/v1.0/models/objective_contract_model.py",
+        "claude/shared/schemas/v1.0/models/plan_model.py",
+        "claude/shared/schemas/v1.0/objective_contract.schema.json",
+        "claude/shared/schemas/v1.0/plan.schema.json",
+        "claude/shared/schemas/v1.0/validate.py",
         "docs/plans/2026-04-19-001-infra-cross-agent-orchestration/plan.md",
         "docs/plans/2026-04-29-001-feat-changelog-skill/features.json",
         "docs/plans/2026-04-29-001-feat-changelog-skill/plan.md",
@@ -972,16 +1046,11 @@ stdout:
         "scripts/dontpanic_orchestrate/active_supervisors.py",
         "scripts/dontpanic_orchestrate/agent_brief.py",
         "scripts/dontpanic_orchestrate/agent_manifest.py",
-        "scripts/dontpanic_orchestrate/agent_surface.py",
-        "scripts/dontpanic_orchestrate/architecture_view_state.py",
-        "scripts/dontpanic_orchestrate/capabilities.py",
-        "scripts/dontpanic_orchestrate/circuit_breakers.py",
-        "scripts/dontpanic_orchestrate/cli.py",
-        "\u2026 +52 more"
+        "\u2026 +72 more"
       ]
     },
-    "changed_files_total": 407,
-    "unchanged_files": 364,
+    "changed_files_total": 484,
+    "unchanged_files": 344,
     "missing_required": [],
     "recommendation": "major drift (\u22655% files changed). Run `python -m dontpanic_orchestrate architecture regen` before downstream consumers (Plan 4.5 `dontpanic new`, F004 supervisor regen hook) read a stale snapshot.",
     "ok": true,
@@ -1082,9 +1151,9 @@ stdout:
   "registered_active": [],
   "registered_stale": [
     {
-      "canonical_repo_key": "21bb34ac465755aa",
+      "canonical_repo_key": "d9cf2a2a65fd28e8",
       "registry_name": "fixture-project",
-      "path_display": "/Users/<operator>/.dontpanic-f010-e2e-74843/fixture-project",
+      "path_display": "/Users/<operator>/.dontpanic-f010-e2e-94822/fixture-project",
       "observed_count": 0,
       "last_seen": null,
       "registry_conflict": false,
@@ -1179,8 +1248,8 @@ $ python -m dontpanic_orchestrate projects backfill-canonical
 rc=0
 stdout:
 [projects backfill-canonical] mode: write
-  ledger:   /Users/<operator>/.dontpanic-f010-e2e-74843/home/invocations.jsonl
-  evidence: /Users/<operator>/.dontpanic-f010-e2e-74843/home/canonical-backfill-evidence.json
+  ledger:   /Users/<operator>/.dontpanic-f010-e2e-94822/home/invocations.jsonl
+  evidence: /Users/<operator>/.dontpanic-f010-e2e-94822/home/canonical-backfill-evidence.json
   stamped:         3
   already stamped: 1
   would skip:      0
@@ -1193,11 +1262,11 @@ stdout:
   "used_unregistered": [],
   "registered_active": [
     {
-      "canonical_repo_key": "21bb34ac465755aa",
+      "canonical_repo_key": "d9cf2a2a65fd28e8",
       "registry_name": "fixture-project",
-      "path_display": "/Users/<operator>/.dontpanic-f010-e2e-74843/fixture-project",
+      "path_display": "/Users/<operator>/.dontpanic-f010-e2e-94822/fixture-project",
       "observed_count": 5,
-      "last_seen": "2026-06-23T04:59:12Z",
+      "last_seen": "2026-08-13T13:38:14Z",
       "registry_conflict": false,
       "conflicting_registry_names": []
     }
@@ -1300,7 +1369,7 @@ stdout:
     {
       "name": "sa-key-age",
       "ok": true,
-      "message": "/Users/bayesian/.dontpanic-f010-e2e-74843/home/.secrets not present (no SA keys to age-check)",
+      "message": "/Users/bayesian/.dontpanic-f010-e2e-94822/home/.secrets not present (no SA keys to age-check)",
       "remediation": "",
       "warn": false
     },
@@ -1349,14 +1418,14 @@ stdout:
     {
       "name": "quota-caps",
       "ok": true,
-      "message": "/Users/bayesian/.dontpanic-f010-e2e-74843/home-env/.jarvis/quota_state.json not present \u2014 run `python3 scripts/quota_check.py` to populate",
+      "message": "/Users/bayesian/.dontpanic-f010-e2e-94822/home-env/.jarvis/quota_state.json not present \u2014 run `python3 scripts/quota_check.py` to populate",
       "remediation": "",
       "warn": false
     },
     {
       "name": "global-config",
       "ok": true,
-      "message": "/Users/bayesian/.dontpanic-f010-e2e-74843/home/config.json not present (first-run zero state \u2014 defaults will fall through to hardcoded)",
+      "message": "/Users/bayesian/.dontpanic-f010-e2e-94822/home/config.json not present (first-run zero state \u2014 defaults will fall through to hardcoded)",
       "remediation": "",
       "warn": false
     },
@@ -1370,22 +1439,22 @@ stdout:
     {
       "name": "project:fixture-project:path",
       "ok": true,
-      "message": "path exists: /Users/bayesian/.dontpanic-f010-e2e-74843/fixture-project",
+      "message": "path exists: /Users/bayesian/.dontpanic-f010-e2e-94822/fixture-project",
       "remediation": "",
       "warn": false
     },
     {
       "name": "project:fixture-project:config",
       "ok": true,
-      "message": "/Users/bayesian/.dontpanic-f010-e2e-74843/fixture-project/.dontpanic/dontpanic.json not present (per-project config is optional)",
+      "message": "/Users/bayesian/.dontpanic-f010-e2e-94822/fixture-project/.dontpanic/dontpanic.json not present (per-project config is optional)",
       "remediation": "",
       "warn": false
     },
     {
       "name": "project:fixture-project:plans-dir",
       "ok": true,
-      "message": "declared plans dir not present: /Users/bayesian/.dontpanic-f010-e2e-74843/fixture-project/docs/plans (parent dir also missing)",
-      "remediation": "create the directory or update plans_dir in /Users/bayesian/.dontpanic-f010-e2e-74843/fixture-project/.dontpanic/dontpanic.json",
+      "message": "declared plans dir not present: /Users/bayesian/.dontpanic-f010-e2e-94822/fixture-project/docs/plans (parent dir also missing)",
+      "remediation": "create the directory or update plans_dir in /Users/bayesian/.dontpanic-f010-e2e-94822/fixture-project/.dontpanic/dontpanic.json",
       "warn": true
     },
     {
@@ -1410,6 +1479,27 @@ stdout:
       "warn": false
     },
     {
+      "name": "project:fixture-project:models:implementer",
+      "ok": true,
+      "message": "claude: harness CLI default model",
+      "remediation": "",
+      "warn": false
+    },
+    {
+      "name": "project:fixture-project:models:auditor",
+      "ok": true,
+      "message": "codex: harness CLI default model",
+      "remediation": "",
+      "warn": false
+    },
+    {
+      "name": "project:fixture-project:models:goal_auditor",
+      "ok": true,
+      "message": "codex: harness CLI default model",
+      "remediation": "",
+      "warn": false
+    },
+    {
       "name": "config-home",
       "ok": true,
       "message": "canonical (~/.dontpanic) and legacy (~/.jarvis) homes are reconciled",
@@ -1419,7 +1509,7 @@ stdout:
     {
       "name": "validate-plans-strict",
       "ok": true,
-      "message": "109 locked plan(s) under docs/plans validate clean against plan.schema.json",
+      "message": "113 locked plan(s) under docs/plans validate clean against plan.schema.json",
       "remediation": "",
       "warn": false,
       "details": [
@@ -1967,21 +2057,41 @@ stdout:
           "plan_id": "2026-06-21-001-feat-upgrade-readiness-doctor",
           "path": "plans/2026-06-21-001-feat-upgrade-readiness-doctor/plan.md",
           "status": "clean"
+        },
+        {
+          "plan_id": "2026-06-22-001-fix-dashboard-live-agents-projection",
+          "path": "plans/2026-06-22-001-fix-dashboard-live-agents-projection/plan.md",
+          "status": "clean"
+        },
+        {
+          "plan_id": "2026-07-27-001-feat-buzz-integration-agent-taxonomy",
+          "path": "plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/plan.md",
+          "status": "clean"
+        },
+        {
+          "plan_id": "2026-08-09-002-feat-decision-brief-at-gates",
+          "path": "plans/2026-08-09-002-feat-decision-brief-at-gates/plan.md",
+          "status": "clean"
+        },
+        {
+          "plan_id": "2026-08-09-004-feat-agent-graders-task-corpus",
+          "path": "plans/2026-08-09-004-feat-agent-graders-task-corpus/plan.md",
+          "status": "clean"
         }
       ]
     },
     {
       "name": "architecture-drift",
       "ok": true,
-      "message": "stale_major \u2014 407/771 files differ (52.8%): added=335 removed=0 modified=72",
+      "message": "stale_major \u2014 484/828 files differ (58.5%): added=392 removed=0 modified=92",
       "remediation": "python -m dontpanic_orchestrate architecture regen",
       "warn": true,
       "details": [
         {
           "state": "stale_major",
-          "architecture_path": "/Users/bayesian/Documents/GitHub/DontPanic/docs/architecture/architecture.json",
+          "architecture_path": "/Users/bayesian/Code/DontPanic/docs/architecture/architecture.json",
           "stored_fingerprint": "b3dc608f06b214efadeb9b17c1dba1f212100a4f606a7aef3019c39b08d41306",
-          "current_fingerprint": "3b152cb29e0407af6fd93a0c0420e3001ba957997369e42864e0de8f96f8a68e",
+          "current_fingerprint": "e17c065444c88ffb5635b0a7279f83670d2723fe5f5dbbbd0b8fce83bde53f58",
           "changed_files": {
             "added": [
               "claude/shared/schemas/v1.0/models/experience_readiness.py",
@@ -2004,14 +2114,19 @@ stdout:
               "docs/plans/2026-06-04-003-feat-integration-operator-actions/features.json",
               "docs/plans/2026-06-04-003-feat-integration-operator-actions/plan.md",
               "docs/plans/2026-06-04-004-feat-dashboard-state-fidelity/features.json",
-              "\u2026 +315 more"
+              "\u2026 +372 more"
             ],
             "removed": [],
             "modified": [
               "claude/shared/VERSION",
               "claude/shared/schemas/v1.0/capability.schema.json",
+              "claude/shared/schemas/v1.0/features.schema.json",
               "claude/shared/schemas/v1.0/models/features_model.py",
               "claude/shared/schemas/v1.0/models/objective_contract_model.py",
+              "claude/shared/schemas/v1.0/models/plan_model.py",
+              "claude/shared/schemas/v1.0/objective_contract.schema.json",
+              "claude/shared/schemas/v1.0/plan.schema.json",
+              "claude/shared/schemas/v1.0/validate.py",
               "docs/plans/2026-04-19-001-infra-cross-agent-orchestration/plan.md",
               "docs/plans/2026-04-29-001-feat-changelog-skill/features.json",
               "docs/plans/2026-04-29-001-feat-changelog-skill/plan.md",
@@ -2023,12 +2138,7 @@ stdout:
               "scripts/dontpanic_orchestrate/active_supervisors.py",
               "scripts/dontpanic_orchestrate/agent_brief.py",
               "scripts/dontpanic_orchestrate/agent_manifest.py",
-              "scripts/dontpanic_orchestrate/agent_surface.py",
-              "scripts/dontpanic_orchestrate/architecture_view_state.py",
-              "scripts/dontpanic_orchestrate/capabilities.py",
-              "scripts/dontpanic_orchestrate/circuit_breakers.py",
-              "scripts/dontpanic_orchestrate/cli.py",
-              "\u2026 +52 more"
+              "\u2026 +72 more"
             ]
           },
           "changed_files_list": [
@@ -2052,11 +2162,16 @@ stdout:
             "added: docs/plans/2026-06-04-003-feat-integration-operator-actions/features.json",
             "added: docs/plans/2026-06-04-003-feat-integration-operator-actions/plan.md",
             "added: docs/plans/2026-06-04-004-feat-dashboard-state-fidelity/features.json",
-            "added: \u2026 +315 more",
+            "added: \u2026 +372 more",
             "modified: claude/shared/VERSION",
             "modified: claude/shared/schemas/v1.0/capability.schema.json",
+            "modified: claude/shared/schemas/v1.0/features.schema.json",
             "modified: claude/shared/schemas/v1.0/models/features_model.py",
             "modified: claude/shared/schemas/v1.0/models/objective_contract_model.py",
+            "modified: claude/shared/schemas/v1.0/models/plan_model.py",
+            "modified: claude/shared/schemas/v1.0/objective_contract.schema.json",
+            "modified: claude/shared/schemas/v1.0/plan.schema.json",
+            "modified: claude/shared/schemas/v1.0/validate.py",
             "modified: docs/plans/2026-04-19-001-infra-cross-agent-orchestration/plan.md",
             "modified: docs/plans/2026-04-29-001-feat-changelog-skill/features.json",
             "modified: docs/plans/2026-04-29-001-feat-changelog-skill/plan.md",
@@ -2068,18 +2183,13 @@ stdout:
             "modified: scripts/dontpanic_orchestrate/active_supervisors.py",
             "modified: scripts/dontpanic_orchestrate/agent_brief.py",
             "modified: scripts/dontpanic_orchestrate/agent_manifest.py",
-            "modified: scripts/dontpanic_orchestrate/agent_surface.py",
-            "modified: scripts/dontpanic_orchestrate/architecture_view_state.py",
-            "modified: scripts/dontpanic_orchestrate/capabilities.py",
-            "modified: scripts/dontpanic_orchestrate/circuit_breakers.py",
-            "modified: scripts/dontpanic_orchestrate/cli.py",
-            "modified: \u2026 +52 more"
+            "modified: \u2026 +72 more"
           ],
-          "changed_files_total": 407,
-          "unchanged_files": 364,
-          "files_count_current": 771,
+          "changed_files_total": 484,
+          "unchanged_files": 344,
+          "files_count_current": 828,
           "files_count_stored": 436,
-          "drift_pct": 52.79,
+          "drift_pct": 58.45,
           "missing_required": [],
           "recommendation": "major drift (\u22655% files changed). Run `python -m dontpanic_orchestrate architecture regen` before downstream consumers (Plan 4.5 `dontpanic new`, F004 supervisor regen hook) read a stale snapshot."
         }
@@ -2095,7 +2205,7 @@ stdout:
     {
       "name": "dashboard-cache",
       "ok": true,
-      "message": "what-now cache missing at /Users/bayesian/.dontpanic-f010-e2e-74843/home/dashboard/what-now.json",
+      "message": "what-now cache missing at /Users/bayesian/.dontpanic-f010-e2e-94822/home/dashboard/what-now.json",
       "remediation": "run: dontpanic dashboard build",
       "warn": true
     },
@@ -2119,11 +2229,39 @@ stdout:
       "message": "up to date (2026-06-17-001-canonical-discovery)",
       "remediation": "",
       "warn": false
+    },
+    {
+      "name": "buzz-config",
+      "ok": true,
+      "message": "Buzz notify surface not configured (~/.dontpanic/buzz.json missing) \u2014 strongly recommended for multi-agent work, never required",
+      "remediation": "create a PRIVATE Buzz community you own (first-hour checklist: docs/GETTING_STARTED.md \u00a7 'Buzz (Strongly Recommended): Private Community Setup'), then write ~/.dontpanic/buzz.json with keys: relay_url (your private community's relay URL \u2014 the relay is the community authority; public communities are support-only, never the notify default), channels (channel UUIDs; the sink posts to the first entry), reporter_key_ref (a key reference such as an env var name \u2014 never the private key itself); CI/headless: set DONTPANIC_SKIP_BUZZ=1 to silence this advisory",
+      "warn": true
+    },
+    {
+      "name": "models:implementer",
+      "ok": true,
+      "message": "claude: harness CLI default model",
+      "remediation": "",
+      "warn": false
+    },
+    {
+      "name": "models:auditor",
+      "ok": true,
+      "message": "codex: harness CLI default model",
+      "remediation": "",
+      "warn": false
+    },
+    {
+      "name": "models:goal_auditor",
+      "ok": true,
+      "message": "codex: harness CLI default model",
+      "remediation": "",
+      "warn": false
     }
   ],
-  "passed": 31,
+  "passed": 38,
   "failed": 0,
-  "warnings": 4,
+  "warnings": 5,
   "architecture_drift": {
     "state": "stale_major",
     "changed_files": [
@@ -2147,11 +2285,16 @@ stdout:
       "added: docs/plans/2026-06-04-003-feat-integration-operator-actions/features.json",
       "added: docs/plans/2026-06-04-003-feat-integration-operator-actions/plan.md",
       "added: docs/plans/2026-06-04-004-feat-dashboard-state-fidelity/features.json",
-      "added: \u2026 +315 more",
+      "added: \u2026 +372 more",
       "modified: claude/shared/VERSION",
       "modified: claude/shared/schemas/v1.0/capability.schema.json",
+      "modified: claude/shared/schemas/v1.0/features.schema.json",
       "modified: claude/shared/schemas/v1.0/models/features_model.py",
       "modified: claude/shared/schemas/v1.0/models/objective_contract_model.py",
+      "modified: claude/shared/schemas/v1.0/models/plan_model.py",
+      "modified: claude/shared/schemas/v1.0/objective_contract.schema.json",
+      "modified: claude/shared/schemas/v1.0/plan.schema.json",
+      "modified: claude/shared/schemas/v1.0/validate.py",
       "modified: docs/plans/2026-04-19-001-infra-cross-agent-orchestration/plan.md",
       "modified: docs/plans/2026-04-29-001-feat-changelog-skill/features.json",
       "modified: docs/plans/2026-04-29-001-feat-changelog-skill/plan.md",
@@ -2163,12 +2306,7 @@ stdout:
       "modified: scripts/dontpanic_orchestrate/active_supervisors.py",
       "modified: scripts/dontpanic_orchestrate/agent_brief.py",
       "modified: scripts/dontpanic_orchestrate/agent_manifest.py",
-      "modified: scripts/dontpanic_orchestrate/agent_surface.py",
-      "modified: scripts/dontpanic_orchestrate/architecture_view_state.py",
-      "modified: scripts/dontpanic_orchestrate/capabilities.py",
-      "modified: scripts/dontpanic_orchestrate/circuit_breakers.py",
-      "modified: scripts/dontpanic_orchestrate/cli.py",
-      "modified: \u2026 +52 more"
+      "modified: \u2026 +72 more"
     ],
     "changed_files_categorized": {
       "added": [
@@ -2192,14 +2330,19 @@ stdout:
         "docs/plans/2026-06-04-003-feat-integration-operator-actions/features.json",
         "docs/plans/2026-06-04-003-feat-integration-operator-actions/plan.md",
         "docs/plans/2026-06-04-004-feat-dashboard-state-fidelity/features.json",
-        "\u2026 +315 more"
+        "\u2026 +372 more"
       ],
       "removed": [],
       "modified": [
         "claude/shared/VERSION",
         "claude/shared/schemas/v1.0/capability.schema.json",
+        "claude/shared/schemas/v1.0/features.schema.json",
         "claude/shared/schemas/v1.0/models/features_model.py",
         "claude/shared/schemas/v1.0/models/objective_contract_model.py",
+        "claude/shared/schemas/v1.0/models/plan_model.py",
+        "claude/shared/schemas/v1.0/objective_contract.schema.json",
+        "claude/shared/schemas/v1.0/plan.schema.json",
+        "claude/shared/schemas/v1.0/validate.py",
         "docs/plans/2026-04-19-001-infra-cross-agent-orchestration/plan.md",
         "docs/plans/2026-04-29-001-feat-changelog-skill/features.json",
         "docs/plans/2026-04-29-001-feat-changelog-skill/plan.md",
@@ -2211,16 +2354,11 @@ stdout:
         "scripts/dontpanic_orchestrate/active_supervisors.py",
         "scripts/dontpanic_orchestrate/agent_brief.py",
         "scripts/dontpanic_orchestrate/agent_manifest.py",
-        "scripts/dontpanic_orchestrate/agent_surface.py",
-        "scripts/dontpanic_orchestrate/architecture_view_state.py",
-        "scripts/dontpanic_orchestrate/capabilities.py",
-        "scripts/dontpanic_orchestrate/circuit_breakers.py",
-        "scripts/dontpanic_orchestrate/cli.py",
-        "\u2026 +52 more"
+        "\u2026 +72 more"
       ]
     },
-    "changed_files_total": 407,
-    "unchanged_files": 364,
+    "changed_files_total": 484,
+    "unchanged_files": 344,
     "missing_required": [],
     "recommendation": "major drift (\u22655% files changed). Run `python -m dontpanic_orchestrate architecture regen` before downstream consumers (Plan 4.5 `dontpanic new`, F004 supervisor regen hook) read a stale snapshot.",
     "ok": true,

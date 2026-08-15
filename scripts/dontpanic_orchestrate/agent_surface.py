@@ -337,17 +337,61 @@ def render_setup(name: str) -> str:
     return "\n".join(lines) + "\n"
 
 
-def assert_registrable(name: str) -> None:
-    """Guard for ``register-worker``: raise :class:`RegisterWorkerError` when
-    ``name`` is not a real executor, so the CLI refuses before writing any
-    config (F002 acceptance #4)."""
-    if not is_worker_capable(name):
-        registered = ", ".join(worker_executors()) or "(none)"
-        raise RegisterWorkerError(
-            f"{name!r} has no executor in DontPanic and cannot be registered as a "
-            f"worker. {name} can operate DontPanic as an interactive agent, but only "
-            f"these agents are dispatchable workers: {registered}."
-        )
+def assert_registrable(
+    name: str, *, role: str | None = None, project_path: Path | None = None
+) -> None:
+    """Guard for ``register-worker`` / ``roles set``: raise
+    :class:`RegisterWorkerError` when ``name`` cannot be dispatched, so the
+    CLI refuses before writing any config (F002 acceptance #4).
+
+    F013: ``name`` may also be a defined worker-profile id. The profile
+    path applies harness membership + ``allowed_roles`` + capability gates
+    (via :mod:`worker_profiles`); gate refusals re-raise as
+    :class:`RegisterWorkerError` so every caller keeps one refusal type.
+    ``role`` scopes the allowed_roles/capability check to the slot being
+    assigned; ``project_path`` includes that project's profile layer.
+
+    F014: a registered harness is additionally capability-gated per role —
+    an audit-only harness (ollama/openrouter) is refused for the
+    implementer slot with the same vocabulary the profile path uses.
+    """
+    if is_worker_capable(name):
+        if role is not None:
+            from dontpanic_orchestrate.config.worker_profiles import (
+                ROLE_REQUIRED_CAPABILITIES,
+                harness_missing_capabilities_for_role,
+            )
+
+            missing = harness_missing_capabilities_for_role(name, role)
+            if missing:
+                raise RegisterWorkerError(
+                    f"harness {name!r} cannot hold role {role!r}: missing "
+                    f"capabilities {missing}. The {role} role requires "
+                    f"{sorted(ROLE_REQUIRED_CAPABILITIES.get(role, frozenset()))}."
+                )
+        return
+
+    # Lazy import — worker_profiles imports config layers, not this module,
+    # so the lazy edge keeps the dependency acyclic.
+    from dontpanic_orchestrate import worker_profiles as wp
+
+    profile = wp.load_profiles(project_path).get(name)
+    if profile is not None:
+        try:
+            if role is not None:
+                wp.assert_profile_role_allowed(name, profile, role)
+            else:
+                wp.assert_profile_dispatchable(name, profile)
+        except wp.WorkerProfileError as exc:
+            raise RegisterWorkerError(str(exc)) from exc
+        return
+
+    registered = ", ".join(worker_executors()) or "(none)"
+    raise RegisterWorkerError(
+        f"{name!r} has no executor in DontPanic and cannot be registered as a "
+        f"worker. {name} can operate DontPanic as an interactive agent, but only "
+        f"these agents are dispatchable workers: {registered}."
+    )
 
 
 __all__ = [

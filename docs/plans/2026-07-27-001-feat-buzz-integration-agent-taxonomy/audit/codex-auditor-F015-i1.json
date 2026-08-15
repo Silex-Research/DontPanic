@@ -1,0 +1,49 @@
+{
+  "task_id": "2026-07-27-001-feat-buzz-integration-agent-taxonomy",
+  "audit_id": "2026-07-27-001-feat-buzz-integration-agent-taxonomy#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-07-28T14:45:02Z",
+  "completed_at": "2026-07-28T14:49:28Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "worker: profile_id=None harness=codex model=(harness default)",
+    "quota gate aud=37.022385",
+    "reviewing implementer audit at claude-implementer-F015-i1.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-07-27-001-feat-buzz-integration-agent-taxonomy-4k76g82n target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 209777 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 3175386,
+    "tokens_out": 19779,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 10 (see structured target_context.commands_run)\n\n[F015] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nOverall verdict: **signed_off**. The implementer correctly declared `{DontPanic, dev, (none)}` in both prose and structured `target_context`; no forbidden command shapes were recorded. All prior blocking findings are addressed. The focused suite contains 34 tests; execution was prevented here by the read-only sandbox lacking a temporary directory, but collection succeeded, both write-free runtime smokes passed, and scoped Ruff lint/format checks passed. The broader `cli.py` lint exposed six unrelated pre-existing violations.\n\nFINDING (advisory, documentation): The new `models` command is routed and functional but absent from top-level help and operator documentation. Evidence: `_run_cli` routes `models`, while `_print_top_level_help` has no corresponding entry. Recommendation: add `models list|aliases` to the public command surface.\n\n$ git status --short --branch\n$ git diff HEAD~1 --stat\n$ git diff HEAD~1 -- ../scripts/dontpanic_doctor.py ../scripts/dontpanic_orchestrate/cli.py ../scripts/dontpanic_orchestrate/completion_dispatch.py ../scripts/dontpanic_orchestrate/executors/base.py ../scripts/dontpanic_orchestrate/global_config.py ../scripts/dontpanic_orchestrate/project_config.py ../scripts/dontpanic_orchestrate/sufficiency_auditor.py ../scripts/dontpanic_orchestrate/supervisor.py\n$ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_f015_model_catalog.py -q\n$ ruff che",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "git status --short --branch",
+      "git diff HEAD~1 --stat",
+      "git diff HEAD~1 -- ../scripts/dontpanic_doctor.py ../scripts/dontpanic_orchestrate/cli.py ../scripts/dontpanic_orchestrate/completion_dispatch.py ../scripts/dontpanic_orchestrate/executors/base.py ../scripts/dontpanic_orchestrate/global_config.py ../scripts/dontpanic_orchestrate/project_config.py ../scripts/dontpanic_orchestrate/sufficiency_auditor.py ../scripts/dontpanic_orchestrate/supervisor.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_f015_model_catalog.py -q",
+      "ruff check --no-cache scripts/dontpanic_doctor.py scripts/dontpanic_orchestrate/cli.py scripts/dontpanic_orchestrate/executors/base.py scripts/dontpanic_orchestrate/global_config.py scripts/dontpanic_orchestrate/project_config.py scripts/dontpanic_orchestrate/supervisor.py scripts/dontpanic_orchestrate/model_catalog.py scripts/dontpanic_orchestrate/models_cli.py scripts/dontpanic_orchestrate/sufficiency_auditor.py scripts/dontpanic_orchestrate/completion_dispatch.py scripts/dontpanic_orchestrate/tests/test_f015_model_catalog.py",
+      "ruff check --no-cache scripts/dontpanic_doctor.py scripts/dontpanic_orchestrate/executors/base.py scripts/dontpanic_orchestrate/global_config.py scripts/dontpanic_orchestrate/project_config.py scripts/dontpanic_orchestrate/supervisor.py scripts/dontpanic_orchestrate/model_catalog.py scripts/dontpanic_orchestrate/models_cli.py scripts/dontpanic_orchestrate/sufficiency_auditor.py scripts/dontpanic_orchestrate/completion_dispatch.py scripts/dontpanic_orchestrate/tests/test_f015_model_catalog.py",
+      "ruff format --no-cache --check scripts/dontpanic_doctor.py scripts/dontpanic_orchestrate/executors/base.py scripts/dontpanic_orchestrate/global_config.py scripts/dontpanic_orchestrate/project_config.py scripts/dontpanic_orchestrate/supervisor.py scripts/dontpanic_orchestrate/model_catalog.py scripts/dontpanic_orchestrate/models_cli.py scripts/dontpanic_orchestrate/sufficiency_auditor.py scripts/dontpanic_orchestrate/completion_dispatch.py scripts/dontpanic_orchestrate/tests/test_f015_model_catalog.py",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c 'import subprocess; from dontpanic_orchestrate import model_catalog as mc; from dontpanic_orchestrate.models_cli import models_main; mc.shutil.which=lambda _:\"/usr/bin/ollama\"; mc.subprocess.run=lambda argv,**kw:subprocess.CompletedProcess(argv,0,stdout=\"NAME ID\\nllama3:latest abc\\n\",stderr=\"\"); assert models_main([\"list\",\"--harness\",\"ollama\",\"--json\"])==0; mc.load_model_aliases=lambda _:{\"fast\":\"vendor/model\"}; assert mc.resolve_alias(\"fast\",None)==\"vendor/model\"; assert mc.resolve_alias(\"freeform\",None)==\"freeform\"; print(\"F015 in-memory smoke: PASS\")'",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python -c 'import importlib.util,sys; from pathlib import Path; from dontpanic_orchestrate import model_catalog as mc,worker_profiles as wp; from dontpanic_orchestrate.config import resolvers; spec=importlib.util.spec_from_file_location(\"doctor_f015_smoke\",Path(\"scripts/dontpanic_doctor.py\")); doctor=importlib.util.module_from_spec(spec); sys.modules[\"doctor_f015_smoke\"]=doctor; spec.loader.exec_module(doctor); resolvers.resolve_role=lambda *a,**k:\"claude\"; wp.peek_worker=lambda *a,**k:None; resolvers.resolve_model=lambda *a,**k:\"vendor/mystery\"; mc.resolve_alias=lambda model,*a:model; mc.probe_model=lambda *a,**k:mc.ModelProbe(status=\"unknown\",detail=\"not listed\"); warned=doctor.check_model_catalog(); assert all(r.ok and r.warn for r in warned); mc.probe_model=lambda *a,**k:mc.ModelProbe(status=\"rejected\",detail=\"refused\"); failed=doctor.check_model_catalog(); assert all(not r.ok for r in failed); print(\"F015 doctor unknown/rejected smoke: PASS\")'",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts pytest -s --collect-only -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_f015_model_catalog.py -q"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "advisory",
+      "category": "documentation",
+      "feature_id": "F015",
+      "issue": "The new `models` command is routed and functional but absent from top-level help and operator documentation. Evidence: `_run_cli` routes `models`, while `_print_top_level_help` has no corresponding entry. Recommendation: add `models list|aliases` to the public command surface. $ git status --short --branch $ git diff HEAD~1 --stat $ git diff HEAD~1 -- ../scripts/dontpanic_doctor.py ../scripts/dontpanic_orchestrate/cli.py ../scripts/dontpanic_orchestrate/completion_dispatch.py ../scripts/dontpani",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "signed_off"
+}

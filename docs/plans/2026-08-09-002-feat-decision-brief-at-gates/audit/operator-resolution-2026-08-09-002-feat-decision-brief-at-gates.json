@@ -1,0 +1,8 @@
+{
+  "plan_id": "2026-08-09-002-feat-decision-brief-at-gates",
+  "feature_id": "F006",
+  "class": "environmental_reproduction_failure",
+  "memo": "evidence/closeout-memo.md",
+  "resolved": true,
+  "resolved_at": "2026-08-13T13:43:12Z"
+}

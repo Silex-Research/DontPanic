@@ -1,0 +1,31 @@
+{
+  "gate": "patch_completeness_cross_feature",
+  "plan_id": "2026-07-27-001-feat-buzz-integration-agent-taxonomy",
+  "current_feature_id": "F003",
+  "reason": "shared plan ledger and prior Track A docs (F001/F002) are co-owned plan surface",
+  "acknowledged_findings": [
+    {
+      "mode": "cross_feature_edit",
+      "severity": "block",
+      "current_feature_id": "F003",
+      "foreign_feature_id": "F002",
+      "paths": [
+        "capabilities/README.md"
+      ],
+      "reason": "Dispatch for F003 touched 1 path(s) owned by F002: capabilities/README.md. Cross-feature edits leak scope between features and should be split out or explicitly acknowledged.",
+      "recommendation": "Revert the foreign-owned paths from this dispatch and land them under F002, OR re-run with --acknowledge-cross-feature <reason> (>=8 chars) if the shared edit is legitimate."
+    },
+    {
+      "mode": "cross_feature_edit",
+      "severity": "block",
+      "current_feature_id": "F003",
+      "foreign_feature_id": "F004",
+      "paths": [
+        "docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/decisions.jsonl"
+      ],
+      "reason": "Dispatch for F003 touched 1 path(s) owned by F004: docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/decisions.jsonl. Cross-feature edits leak scope between features and should be split out or explicitly acknowledged.",
+      "recommendation": "Revert the foreign-owned paths from this dispatch and land them under F004, OR re-run with --acknowledge-cross-feature <reason> (>=8 chars) if the shared edit is legitimate."
+    }
+  ],
+  "recorded_at": "2026-07-28T00:37:53Z"
+}

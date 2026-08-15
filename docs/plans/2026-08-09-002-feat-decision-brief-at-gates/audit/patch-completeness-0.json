@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "status": "fail",
+  "findings": [
+    {
+      "mode": "unstaged_dirty_state",
+      "files": [
+        "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/evidence/F010-journey-transcript.md",
+        "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/evidence/F010-live-upgrade-report.json"
+      ],
+      "reason": "Unstaged modifications present. F003 will require an operator note when files fall outside touched_files. Files outside touched_files: docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/evidence/F010-journey-transcript.md,docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/evidence/F010-live-upgrade-report.json",
+      "severity": "block",
+      "recommendation": "Run: git add -u <paths> for files that should ride along; OR pass --unrelated-dirty-state-note <reason> at dispatch."
+    }
+  ],
+  "files": [
+    "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/evidence/F010-journey-transcript.md",
+    "docs/plans/2026-06-21-001-feat-upgrade-readiness-doctor/evidence/F010-live-upgrade-report.json"
+  ]
+}

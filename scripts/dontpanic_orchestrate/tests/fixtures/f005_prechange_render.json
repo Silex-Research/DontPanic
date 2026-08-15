@@ -1,0 +1,1019 @@
+{
+  "kinds": {
+    "architecture_regen_failed": {
+      "declared": {
+        "affected_audience": "operator",
+        "band": "advisory",
+        "detail": "Post-commit architecture regen failed (`SubprocessTimeout`). The volley terminal is unaffected; operator may re-run the regen.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "dontpanic architecture regen",
+        "plain_consequence": "Clearing pre_merge writes the success signoff for F005 and releases it to merge. This is the last stop before the change lands.",
+        "reversible": false,
+        "title": "System warning on 2026-08-09-002-feat-decision-brief-at-gates \u2014 architecture map may be stale",
+        "user_impact": "Operators reading an approval prompt see what the change does to the product before they see the plan id",
+        "what_changes": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line"
+      },
+      "no_brief": {
+        "affected_audience": null,
+        "band": "advisory",
+        "detail": "Post-commit architecture regen failed (`SubprocessTimeout`). The volley terminal is unaffected; operator may re-run the regen.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "dontpanic architecture regen",
+        "plain_consequence": null,
+        "reversible": false,
+        "title": "System warning on 2026-08-09-002-feat-decision-brief-at-gates \u2014 architecture map may be stale",
+        "user_impact": null,
+        "what_changes": null
+      },
+      "plan_level": {
+        "affected_audience": null,
+        "band": "advisory",
+        "detail": "Post-commit architecture regen failed (`SubprocessTimeout`). The volley terminal is unaffected; operator may re-run the regen.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "dontpanic architecture regen",
+        "plain_consequence": "Clearing upfront starts the volley on Decision brief at gates \u2014 ask for approval in product terms, not orchestration terms. The resulting patch is still reviewed before it merges.",
+        "reversible": true,
+        "title": "System warning on 2026-08-09-002-feat-decision-brief-at-gates \u2014 architecture map may be stale",
+        "user_impact": null,
+        "what_changes": "Decision brief at gates \u2014 ask for approval in product terms, not orchestration terms"
+      },
+      "stale": {
+        "affected_audience": "operator",
+        "band": "advisory",
+        "detail": "Post-commit architecture regen failed (`SubprocessTimeout`). The volley terminal is unaffected; operator may re-run the regen.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "dontpanic architecture regen",
+        "plain_consequence": "Clearing pre_impl lets the implementer run on F005. The resulting patch is still reviewed before it merges.",
+        "reversible": true,
+        "title": "System warning on 2026-08-09-002-feat-decision-brief-at-gates \u2014 architecture map may be stale",
+        "user_impact": "Operators reading an approval prompt see what the change does to the product before they see the plan id",
+        "what_changes": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line"
+      },
+      "undeclared": {
+        "affected_audience": null,
+        "band": "advisory",
+        "detail": "Post-commit architecture regen failed (`SubprocessTimeout`). The volley terminal is unaffected; operator may re-run the regen.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "dontpanic architecture regen",
+        "plain_consequence": "Clearing pre_impl lets the implementer run on F005. The resulting patch is still reviewed before it merges.",
+        "reversible": true,
+        "title": "System warning on 2026-08-09-002-feat-decision-brief-at-gates \u2014 architecture map may be stale",
+        "user_impact": null,
+        "what_changes": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line"
+      }
+    },
+    "architecture_regenerated": {
+      "declared": null,
+      "no_brief": null,
+      "plan_level": null,
+      "stale": null,
+      "undeclared": null
+    },
+    "auto_cleared_pre_impl": {
+      "declared": null,
+      "no_brief": null,
+      "plan_level": null,
+      "stale": null,
+      "undeclared": null
+    },
+    "blocked_no_findings": {
+      "declared": null,
+      "no_brief": null,
+      "plan_level": null,
+      "stale": null,
+      "undeclared": null
+    },
+    "breaker:patch_incomplete": {
+      "declared": {
+        "affected_audience": "operator",
+        "band": "needs_action",
+        "detail": "Circuit breaker `patch_incomplete` tripped. Operator clearance required before dispatch continues.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "dontpanic approve 2026-08-09-002-feat-decision-brief-at-gates breaker:patch_incomplete",
+        "plain_consequence": "Clearing pre_merge writes the success signoff for F005 and releases it to merge. This is the last stop before the change lands.",
+        "reversible": false,
+        "title": "Blocked work on 2026-08-09-002-feat-decision-brief-at-gates \u2014 breaker `patch_incomplete` tripped",
+        "user_impact": "Operators reading an approval prompt see what the change does to the product before they see the plan id",
+        "what_changes": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line"
+      },
+      "no_brief": {
+        "affected_audience": null,
+        "band": "needs_action",
+        "detail": "Circuit breaker `patch_incomplete` tripped. Operator clearance required before dispatch continues.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "dontpanic approve 2026-08-09-002-feat-decision-brief-at-gates breaker:patch_incomplete",
+        "plain_consequence": null,
+        "reversible": false,
+        "title": "Blocked work on 2026-08-09-002-feat-decision-brief-at-gates \u2014 breaker `patch_incomplete` tripped",
+        "user_impact": null,
+        "what_changes": null
+      },
+      "plan_level": {
+        "affected_audience": null,
+        "band": "needs_action",
+        "detail": "Circuit breaker `patch_incomplete` tripped. Operator clearance required before dispatch continues.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "dontpanic approve 2026-08-09-002-feat-decision-brief-at-gates breaker:patch_incomplete",
+        "plain_consequence": "Clearing upfront starts the volley on Decision brief at gates \u2014 ask for approval in product terms, not orchestration terms. The resulting patch is still reviewed before it merges.",
+        "reversible": true,
+        "title": "Blocked work on 2026-08-09-002-feat-decision-brief-at-gates \u2014 breaker `patch_incomplete` tripped",
+        "user_impact": null,
+        "what_changes": "Decision brief at gates \u2014 ask for approval in product terms, not orchestration terms"
+      },
+      "stale": {
+        "affected_audience": "operator",
+        "band": "needs_action",
+        "detail": "Circuit breaker `patch_incomplete` tripped. Operator clearance required before dispatch continues.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "dontpanic approve 2026-08-09-002-feat-decision-brief-at-gates breaker:patch_incomplete",
+        "plain_consequence": "Clearing pre_impl lets the implementer run on F005. The resulting patch is still reviewed before it merges.",
+        "reversible": true,
+        "title": "Blocked work on 2026-08-09-002-feat-decision-brief-at-gates \u2014 breaker `patch_incomplete` tripped",
+        "user_impact": "Operators reading an approval prompt see what the change does to the product before they see the plan id",
+        "what_changes": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line"
+      },
+      "undeclared": {
+        "affected_audience": null,
+        "band": "needs_action",
+        "detail": "Circuit breaker `patch_incomplete` tripped. Operator clearance required before dispatch continues.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "dontpanic approve 2026-08-09-002-feat-decision-brief-at-gates breaker:patch_incomplete",
+        "plain_consequence": "Clearing pre_impl lets the implementer run on F005. The resulting patch is still reviewed before it merges.",
+        "reversible": true,
+        "title": "Blocked work on 2026-08-09-002-feat-decision-brief-at-gates \u2014 breaker `patch_incomplete` tripped",
+        "user_impact": null,
+        "what_changes": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line"
+      }
+    },
+    "breaker_tripped": {
+      "declared": {
+        "affected_audience": "operator",
+        "band": "needs_action",
+        "detail": "Circuit breaker `iteration_cap` tripped. Operator clearance required before dispatch continues.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "dontpanic approve 2026-08-09-002-feat-decision-brief-at-gates breaker:iteration_cap",
+        "plain_consequence": "Clearing pre_merge writes the success signoff for F005 and releases it to merge. This is the last stop before the change lands.",
+        "reversible": false,
+        "title": "Blocked work on 2026-08-09-002-feat-decision-brief-at-gates \u2014 breaker `iteration_cap` tripped",
+        "user_impact": "Operators reading an approval prompt see what the change does to the product before they see the plan id",
+        "what_changes": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line"
+      },
+      "no_brief": {
+        "affected_audience": null,
+        "band": "needs_action",
+        "detail": "Circuit breaker `iteration_cap` tripped. Operator clearance required before dispatch continues.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "dontpanic approve 2026-08-09-002-feat-decision-brief-at-gates breaker:iteration_cap",
+        "plain_consequence": null,
+        "reversible": false,
+        "title": "Blocked work on 2026-08-09-002-feat-decision-brief-at-gates \u2014 breaker `iteration_cap` tripped",
+        "user_impact": null,
+        "what_changes": null
+      },
+      "plan_level": {
+        "affected_audience": null,
+        "band": "needs_action",
+        "detail": "Circuit breaker `iteration_cap` tripped. Operator clearance required before dispatch continues.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "dontpanic approve 2026-08-09-002-feat-decision-brief-at-gates breaker:iteration_cap",
+        "plain_consequence": "Clearing upfront starts the volley on Decision brief at gates \u2014 ask for approval in product terms, not orchestration terms. The resulting patch is still reviewed before it merges.",
+        "reversible": true,
+        "title": "Blocked work on 2026-08-09-002-feat-decision-brief-at-gates \u2014 breaker `iteration_cap` tripped",
+        "user_impact": null,
+        "what_changes": "Decision brief at gates \u2014 ask for approval in product terms, not orchestration terms"
+      },
+      "stale": {
+        "affected_audience": "operator",
+        "band": "needs_action",
+        "detail": "Circuit breaker `iteration_cap` tripped. Operator clearance required before dispatch continues.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "dontpanic approve 2026-08-09-002-feat-decision-brief-at-gates breaker:iteration_cap",
+        "plain_consequence": "Clearing pre_impl lets the implementer run on F005. The resulting patch is still reviewed before it merges.",
+        "reversible": true,
+        "title": "Blocked work on 2026-08-09-002-feat-decision-brief-at-gates \u2014 breaker `iteration_cap` tripped",
+        "user_impact": "Operators reading an approval prompt see what the change does to the product before they see the plan id",
+        "what_changes": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line"
+      },
+      "undeclared": {
+        "affected_audience": null,
+        "band": "needs_action",
+        "detail": "Circuit breaker `iteration_cap` tripped. Operator clearance required before dispatch continues.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "dontpanic approve 2026-08-09-002-feat-decision-brief-at-gates breaker:iteration_cap",
+        "plain_consequence": "Clearing pre_impl lets the implementer run on F005. The resulting patch is still reviewed before it merges.",
+        "reversible": true,
+        "title": "Blocked work on 2026-08-09-002-feat-decision-brief-at-gates \u2014 breaker `iteration_cap` tripped",
+        "user_impact": null,
+        "what_changes": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line"
+      }
+    },
+    "calibration_required": {
+      "declared": {
+        "affected_audience": "operator",
+        "band": "needs_action",
+        "detail": "Calibration sample required for `claude.weekly` so the breaker can convert local proxy units into percent-of-plan.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "python -m dontpanic_orchestrate calibrate-claude --window weekly --dashboard-pct 0",
+        "plain_consequence": "Clearing pre_merge writes the success signoff for F005 and releases it to merge. This is the last stop before the change lands.",
+        "reversible": false,
+        "title": "Budget guardrail on 2026-08-09-002-feat-decision-brief-at-gates \u2014 calibration required",
+        "user_impact": "Operators reading an approval prompt see what the change does to the product before they see the plan id",
+        "what_changes": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line"
+      },
+      "no_brief": {
+        "affected_audience": null,
+        "band": "needs_action",
+        "detail": "Calibration sample required for `claude.weekly` so the breaker can convert local proxy units into percent-of-plan.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "python -m dontpanic_orchestrate calibrate-claude --window weekly --dashboard-pct 0",
+        "plain_consequence": null,
+        "reversible": false,
+        "title": "Budget guardrail on 2026-08-09-002-feat-decision-brief-at-gates \u2014 calibration required",
+        "user_impact": null,
+        "what_changes": null
+      },
+      "plan_level": {
+        "affected_audience": null,
+        "band": "needs_action",
+        "detail": "Calibration sample required for `claude.weekly` so the breaker can convert local proxy units into percent-of-plan.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "python -m dontpanic_orchestrate calibrate-claude --window weekly --dashboard-pct 0",
+        "plain_consequence": "Clearing upfront starts the volley on Decision brief at gates \u2014 ask for approval in product terms, not orchestration terms. The resulting patch is still reviewed before it merges.",
+        "reversible": true,
+        "title": "Budget guardrail on 2026-08-09-002-feat-decision-brief-at-gates \u2014 calibration required",
+        "user_impact": null,
+        "what_changes": "Decision brief at gates \u2014 ask for approval in product terms, not orchestration terms"
+      },
+      "stale": {
+        "affected_audience": "operator",
+        "band": "needs_action",
+        "detail": "Calibration sample required for `claude.weekly` so the breaker can convert local proxy units into percent-of-plan.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "python -m dontpanic_orchestrate calibrate-claude --window weekly --dashboard-pct 0",
+        "plain_consequence": "Clearing pre_impl lets the implementer run on F005. The resulting patch is still reviewed before it merges.",
+        "reversible": true,
+        "title": "Budget guardrail on 2026-08-09-002-feat-decision-brief-at-gates \u2014 calibration required",
+        "user_impact": "Operators reading an approval prompt see what the change does to the product before they see the plan id",
+        "what_changes": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line"
+      },
+      "undeclared": {
+        "affected_audience": null,
+        "band": "needs_action",
+        "detail": "Calibration sample required for `claude.weekly` so the breaker can convert local proxy units into percent-of-plan.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "python -m dontpanic_orchestrate calibrate-claude --window weekly --dashboard-pct 0",
+        "plain_consequence": "Clearing pre_impl lets the implementer run on F005. The resulting patch is still reviewed before it merges.",
+        "reversible": true,
+        "title": "Budget guardrail on 2026-08-09-002-feat-decision-brief-at-gates \u2014 calibration required",
+        "user_impact": null,
+        "what_changes": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line"
+      }
+    },
+    "config_required": {
+      "declared": {
+        "affected_audience": "operator",
+        "band": "needs_action",
+        "detail": "Quota config required (`no_cap_for_signal`). Run `python -m dontpanic_orchestrate quota-caps init` to seed defaults, hand-edit `~/.jarvis/quota_caps.json` for `no_cap_for_signal`, or re-run `scripts/quota_check.py` for `missing_vendor_block`.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "python -m dontpanic_orchestrate quota-caps init",
+        "plain_consequence": "Clearing pre_merge writes the success signoff for F005 and releases it to merge. This is the last stop before the change lands.",
+        "reversible": false,
+        "title": "Setup drift on 2026-08-09-002-feat-decision-brief-at-gates \u2014 quota config required",
+        "user_impact": "Operators reading an approval prompt see what the change does to the product before they see the plan id",
+        "what_changes": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line"
+      },
+      "no_brief": {
+        "affected_audience": null,
+        "band": "needs_action",
+        "detail": "Quota config required (`no_cap_for_signal`). Run `python -m dontpanic_orchestrate quota-caps init` to seed defaults, hand-edit `~/.jarvis/quota_caps.json` for `no_cap_for_signal`, or re-run `scripts/quota_check.py` for `missing_vendor_block`.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "python -m dontpanic_orchestrate quota-caps init",
+        "plain_consequence": null,
+        "reversible": false,
+        "title": "Setup drift on 2026-08-09-002-feat-decision-brief-at-gates \u2014 quota config required",
+        "user_impact": null,
+        "what_changes": null
+      },
+      "plan_level": {
+        "affected_audience": null,
+        "band": "needs_action",
+        "detail": "Quota config required (`no_cap_for_signal`). Run `python -m dontpanic_orchestrate quota-caps init` to seed defaults, hand-edit `~/.jarvis/quota_caps.json` for `no_cap_for_signal`, or re-run `scripts/quota_check.py` for `missing_vendor_block`.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "python -m dontpanic_orchestrate quota-caps init",
+        "plain_consequence": "Clearing upfront starts the volley on Decision brief at gates \u2014 ask for approval in product terms, not orchestration terms. The resulting patch is still reviewed before it merges.",
+        "reversible": true,
+        "title": "Setup drift on 2026-08-09-002-feat-decision-brief-at-gates \u2014 quota config required",
+        "user_impact": null,
+        "what_changes": "Decision brief at gates \u2014 ask for approval in product terms, not orchestration terms"
+      },
+      "stale": {
+        "affected_audience": "operator",
+        "band": "needs_action",
+        "detail": "Quota config required (`no_cap_for_signal`). Run `python -m dontpanic_orchestrate quota-caps init` to seed defaults, hand-edit `~/.jarvis/quota_caps.json` for `no_cap_for_signal`, or re-run `scripts/quota_check.py` for `missing_vendor_block`.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "python -m dontpanic_orchestrate quota-caps init",
+        "plain_consequence": "Clearing pre_impl lets the implementer run on F005. The resulting patch is still reviewed before it merges.",
+        "reversible": true,
+        "title": "Setup drift on 2026-08-09-002-feat-decision-brief-at-gates \u2014 quota config required",
+        "user_impact": "Operators reading an approval prompt see what the change does to the product before they see the plan id",
+        "what_changes": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line"
+      },
+      "undeclared": {
+        "affected_audience": null,
+        "band": "needs_action",
+        "detail": "Quota config required (`no_cap_for_signal`). Run `python -m dontpanic_orchestrate quota-caps init` to seed defaults, hand-edit `~/.jarvis/quota_caps.json` for `no_cap_for_signal`, or re-run `scripts/quota_check.py` for `missing_vendor_block`.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "python -m dontpanic_orchestrate quota-caps init",
+        "plain_consequence": "Clearing pre_impl lets the implementer run on F005. The resulting patch is still reviewed before it merges.",
+        "reversible": true,
+        "title": "Setup drift on 2026-08-09-002-feat-decision-brief-at-gates \u2014 quota config required",
+        "user_impact": null,
+        "what_changes": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line"
+      }
+    },
+    "defer_cleared": {
+      "declared": null,
+      "no_brief": null,
+      "plan_level": null,
+      "stale": null,
+      "undeclared": null
+    },
+    "defer_tripped": {
+      "declared": null,
+      "no_brief": null,
+      "plan_level": null,
+      "stale": null,
+      "undeclared": null
+    },
+    "environmental_blocker_short_circuit": {
+      "declared": {
+        "affected_audience": "operator",
+        "band": "needs_action",
+        "detail": "Every auditor finding classified as `environmental_reproduction_failure`; volley short-circuited without another paid implementer round.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "dontpanic approve 2026-08-09-002-feat-decision-brief-at-gates breaker:environmental_blocker",
+        "plain_consequence": "Clearing pre_merge writes the success signoff for F005 and releases it to merge. This is the last stop before the change lands.",
+        "reversible": false,
+        "title": "Blocked work on 2026-08-09-002-feat-decision-brief-at-gates \u2014 environmental blocker",
+        "user_impact": "Operators reading an approval prompt see what the change does to the product before they see the plan id",
+        "what_changes": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line"
+      },
+      "no_brief": {
+        "affected_audience": null,
+        "band": "needs_action",
+        "detail": "Every auditor finding classified as `environmental_reproduction_failure`; volley short-circuited without another paid implementer round.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "dontpanic approve 2026-08-09-002-feat-decision-brief-at-gates breaker:environmental_blocker",
+        "plain_consequence": null,
+        "reversible": false,
+        "title": "Blocked work on 2026-08-09-002-feat-decision-brief-at-gates \u2014 environmental blocker",
+        "user_impact": null,
+        "what_changes": null
+      },
+      "plan_level": {
+        "affected_audience": null,
+        "band": "needs_action",
+        "detail": "Every auditor finding classified as `environmental_reproduction_failure`; volley short-circuited without another paid implementer round.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "dontpanic approve 2026-08-09-002-feat-decision-brief-at-gates breaker:environmental_blocker",
+        "plain_consequence": "Clearing upfront starts the volley on Decision brief at gates \u2014 ask for approval in product terms, not orchestration terms. The resulting patch is still reviewed before it merges.",
+        "reversible": true,
+        "title": "Blocked work on 2026-08-09-002-feat-decision-brief-at-gates \u2014 environmental blocker",
+        "user_impact": null,
+        "what_changes": "Decision brief at gates \u2014 ask for approval in product terms, not orchestration terms"
+      },
+      "stale": {
+        "affected_audience": "operator",
+        "band": "needs_action",
+        "detail": "Every auditor finding classified as `environmental_reproduction_failure`; volley short-circuited without another paid implementer round.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "dontpanic approve 2026-08-09-002-feat-decision-brief-at-gates breaker:environmental_blocker",
+        "plain_consequence": "Clearing pre_impl lets the implementer run on F005. The resulting patch is still reviewed before it merges.",
+        "reversible": true,
+        "title": "Blocked work on 2026-08-09-002-feat-decision-brief-at-gates \u2014 environmental blocker",
+        "user_impact": "Operators reading an approval prompt see what the change does to the product before they see the plan id",
+        "what_changes": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line"
+      },
+      "undeclared": {
+        "affected_audience": null,
+        "band": "needs_action",
+        "detail": "Every auditor finding classified as `environmental_reproduction_failure`; volley short-circuited without another paid implementer round.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "dontpanic approve 2026-08-09-002-feat-decision-brief-at-gates breaker:environmental_blocker",
+        "plain_consequence": "Clearing pre_impl lets the implementer run on F005. The resulting patch is still reviewed before it merges.",
+        "reversible": true,
+        "title": "Blocked work on 2026-08-09-002-feat-decision-brief-at-gates \u2014 environmental blocker",
+        "user_impact": null,
+        "what_changes": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line"
+      }
+    },
+    "error": {
+      "declared": null,
+      "no_brief": null,
+      "plan_level": null,
+      "stale": null,
+      "undeclared": null
+    },
+    "feature_operator_resolved": {
+      "declared": null,
+      "no_brief": null,
+      "plan_level": null,
+      "stale": null,
+      "undeclared": null
+    },
+    "gate_cleared": {
+      "declared": null,
+      "no_brief": null,
+      "plan_level": null,
+      "stale": null,
+      "undeclared": null
+    },
+    "gate_hit": {
+      "declared": {
+        "affected_audience": "operator",
+        "band": "needs_action",
+        "detail": "Supervisor paused at gate `pre_merge` (stage `implement`). Operator must approve before dispatch continues.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "dontpanic approve 2026-08-09-002-feat-decision-brief-at-gates pre_merge",
+        "plain_consequence": "Clearing pre_merge writes the success signoff for F005 and releases it to merge. This is the last stop before the change lands.",
+        "reversible": false,
+        "title": "Approval needed on 2026-08-09-002-feat-decision-brief-at-gates",
+        "user_impact": "Operators reading an approval prompt see what the change does to the product before they see the plan id",
+        "what_changes": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line"
+      },
+      "no_brief": {
+        "affected_audience": null,
+        "band": "needs_action",
+        "detail": "Supervisor paused at gate `pre_merge` (stage `implement`). Operator must approve before dispatch continues.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "dontpanic approve 2026-08-09-002-feat-decision-brief-at-gates pre_merge",
+        "plain_consequence": null,
+        "reversible": false,
+        "title": "Approval needed on 2026-08-09-002-feat-decision-brief-at-gates",
+        "user_impact": null,
+        "what_changes": null
+      },
+      "plan_level": {
+        "affected_audience": null,
+        "band": "needs_action",
+        "detail": "Supervisor paused at gate `pre_merge` (stage `implement`). Operator must approve before dispatch continues.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "dontpanic approve 2026-08-09-002-feat-decision-brief-at-gates pre_merge",
+        "plain_consequence": "Clearing upfront starts the volley on Decision brief at gates \u2014 ask for approval in product terms, not orchestration terms. The resulting patch is still reviewed before it merges.",
+        "reversible": true,
+        "title": "Approval needed on 2026-08-09-002-feat-decision-brief-at-gates",
+        "user_impact": null,
+        "what_changes": "Decision brief at gates \u2014 ask for approval in product terms, not orchestration terms"
+      },
+      "stale": {
+        "affected_audience": "operator",
+        "band": "needs_action",
+        "detail": "Supervisor paused at gate `pre_merge` (stage `implement`). Operator must approve before dispatch continues.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "dontpanic approve 2026-08-09-002-feat-decision-brief-at-gates pre_merge",
+        "plain_consequence": "Clearing pre_impl lets the implementer run on F005. The resulting patch is still reviewed before it merges.",
+        "reversible": true,
+        "title": "Approval needed on 2026-08-09-002-feat-decision-brief-at-gates",
+        "user_impact": "Operators reading an approval prompt see what the change does to the product before they see the plan id",
+        "what_changes": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line"
+      },
+      "undeclared": {
+        "affected_audience": null,
+        "band": "needs_action",
+        "detail": "Supervisor paused at gate `pre_merge` (stage `implement`). Operator must approve before dispatch continues.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "dontpanic approve 2026-08-09-002-feat-decision-brief-at-gates pre_merge",
+        "plain_consequence": "Clearing pre_impl lets the implementer run on F005. The resulting patch is still reviewed before it merges.",
+        "reversible": true,
+        "title": "Approval needed on 2026-08-09-002-feat-decision-brief-at-gates",
+        "user_impact": null,
+        "what_changes": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line"
+      }
+    },
+    "gate_state_reconciliation_failed": {
+      "declared": {
+        "affected_audience": "operator",
+        "band": "needs_action",
+        "detail": "Persisted gate state contradicts plan declaration (`cleared_gate_still_pending`, gate=`pre_impl`, stage=`implement`). There is no canonical reconcile subcommand; inspect the persisted state file and INBOX entry before re-dispatching.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": null,
+        "plain_consequence": "Clearing pre_merge writes the success signoff for F005 and releases it to merge. This is the last stop before the change lands.",
+        "reversible": false,
+        "title": "Setup drift on 2026-08-09-002-feat-decision-brief-at-gates \u2014 gate state inconsistent",
+        "user_impact": "Operators reading an approval prompt see what the change does to the product before they see the plan id",
+        "what_changes": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line"
+      },
+      "no_brief": {
+        "affected_audience": null,
+        "band": "needs_action",
+        "detail": "Persisted gate state contradicts plan declaration (`cleared_gate_still_pending`, gate=`pre_impl`, stage=`implement`). There is no canonical reconcile subcommand; inspect the persisted state file and INBOX entry before re-dispatching.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": null,
+        "plain_consequence": null,
+        "reversible": false,
+        "title": "Setup drift on 2026-08-09-002-feat-decision-brief-at-gates \u2014 gate state inconsistent",
+        "user_impact": null,
+        "what_changes": null
+      },
+      "plan_level": {
+        "affected_audience": null,
+        "band": "needs_action",
+        "detail": "Persisted gate state contradicts plan declaration (`cleared_gate_still_pending`, gate=`pre_impl`, stage=`implement`). There is no canonical reconcile subcommand; inspect the persisted state file and INBOX entry before re-dispatching.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": null,
+        "plain_consequence": "Clearing upfront starts the volley on Decision brief at gates \u2014 ask for approval in product terms, not orchestration terms. The resulting patch is still reviewed before it merges.",
+        "reversible": true,
+        "title": "Setup drift on 2026-08-09-002-feat-decision-brief-at-gates \u2014 gate state inconsistent",
+        "user_impact": null,
+        "what_changes": "Decision brief at gates \u2014 ask for approval in product terms, not orchestration terms"
+      },
+      "stale": {
+        "affected_audience": "operator",
+        "band": "needs_action",
+        "detail": "Persisted gate state contradicts plan declaration (`cleared_gate_still_pending`, gate=`pre_impl`, stage=`implement`). There is no canonical reconcile subcommand; inspect the persisted state file and INBOX entry before re-dispatching.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": null,
+        "plain_consequence": "Clearing pre_impl lets the implementer run on F005. The resulting patch is still reviewed before it merges.",
+        "reversible": true,
+        "title": "Setup drift on 2026-08-09-002-feat-decision-brief-at-gates \u2014 gate state inconsistent",
+        "user_impact": "Operators reading an approval prompt see what the change does to the product before they see the plan id",
+        "what_changes": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line"
+      },
+      "undeclared": {
+        "affected_audience": null,
+        "band": "needs_action",
+        "detail": "Persisted gate state contradicts plan declaration (`cleared_gate_still_pending`, gate=`pre_impl`, stage=`implement`). There is no canonical reconcile subcommand; inspect the persisted state file and INBOX entry before re-dispatching.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": null,
+        "plain_consequence": "Clearing pre_impl lets the implementer run on F005. The resulting patch is still reviewed before it merges.",
+        "reversible": true,
+        "title": "Setup drift on 2026-08-09-002-feat-decision-brief-at-gates \u2014 gate state inconsistent",
+        "user_impact": null,
+        "what_changes": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line"
+      }
+    },
+    "nested_child_pending": {
+      "declared": null,
+      "no_brief": null,
+      "plan_level": null,
+      "stale": null,
+      "undeclared": null
+    },
+    "no_progress_classification": {
+      "declared": {
+        "affected_audience": "operator",
+        "band": "needs_action",
+        "detail": "Auditor verdict taxonomy `environmental_reproduction_failure` (blocking=false); recommended: review the audit envelope before re-dispatch.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "dontpanic resume 2026-08-09-002-feat-decision-brief-at-gates --all",
+        "plain_consequence": "Clearing pre_merge writes the success signoff for F005 and releases it to merge. This is the last stop before the change lands.",
+        "reversible": false,
+        "title": "Blocked work on 2026-08-09-002-feat-decision-brief-at-gates \u2014 no-progress taxonomy",
+        "user_impact": "Operators reading an approval prompt see what the change does to the product before they see the plan id",
+        "what_changes": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line"
+      },
+      "no_brief": {
+        "affected_audience": null,
+        "band": "needs_action",
+        "detail": "Auditor verdict taxonomy `environmental_reproduction_failure` (blocking=false); recommended: review the audit envelope before re-dispatch.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "dontpanic resume 2026-08-09-002-feat-decision-brief-at-gates --all",
+        "plain_consequence": null,
+        "reversible": false,
+        "title": "Blocked work on 2026-08-09-002-feat-decision-brief-at-gates \u2014 no-progress taxonomy",
+        "user_impact": null,
+        "what_changes": null
+      },
+      "plan_level": {
+        "affected_audience": null,
+        "band": "needs_action",
+        "detail": "Auditor verdict taxonomy `environmental_reproduction_failure` (blocking=false); recommended: review the audit envelope before re-dispatch.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "dontpanic resume 2026-08-09-002-feat-decision-brief-at-gates --all",
+        "plain_consequence": "Clearing upfront starts the volley on Decision brief at gates \u2014 ask for approval in product terms, not orchestration terms. The resulting patch is still reviewed before it merges.",
+        "reversible": true,
+        "title": "Blocked work on 2026-08-09-002-feat-decision-brief-at-gates \u2014 no-progress taxonomy",
+        "user_impact": null,
+        "what_changes": "Decision brief at gates \u2014 ask for approval in product terms, not orchestration terms"
+      },
+      "stale": {
+        "affected_audience": "operator",
+        "band": "needs_action",
+        "detail": "Auditor verdict taxonomy `environmental_reproduction_failure` (blocking=false); recommended: review the audit envelope before re-dispatch.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "dontpanic resume 2026-08-09-002-feat-decision-brief-at-gates --all",
+        "plain_consequence": "Clearing pre_impl lets the implementer run on F005. The resulting patch is still reviewed before it merges.",
+        "reversible": true,
+        "title": "Blocked work on 2026-08-09-002-feat-decision-brief-at-gates \u2014 no-progress taxonomy",
+        "user_impact": "Operators reading an approval prompt see what the change does to the product before they see the plan id",
+        "what_changes": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line"
+      },
+      "undeclared": {
+        "affected_audience": null,
+        "band": "needs_action",
+        "detail": "Auditor verdict taxonomy `environmental_reproduction_failure` (blocking=false); recommended: review the audit envelope before re-dispatch.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "dontpanic resume 2026-08-09-002-feat-decision-brief-at-gates --all",
+        "plain_consequence": "Clearing pre_impl lets the implementer run on F005. The resulting patch is still reviewed before it merges.",
+        "reversible": true,
+        "title": "Blocked work on 2026-08-09-002-feat-decision-brief-at-gates \u2014 no-progress taxonomy",
+        "user_impact": null,
+        "what_changes": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line"
+      }
+    },
+    "pre_impl_status_synced": {
+      "declared": null,
+      "no_brief": null,
+      "plan_level": null,
+      "stale": null,
+      "undeclared": null
+    },
+    "quota_warn": {
+      "declared": {
+        "affected_audience": "operator",
+        "band": "advisory",
+        "detail": "Quota soft-warn for `claude` at `82%` of weekly cap (threshold `80%`). Volley continues under `JARVIS_QUOTA_ENFORCE=soft`; set `hard` to halt at threshold.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": null,
+        "plain_consequence": "Clearing pre_merge writes the success signoff for F005 and releases it to merge. This is the last stop before the change lands.",
+        "reversible": false,
+        "title": "Budget guardrail on 2026-08-09-002-feat-decision-brief-at-gates \u2014 quota soft warn",
+        "user_impact": "Operators reading an approval prompt see what the change does to the product before they see the plan id",
+        "what_changes": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line"
+      },
+      "no_brief": {
+        "affected_audience": null,
+        "band": "advisory",
+        "detail": "Quota soft-warn for `claude` at `82%` of weekly cap (threshold `80%`). Volley continues under `JARVIS_QUOTA_ENFORCE=soft`; set `hard` to halt at threshold.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": null,
+        "plain_consequence": null,
+        "reversible": false,
+        "title": "Budget guardrail on 2026-08-09-002-feat-decision-brief-at-gates \u2014 quota soft warn",
+        "user_impact": null,
+        "what_changes": null
+      },
+      "plan_level": {
+        "affected_audience": null,
+        "band": "advisory",
+        "detail": "Quota soft-warn for `claude` at `82%` of weekly cap (threshold `80%`). Volley continues under `JARVIS_QUOTA_ENFORCE=soft`; set `hard` to halt at threshold.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": null,
+        "plain_consequence": "Clearing upfront starts the volley on Decision brief at gates \u2014 ask for approval in product terms, not orchestration terms. The resulting patch is still reviewed before it merges.",
+        "reversible": true,
+        "title": "Budget guardrail on 2026-08-09-002-feat-decision-brief-at-gates \u2014 quota soft warn",
+        "user_impact": null,
+        "what_changes": "Decision brief at gates \u2014 ask for approval in product terms, not orchestration terms"
+      },
+      "stale": {
+        "affected_audience": "operator",
+        "band": "advisory",
+        "detail": "Quota soft-warn for `claude` at `82%` of weekly cap (threshold `80%`). Volley continues under `JARVIS_QUOTA_ENFORCE=soft`; set `hard` to halt at threshold.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": null,
+        "plain_consequence": "Clearing pre_impl lets the implementer run on F005. The resulting patch is still reviewed before it merges.",
+        "reversible": true,
+        "title": "Budget guardrail on 2026-08-09-002-feat-decision-brief-at-gates \u2014 quota soft warn",
+        "user_impact": "Operators reading an approval prompt see what the change does to the product before they see the plan id",
+        "what_changes": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line"
+      },
+      "undeclared": {
+        "affected_audience": null,
+        "band": "advisory",
+        "detail": "Quota soft-warn for `claude` at `82%` of weekly cap (threshold `80%`). Volley continues under `JARVIS_QUOTA_ENFORCE=soft`; set `hard` to halt at threshold.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": null,
+        "plain_consequence": "Clearing pre_impl lets the implementer run on F005. The resulting patch is still reviewed before it merges.",
+        "reversible": true,
+        "title": "Budget guardrail on 2026-08-09-002-feat-decision-brief-at-gates \u2014 quota soft warn",
+        "user_impact": null,
+        "what_changes": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line"
+      }
+    },
+    "resumed": {
+      "declared": null,
+      "no_brief": null,
+      "plan_level": null,
+      "stale": null,
+      "undeclared": null
+    },
+    "unit_mismatch": {
+      "declared": {
+        "affected_audience": "operator",
+        "band": "needs_action",
+        "detail": "Quota cap unit drift for `claude.weekly`: cap.unit=`tokens` \u2260 observed=`percent`. Edit `~/.jarvis/quota_caps.json` so cap.unit matches what quota_check.py emits.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": null,
+        "plain_consequence": "Clearing pre_merge writes the success signoff for F005 and releases it to merge. This is the last stop before the change lands.",
+        "reversible": false,
+        "title": "Setup drift on 2026-08-09-002-feat-decision-brief-at-gates \u2014 quota cap unit mismatch",
+        "user_impact": "Operators reading an approval prompt see what the change does to the product before they see the plan id",
+        "what_changes": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line"
+      },
+      "no_brief": {
+        "affected_audience": null,
+        "band": "needs_action",
+        "detail": "Quota cap unit drift for `claude.weekly`: cap.unit=`tokens` \u2260 observed=`percent`. Edit `~/.jarvis/quota_caps.json` so cap.unit matches what quota_check.py emits.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": null,
+        "plain_consequence": null,
+        "reversible": false,
+        "title": "Setup drift on 2026-08-09-002-feat-decision-brief-at-gates \u2014 quota cap unit mismatch",
+        "user_impact": null,
+        "what_changes": null
+      },
+      "plan_level": {
+        "affected_audience": null,
+        "band": "needs_action",
+        "detail": "Quota cap unit drift for `claude.weekly`: cap.unit=`tokens` \u2260 observed=`percent`. Edit `~/.jarvis/quota_caps.json` so cap.unit matches what quota_check.py emits.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": null,
+        "plain_consequence": "Clearing upfront starts the volley on Decision brief at gates \u2014 ask for approval in product terms, not orchestration terms. The resulting patch is still reviewed before it merges.",
+        "reversible": true,
+        "title": "Setup drift on 2026-08-09-002-feat-decision-brief-at-gates \u2014 quota cap unit mismatch",
+        "user_impact": null,
+        "what_changes": "Decision brief at gates \u2014 ask for approval in product terms, not orchestration terms"
+      },
+      "stale": {
+        "affected_audience": "operator",
+        "band": "needs_action",
+        "detail": "Quota cap unit drift for `claude.weekly`: cap.unit=`tokens` \u2260 observed=`percent`. Edit `~/.jarvis/quota_caps.json` so cap.unit matches what quota_check.py emits.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": null,
+        "plain_consequence": "Clearing pre_impl lets the implementer run on F005. The resulting patch is still reviewed before it merges.",
+        "reversible": true,
+        "title": "Setup drift on 2026-08-09-002-feat-decision-brief-at-gates \u2014 quota cap unit mismatch",
+        "user_impact": "Operators reading an approval prompt see what the change does to the product before they see the plan id",
+        "what_changes": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line"
+      },
+      "undeclared": {
+        "affected_audience": null,
+        "band": "needs_action",
+        "detail": "Quota cap unit drift for `claude.weekly`: cap.unit=`tokens` \u2260 observed=`percent`. Edit `~/.jarvis/quota_caps.json` so cap.unit matches what quota_check.py emits.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": null,
+        "plain_consequence": "Clearing pre_impl lets the implementer run on F005. The resulting patch is still reviewed before it merges.",
+        "reversible": true,
+        "title": "Setup drift on 2026-08-09-002-feat-decision-brief-at-gates \u2014 quota cap unit mismatch",
+        "user_impact": null,
+        "what_changes": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line"
+      }
+    },
+    "verdict_blocked_reconciled": {
+      "declared": {
+        "affected_audience": "operator",
+        "band": "needs_action",
+        "detail": "Auditor said `blocked` but every finding classified as advisory (`advisory_only`); supervisor promoted the terminal to `stopped_environmental_blocker`.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "dontpanic approve 2026-08-09-002-feat-decision-brief-at-gates breaker:environmental_blocker",
+        "plain_consequence": "Clearing pre_merge writes the success signoff for F005 and releases it to merge. This is the last stop before the change lands.",
+        "reversible": false,
+        "title": "Blocked work on 2026-08-09-002-feat-decision-brief-at-gates \u2014 verdict reconciled",
+        "user_impact": "Operators reading an approval prompt see what the change does to the product before they see the plan id",
+        "what_changes": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line"
+      },
+      "no_brief": {
+        "affected_audience": null,
+        "band": "needs_action",
+        "detail": "Auditor said `blocked` but every finding classified as advisory (`advisory_only`); supervisor promoted the terminal to `stopped_environmental_blocker`.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "dontpanic approve 2026-08-09-002-feat-decision-brief-at-gates breaker:environmental_blocker",
+        "plain_consequence": null,
+        "reversible": false,
+        "title": "Blocked work on 2026-08-09-002-feat-decision-brief-at-gates \u2014 verdict reconciled",
+        "user_impact": null,
+        "what_changes": null
+      },
+      "plan_level": {
+        "affected_audience": null,
+        "band": "needs_action",
+        "detail": "Auditor said `blocked` but every finding classified as advisory (`advisory_only`); supervisor promoted the terminal to `stopped_environmental_blocker`.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "dontpanic approve 2026-08-09-002-feat-decision-brief-at-gates breaker:environmental_blocker",
+        "plain_consequence": "Clearing upfront starts the volley on Decision brief at gates \u2014 ask for approval in product terms, not orchestration terms. The resulting patch is still reviewed before it merges.",
+        "reversible": true,
+        "title": "Blocked work on 2026-08-09-002-feat-decision-brief-at-gates \u2014 verdict reconciled",
+        "user_impact": null,
+        "what_changes": "Decision brief at gates \u2014 ask for approval in product terms, not orchestration terms"
+      },
+      "stale": {
+        "affected_audience": "operator",
+        "band": "needs_action",
+        "detail": "Auditor said `blocked` but every finding classified as advisory (`advisory_only`); supervisor promoted the terminal to `stopped_environmental_blocker`.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "dontpanic approve 2026-08-09-002-feat-decision-brief-at-gates breaker:environmental_blocker",
+        "plain_consequence": "Clearing pre_impl lets the implementer run on F005. The resulting patch is still reviewed before it merges.",
+        "reversible": true,
+        "title": "Blocked work on 2026-08-09-002-feat-decision-brief-at-gates \u2014 verdict reconciled",
+        "user_impact": "Operators reading an approval prompt see what the change does to the product before they see the plan id",
+        "what_changes": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line"
+      },
+      "undeclared": {
+        "affected_audience": null,
+        "band": "needs_action",
+        "detail": "Auditor said `blocked` but every finding classified as advisory (`advisory_only`); supervisor promoted the terminal to `stopped_environmental_blocker`.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "dontpanic approve 2026-08-09-002-feat-decision-brief-at-gates breaker:environmental_blocker",
+        "plain_consequence": "Clearing pre_impl lets the implementer run on F005. The resulting patch is still reviewed before it merges.",
+        "reversible": true,
+        "title": "Blocked work on 2026-08-09-002-feat-decision-brief-at-gates \u2014 verdict reconciled",
+        "user_impact": null,
+        "what_changes": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line"
+      }
+    },
+    "verdict_mismatch": {
+      "declared": {
+        "affected_audience": "operator",
+        "band": "needs_action",
+        "detail": "Auditor narrative verdict (`blocked`) disagrees with structured `audit_status` (`signed_off`) on iteration 12. No automated re-audit command; open the audit envelope and reconcile manually.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": null,
+        "plain_consequence": "Clearing pre_merge writes the success signoff for F005 and releases it to merge. This is the last stop before the change lands.",
+        "reversible": false,
+        "title": "Blocked work on 2026-08-09-002-feat-decision-brief-at-gates \u2014 verdict mismatch",
+        "user_impact": "Operators reading an approval prompt see what the change does to the product before they see the plan id",
+        "what_changes": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line"
+      },
+      "no_brief": {
+        "affected_audience": null,
+        "band": "needs_action",
+        "detail": "Auditor narrative verdict (`blocked`) disagrees with structured `audit_status` (`signed_off`) on iteration 12. No automated re-audit command; open the audit envelope and reconcile manually.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": null,
+        "plain_consequence": null,
+        "reversible": false,
+        "title": "Blocked work on 2026-08-09-002-feat-decision-brief-at-gates \u2014 verdict mismatch",
+        "user_impact": null,
+        "what_changes": null
+      },
+      "plan_level": {
+        "affected_audience": null,
+        "band": "needs_action",
+        "detail": "Auditor narrative verdict (`blocked`) disagrees with structured `audit_status` (`signed_off`) on iteration 12. No automated re-audit command; open the audit envelope and reconcile manually.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": null,
+        "plain_consequence": "Clearing upfront starts the volley on Decision brief at gates \u2014 ask for approval in product terms, not orchestration terms. The resulting patch is still reviewed before it merges.",
+        "reversible": true,
+        "title": "Blocked work on 2026-08-09-002-feat-decision-brief-at-gates \u2014 verdict mismatch",
+        "user_impact": null,
+        "what_changes": "Decision brief at gates \u2014 ask for approval in product terms, not orchestration terms"
+      },
+      "stale": {
+        "affected_audience": "operator",
+        "band": "needs_action",
+        "detail": "Auditor narrative verdict (`blocked`) disagrees with structured `audit_status` (`signed_off`) on iteration 12. No automated re-audit command; open the audit envelope and reconcile manually.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": null,
+        "plain_consequence": "Clearing pre_impl lets the implementer run on F005. The resulting patch is still reviewed before it merges.",
+        "reversible": true,
+        "title": "Blocked work on 2026-08-09-002-feat-decision-brief-at-gates \u2014 verdict mismatch",
+        "user_impact": "Operators reading an approval prompt see what the change does to the product before they see the plan id",
+        "what_changes": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line"
+      },
+      "undeclared": {
+        "affected_audience": null,
+        "band": "needs_action",
+        "detail": "Auditor narrative verdict (`blocked`) disagrees with structured `audit_status` (`signed_off`) on iteration 12. No automated re-audit command; open the audit envelope and reconcile manually.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": null,
+        "plain_consequence": "Clearing pre_impl lets the implementer run on F005. The resulting patch is still reviewed before it merges.",
+        "reversible": true,
+        "title": "Blocked work on 2026-08-09-002-feat-decision-brief-at-gates \u2014 verdict mismatch",
+        "user_impact": null,
+        "what_changes": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line"
+      }
+    },
+    "volley_crash_caught": {
+      "declared": null,
+      "no_brief": null,
+      "plan_level": null,
+      "stale": null,
+      "undeclared": null
+    },
+    "volley_start": {
+      "declared": {
+        "affected_audience": "operator",
+        "band": "info",
+        "detail": "Volley begins with implementer `claude` and auditor `codex` (cap 12).",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": null,
+        "plain_consequence": "Clearing pre_merge writes the success signoff for F005 and releases it to merge. This is the last stop before the change lands.",
+        "reversible": false,
+        "title": "Active AI work on 2026-08-09-002-feat-decision-brief-at-gates",
+        "user_impact": "Operators reading an approval prompt see what the change does to the product before they see the plan id",
+        "what_changes": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line"
+      },
+      "no_brief": {
+        "affected_audience": null,
+        "band": "info",
+        "detail": "Volley begins with implementer `claude` and auditor `codex` (cap 12).",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": null,
+        "plain_consequence": null,
+        "reversible": false,
+        "title": "Active AI work on 2026-08-09-002-feat-decision-brief-at-gates",
+        "user_impact": null,
+        "what_changes": null
+      },
+      "plan_level": {
+        "affected_audience": null,
+        "band": "info",
+        "detail": "Volley begins with implementer `claude` and auditor `codex` (cap 12).",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": null,
+        "plain_consequence": "Clearing upfront starts the volley on Decision brief at gates \u2014 ask for approval in product terms, not orchestration terms. The resulting patch is still reviewed before it merges.",
+        "reversible": true,
+        "title": "Active AI work on 2026-08-09-002-feat-decision-brief-at-gates",
+        "user_impact": null,
+        "what_changes": "Decision brief at gates \u2014 ask for approval in product terms, not orchestration terms"
+      },
+      "stale": {
+        "affected_audience": "operator",
+        "band": "info",
+        "detail": "Volley begins with implementer `claude` and auditor `codex` (cap 12).",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": null,
+        "plain_consequence": "Clearing pre_impl lets the implementer run on F005. The resulting patch is still reviewed before it merges.",
+        "reversible": true,
+        "title": "Active AI work on 2026-08-09-002-feat-decision-brief-at-gates",
+        "user_impact": "Operators reading an approval prompt see what the change does to the product before they see the plan id",
+        "what_changes": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line"
+      },
+      "undeclared": {
+        "affected_audience": null,
+        "band": "info",
+        "detail": "Volley begins with implementer `claude` and auditor `codex` (cap 12).",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": null,
+        "plain_consequence": "Clearing pre_impl lets the implementer run on F005. The resulting patch is still reviewed before it merges.",
+        "reversible": true,
+        "title": "Active AI work on 2026-08-09-002-feat-decision-brief-at-gates",
+        "user_impact": null,
+        "what_changes": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line"
+      }
+    },
+    "volley_terminal": {
+      "declared": {
+        "affected_audience": "operator",
+        "band": "needs_action",
+        "detail": "Volley terminated after 12 round(s) with status `stopped_no_progress`. Review the audit envelope before deciding next step.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "dontpanic resume 2026-08-09-002-feat-decision-brief-at-gates --all",
+        "plain_consequence": "Clearing pre_merge writes the success signoff for F005 and releases it to merge. This is the last stop before the change lands.",
+        "reversible": false,
+        "title": "Blocked work on 2026-08-09-002-feat-decision-brief-at-gates \u2014 stopped no progress",
+        "user_impact": "Operators reading an approval prompt see what the change does to the product before they see the plan id",
+        "what_changes": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line"
+      },
+      "no_brief": {
+        "affected_audience": null,
+        "band": "needs_action",
+        "detail": "Volley terminated after 12 round(s) with status `stopped_no_progress`. Review the audit envelope before deciding next step.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "dontpanic resume 2026-08-09-002-feat-decision-brief-at-gates --all",
+        "plain_consequence": null,
+        "reversible": false,
+        "title": "Blocked work on 2026-08-09-002-feat-decision-brief-at-gates \u2014 stopped no progress",
+        "user_impact": null,
+        "what_changes": null
+      },
+      "plan_level": {
+        "affected_audience": null,
+        "band": "needs_action",
+        "detail": "Volley terminated after 12 round(s) with status `stopped_no_progress`. Review the audit envelope before deciding next step.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "dontpanic resume 2026-08-09-002-feat-decision-brief-at-gates --all",
+        "plain_consequence": "Clearing upfront starts the volley on Decision brief at gates \u2014 ask for approval in product terms, not orchestration terms. The resulting patch is still reviewed before it merges.",
+        "reversible": true,
+        "title": "Blocked work on 2026-08-09-002-feat-decision-brief-at-gates \u2014 stopped no progress",
+        "user_impact": null,
+        "what_changes": "Decision brief at gates \u2014 ask for approval in product terms, not orchestration terms"
+      },
+      "stale": {
+        "affected_audience": "operator",
+        "band": "needs_action",
+        "detail": "Volley terminated after 12 round(s) with status `stopped_no_progress`. Review the audit envelope before deciding next step.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "dontpanic resume 2026-08-09-002-feat-decision-brief-at-gates --all",
+        "plain_consequence": "Clearing pre_impl lets the implementer run on F005. The resulting patch is still reviewed before it merges.",
+        "reversible": true,
+        "title": "Blocked work on 2026-08-09-002-feat-decision-brief-at-gates \u2014 stopped no progress",
+        "user_impact": "Operators reading an approval prompt see what the change does to the product before they see the plan id",
+        "what_changes": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line"
+      },
+      "undeclared": {
+        "affected_audience": null,
+        "band": "needs_action",
+        "detail": "Volley terminated after 12 round(s) with status `stopped_no_progress`. Review the audit envelope before deciding next step.",
+        "evidence_uri": "file:///plan/INBOX.md",
+        "exact_command": "dontpanic resume 2026-08-09-002-feat-decision-brief-at-gates --all",
+        "plain_consequence": "Clearing pre_impl lets the implementer run on F005. The resulting patch is still reviewed before it merges.",
+        "reversible": true,
+        "title": "Blocked work on 2026-08-09-002-feat-decision-brief-at-gates \u2014 stopped no progress",
+        "user_impact": null,
+        "what_changes": "Rewrite the renderable approval-class templates so product outcome leads and orchestration identifiers demote to a supporting reference line"
+      }
+    }
+  },
+  "note": "render() output captured before plan 2026-08-09-002 F005. Do not regenerate after F005 landed \u2014 criteria 2, 6 and 7 diff against it."
+}

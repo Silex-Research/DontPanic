@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "reason": "D001 resolved B1-then-B2; D014-D019 pin transport, harness aliases, model precedence, narrow-only capabilities, Silex visibility, approve_gate human confirm. Remaining plan_contract/parity items are acceptance criteria of F001-F016 phased impl; operator deploys Track A first (F001 docs).",
+  "approved_by": "bayesian",
+  "approved_at": "2026-07-27T10:38:14Z",
+  "plan_id": "2026-07-27-001-feat-buzz-integration-agent-taxonomy",
+  "goal_type": "new_feature",
+  "objective_contract_path": "./objective_contract.json",
+  "features_hash": "sha256:a34f7be02d40316b48f8c92f4b625295fe5e0a0e92028285d26b2454f68b9506",
+  "objective_contract_hash": "sha256:48c0a1b3ecbefcbff208e862b9975746d55955a4b5f07d7ac7b905889ca4733a",
+  "sufficiency_findings_hash": "sha256:9bfae8a7abd9ce2306bc2e6f66faa3db4afa809d135ae62e89cd4022aea947ed"
+}

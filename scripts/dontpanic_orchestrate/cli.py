@@ -58,6 +58,7 @@ from dontpanic_orchestrate import (
     calibration_loader,
     closeout,
     completion_gate,
+    decision_brief,
     gate_pause,
     git_state,
     inbox,
@@ -2423,7 +2424,9 @@ def _calibrate_claude_main(argv: list[str]) -> int:
         type=float,
         required=True,
         help=(
-            "Current weekly% (rolling_7d) or session% (rolling_5h) shown on "
+            # Literal % must be doubled — argparse treats help as %-format
+            # (Python 3.14 validates this at add_argument time).
+            "Current weekly%% (rolling_7d) or session%% (rolling_5h) shown on "
             "claude.ai/settings/usage. Must be in (0, 100]."
         ),
     )
@@ -2791,6 +2794,13 @@ def _doctor_main(argv: list[str]) -> int:
     exit_inputs = [
         r for r in exit_inputs if r.name != "upgrade-readiness"
     ]
+    # 2026-07-27-001 F009: the buzz-config probe is advisory — Buzz is
+    # strongly recommended, never required, so a missing ~/.dontpanic/buzz.json
+    # must not escalate the canonical exit code. Its WARN text + private-
+    # community remediation still renders above.
+    exit_inputs = [
+        r for r in exit_inputs if r.name != "buzz-config"
+    ]
     return jd.compute_strict_exit(exit_inputs)
 
 
@@ -3111,6 +3121,19 @@ def _dispatch_from_plan_main(argv: list[str]) -> int:
     plan_aud = str(agents_req[1]).split(".")[-1] if len(agents_req) >= 2 else None
     impl = args.implementer or plan_impl or resolved_defaults["implementer"]
     aud = args.auditor or plan_aud or resolved_defaults["auditor"]
+    # F013 i1 — role values may be worker-profile ids or D015 aliases.
+    # Resolve them to harnesses HERE so the preflight readiness/quota check
+    # and the printed defaults match what dispatch_volley will actually run
+    # with. Gate refusals (illegal role, capability gap, unknown name)
+    # surface as an exit-3 refusal before any paid work.
+    from dontpanic_orchestrate import worker_profiles as _wp
+
+    try:
+        impl = _wp.resolve_worker(plan_dir, "implementer", impl).harness
+        aud = _wp.resolve_worker(plan_dir, "auditor", aud).harness
+    except _wp.WorkerProfileError as exc:
+        print(f"[dispatch-from-plan] REFUSED: {exc}", file=sys.stderr)
+        return 3
 
     human_gates = [g.value if hasattr(g, "value") else str(g) for g in (plan.human_gates or [])]
     loop_caps = plan.loop_caps
@@ -3360,7 +3383,12 @@ def _plan_main(argv: list[str]) -> int:
             "  worktree <create|list>\n"
             "      Per-plan git worktree isolation (plan 2026-06-10-002): create a\n"
             "      bound plan worktree from the repo's default branch, or render\n"
-            "      the worktree-status model (branch, dirty, health, owner).",
+            "      the worktree-status model (branch, dirty, health, owner).\n"
+            "  attach-goal-audit <plan-dir> --vendor <name> --response <file|-> \n"
+            "      Attach an externally-captured goal/experience audit (JSON\n"
+            "      disposition array) from an operator-only vendor with NO executor\n"
+            "      (e.g. gemini) as a first-class audit envelope (D001 B1). Use\n"
+            "      --show-prompt to render the audit prompt for the external run.",
             file=sys.stderr,
         )
         return 2
@@ -3370,6 +3398,8 @@ def _plan_main(argv: list[str]) -> int:
         return _plan_lock_main(rest)
     if sub == "audit":
         return _plan_audit_main(rest)
+    if sub == "attach-goal-audit":
+        return _plan_attach_goal_audit_main(rest)
     if sub == "close":
         return _plan_close_main(rest)
     if sub == "resync":
@@ -3632,6 +3662,109 @@ def _plan_disposition_main(argv: list[str]) -> int:
             "[plan disposition] still undisposed: " + ", ".join(decision.undisposed_ids)
         )
     return 0
+
+
+def _run_outcome_score_gate(plan_dir: Path) -> int | None:
+    """Plan 2026-08-13-001 F002 — print the outcome / slices / proofs score
+    and refuse the lock on exactly one thing: a missing outcome with nothing
+    inherited (and only where ``delivers[]`` is required — no legacy plan
+    meets a surprise refuse).
+
+    Returns ``3`` on refusal, ``None`` to proceed. A scorer crash is a
+    one-line warning, never a block: the gate exists to name a missing
+    outcome, not to become a new way for lock to fail.
+    """
+    from dontpanic_orchestrate import outcome_score as _outcome_score
+
+    try:
+        plan_data = _outcome_score._read_frontmatter(Path(plan_dir) / "plan.md")
+        if plan_data.get("status") != "draft":
+            # Not a lockable plan — leave the status refusal to lock_plan so the
+            # operator reads "status is active", not "outcome is missing".
+            return None
+        score = _outcome_score.score_plan(plan_dir)
+    except Exception as exc:  # noqa: BLE001 — advisory scorer must not block
+        print(
+            f"[outcome-score] WARN: could not score the plan ({exc!r}); no score "
+            "is printed here. The lock is not waved through: the recording step "
+            "below meets the same failure and refuses it (F005 AC3).",
+            file=sys.stderr,
+        )
+        return None
+
+    for line in _outcome_score.render_score_lines(score):
+        print(line)
+    if score.refuse:
+        print(f"[plan lock] REFUSED: {score.refusal}", file=sys.stderr)
+        return 3
+    return None
+
+
+def _record_outcome_score_before_flip(plan_dir: Path) -> int | None:
+    """Plan 2026-08-13-001 F002 — record the score, and every gap it accepted
+    or inferred, under ``evidence/goal-governance/pre_impl/`` BEFORE the
+    draft → active flip.
+
+    Ordering is the contract: a lock that reports success must have recorded
+    the gaps it accepted, because those gaps are what close is later held to.
+    So the sidecar is written first (atomically), and a write failure REFUSES
+    the lock — the plan stays draft — instead of leaving an active plan whose
+    accepted gaps were never persisted.
+
+    F005/D013 extends the same rule to the ``decisions.jsonl`` receipt written
+    alongside the sidecar: it is what later distinguishes a deleted lock record
+    from a plan locked before the artifact existed, so a lock that cannot leave
+    it is refused too. Both writes happen inside ``write_score_sidecar`` and
+    both raise ``OSError``, which the single handler below turns into a refusal.
+
+    A **scorer** failure refuses the lock too (F005 AC3, D014). It used to warn
+    "lock proceeds unrecorded" and return success, which is precisely the shape
+    the criterion forbids: an exit-zero lock that has just said its gaps were
+    not recorded. There is no third answer available here — a plan that cannot
+    be scored has no obligation set to hold close to, so the honest outcomes are
+    "recorded and active" or "unrecorded and still draft". The plan is left
+    draft, which is the recoverable state: fix what the scorer could not read
+    and lock again.
+
+    Returns ``3`` when the score could not be computed or could not be
+    persisted, ``None`` to proceed.
+    """
+    from dontpanic_orchestrate import outcome_score as _outcome_score
+
+    try:
+        plan_data = _outcome_score._read_frontmatter(Path(plan_dir) / "plan.md")
+        # A non-draft plan is not being locked here; the status refusal belongs
+        # to lock_plan, and there is nothing to record. Not a scorer failure.
+        if plan_data.get("status") != "draft":
+            return None
+        score = _outcome_score.score_plan(plan_dir)
+    except Exception as exc:  # noqa: BLE001 — any scorer failure is a refusal
+        print(
+            f"[plan lock] REFUSED (outcome-score): could not score the plan "
+            f"({exc!r}), so its proof gaps cannot be recorded. The plan stays "
+            "draft — a lock that reports success while its gaps went unrecorded "
+            "is a lock close cannot honour.",
+            file=sys.stderr,
+        )
+        return 3
+
+    try:
+        path = _outcome_score.write_score_sidecar(Path(plan_dir), score)
+    except OSError as exc:
+        print(
+            f"[plan lock] REFUSED (outcome-score): could not record the score "
+            f"and its proof gaps ({exc}). The plan stays draft — a lock that "
+            "cannot record its accepted gaps cannot be honoured at close.",
+            file=sys.stderr,
+        )
+        return 3
+
+    gaps = len(score.accepted_gaps) + len(score.inferred_gaps)
+    print(
+        f"[outcome-score] score + {gaps} proof gap(s) recorded at "
+        f"{path.relative_to(Path(plan_dir))}"
+    )
+    return None
 
 
 def _run_pre_lock_scope_gate(
@@ -3953,6 +4086,13 @@ def _plan_lock_main(argv: list[str]) -> int:
         print(f"[plan lock] REFUSED (requires_capabilities): {exc}", file=sys.stderr)
         return 3
 
+    # Plan 2026-08-13-001 F002 — outcome / slices / proofs score. Runs before
+    # every paid pre-lock step so the one refusal this plan owns (a missing
+    # outcome with nothing inherited) costs nothing to hit.
+    score_rc = _run_outcome_score_gate(plan_dir)
+    if score_rc is not None:
+        return score_rc
+
     # Plan 2026-06-01-001 F004 — pre-lock design gate. Runs the F001 scope lint
     # over every feature BEFORE the status flip; a block-severity scope flag
     # refuses the lock unless --allow-oversize <reason> records a rationale in
@@ -3970,6 +4110,13 @@ def _plan_lock_main(argv: list[str]) -> int:
     # gate checks for them, so a gated plan locks in one command instead of
     # dead-ending on a required-but-ungenerated artifact.
     _ensure_sufficiency_findings(plan_dir)
+
+    # Plan 2026-08-13-001 F002 — persist the outcome score + accepted/inferred
+    # proof gaps BEFORE the status flip. A recording failure refuses the lock
+    # rather than producing an active plan with unrecorded gaps.
+    record_rc = _record_outcome_score_before_flip(plan_dir)
+    if record_rc is not None:
+        return record_rc
 
     try:
         plan_md = sufficiency_gate.lock_plan(
@@ -4038,7 +4185,43 @@ def _plan_lock_main(argv: list[str]) -> int:
             file=sys.stderr,
         )
 
+    # Plan 2026-08-09-002 F006 — undeclared user-impact advisory. Warn-only by
+    # D004: a feature that declares no impact under a user-facing plan is worth
+    # saying out loud and never worth refusing the lock over. Failure to compute
+    # it is a one-line warning, like every other advisory in this flow.
+    try:
+        _emit_plan_lock_undeclared_impact_advisory(plan_dir)
+    except Exception as exc:  # noqa: BLE001 — advisory must never block lock
+        print(
+            f"[user-impact] WARN: advisory failed ({exc!r}); lock succeeded — "
+            "no advisory printed",
+            file=sys.stderr,
+        )
+
     return 0
+
+
+def _emit_plan_lock_undeclared_impact_advisory(plan_dir: Path) -> None:
+    """F006 — name the features that owe a ``user_impact`` block and lack one.
+
+    Prints to stdout and writes nothing. Per D004 this never changes the lock
+    outcome: the caller has already flipped ``plan.md`` to ``active`` by the
+    time this runs, and the advisory returns ``None`` in every branch.
+
+    Silent when the plan declares no user-facing surface, or when every feature
+    under one already carries a declaration — including ``audience: none``,
+    which is a complete answer (D003) rather than a missing one.
+    """
+    plan_obj = plan_loader.load(plan_dir)
+    advisory = decision_brief.undeclared_impact_advisory(
+        plan_surfaces=plan_obj.surfaces,
+        features=getattr(plan_obj.features, "features", []) or [],
+    )
+    lines = decision_brief.render_undeclared_impact_advisory(
+        advisory, features_path=str(plan_dir / "features.json")
+    )
+    for line in lines:
+        print(line)
 
 
 def _emit_plan_lock_release_impact_advisory(plan_dir: Path) -> None:
@@ -4280,6 +4463,148 @@ def _plan_audit_main(argv: list[str]) -> int:
         print("[plan audit] DECISION: blocking", file=sys.stderr)
         return 3
     print("[plan audit] DECISION: non-blocking")
+    return 0
+
+
+def _plan_attach_goal_audit_main(argv: list[str]) -> int:
+    """``dontpanic plan attach-goal-audit`` — Plan 2026-07-27-001 F004
+    (D001 B1): attach an externally-captured goal/experience audit from an
+    operator-only vendor (e.g. gemini) as a first-class audit envelope.
+
+    Two modes:
+      --show-prompt      render the SAME completion-audit prompt the
+                         dispatched path sends, for pasting into the
+                         vendor's own surface (read-only; no --vendor).
+      --vendor/--response validate + write audit-<vendor>-<iter>.{json,
+                         transcript.txt} with provenance='external'.
+
+    Exit-code matrix:
+      0 — prompt rendered / envelope attached
+      2 — usage error / argparse failure
+      3 — refusal (vendor has an executor, malformed vendor name or
+          response, cross-vendor violation, missing plan artifacts).
+          Nothing is written on refusal.
+    """
+    from dontpanic_orchestrate import external_goal_audit as ega
+
+    parser = argparse.ArgumentParser(
+        prog="dontpanic plan attach-goal-audit",
+        description=(
+            "Attach an externally-captured goal/experience audit response "
+            "(JSON disposition array) from an operator-only vendor with NO "
+            "registered executor as a first-class audit envelope (D001 B1). "
+            "Vendors with a registered executor are refused — use "
+            "`dontpanic plan audit` (the dispatched path) for those."
+        ),
+    )
+    parser.add_argument("plan", help="Plan ID or absolute plan-dir path")
+    parser.add_argument(
+        "--show-prompt",
+        action="store_true",
+        help=(
+            "Render the audit prompt for the external run and exit "
+            "(goal-completion prompt, or the consumer-journey experience "
+            "prompt with --kind experience). Read-only."
+        ),
+    )
+    parser.add_argument(
+        "--vendor",
+        default=None,
+        metavar="NAME",
+        help=(
+            "External vendor name (lowercase ascii + dash/underscore; becomes "
+            f"the audit filename). Known B1 vendors: "
+            f"{', '.join(ega.KNOWN_EXTERNAL_AUDIT_VENDORS)}. Any operator-only "
+            "vendor is accepted; registered executors are refused."
+        ),
+    )
+    parser.add_argument(
+        "--response",
+        default=None,
+        metavar="FILE",
+        help=(
+            "Path to the vendor's JSON disposition response, or '-' to read "
+            "stdin. Fenced ```json blocks are tolerated (same parser as the "
+            "dispatched path)."
+        ),
+    )
+    parser.add_argument(
+        "--kind",
+        choices=list(ega.AUDIT_KINDS),
+        default="goal",
+        help="Which surface the external run reviewed (default: goal).",
+    )
+    parser.add_argument(
+        "--note",
+        default=None,
+        help="Optional operator note recorded on the envelope (external_note).",
+    )
+    parser.add_argument(
+        "--implementer",
+        default=None,
+        metavar="AGENT",
+        help=(
+            "Override the effective implementer for the cross-vendor check. "
+            "Default: the layered dispatch-default resolution the dispatched "
+            "path uses."
+        ),
+    )
+    args = parser.parse_args(argv)
+
+    plan_dir = _resolve_plan_dir(args.plan)
+
+    if args.show_prompt:
+        try:
+            print(ega.render_external_audit_prompt(plan_dir, kind=args.kind))
+        except ega.ExternalGoalAuditError as exc:
+            print(f"[plan attach-goal-audit] REFUSED: {exc}", file=sys.stderr)
+            return 3
+        return 0
+
+    if not args.vendor or not args.response:
+        print(
+            "[plan attach-goal-audit] usage error: --vendor and --response are "
+            "required (or use --show-prompt to render the audit prompt)",
+            file=sys.stderr,
+        )
+        return 2
+
+    if args.response == "-":
+        response_text = sys.stdin.read()
+    else:
+        response_file = Path(args.response)
+        if not response_file.is_file():
+            print(
+                f"[plan attach-goal-audit] usage error: response file does not "
+                f"exist: {response_file}",
+                file=sys.stderr,
+            )
+            return 2
+        response_text = response_file.read_text()
+
+    try:
+        transcript = ega.attach_external_goal_audit(
+            plan_dir,
+            vendor=args.vendor,
+            response_text=response_text,
+            kind=args.kind,
+            implementer_agent=args.implementer,
+            note=args.note,
+        )
+    except ega.ExternalGoalAuditError as exc:
+        print(f"[plan attach-goal-audit] REFUSED: {exc}", file=sys.stderr)
+        return 3
+
+    disagreements = sum(1 for d in transcript.findings_dispositions if not d.agree)
+    print(f"[plan attach-goal-audit] attached: {transcript.envelope_path}")
+    print(
+        f"  vendor={transcript.auditor_agent} kind={transcript.audit_kind} "
+        f"iteration={transcript.iteration} provenance={transcript.provenance}"
+    )
+    print(
+        f"  status={transcript.status} dispositions="
+        f"{len(transcript.findings_dispositions)} disagreements={disagreements}"
+    )
     return 0
 
 
@@ -5447,15 +5772,6 @@ def _roles_main(argv: list[str]) -> int:
 
         is_global = args.is_global or args.project is None
 
-        # Guard FIRST — never touch config for an agent with no executor
-        # (acceptance #5/#6). The message distinguishes operator-only from
-        # worker-capable, identical to `agent register-worker`.
-        try:
-            _ra.assert_assignable(args.executor)
-        except agent_surface.RegisterWorkerError as exc:
-            print(f"[roles set] REFUSED: {exc}", file=sys.stderr)
-            return 3
-
         scope = None
         if not is_global:
             scope = _resolve_roles_scope(args.project)
@@ -5466,6 +5782,22 @@ def _roles_main(argv: list[str]) -> int:
                     file=sys.stderr,
                 )
                 return 2
+
+        # Guard FIRST — never touch config for an agent with no executor
+        # (acceptance #5/#6). The message distinguishes operator-only from
+        # worker-capable, identical to `agent register-worker`. F013: a
+        # worker-profile id is also assignable when its allowed_roles +
+        # capability gates pass for THIS role slot; scope resolves before
+        # the guard so project-layer profiles are visible to it.
+        try:
+            _ra.assert_assignable(
+                args.executor,
+                role=args.role,
+                project_path=scope.path if scope is not None else None,
+            )
+        except agent_surface.RegisterWorkerError as exc:
+            print(f"[roles set] REFUSED: {exc}", file=sys.stderr)
+            return 3
 
         preview = _ra.render_set_preview(
             args.role, args.executor, is_global=is_global, scope=scope
@@ -5680,6 +6012,97 @@ def _skills_rubric_main(argv: list[str]) -> int:
     return 0
 
 
+def _buzz_gate_main(argv: list[str]) -> int:
+    """Plan 2026-07-27-001 F008 — ``dontpanic buzz-gate <plan> (--payload|--poll)``.
+
+    Applies one (or a poll batch of) signed Nostr approval events through
+    the F008 gate bridge. Cryptographic verification is in-process
+    (BIP-340 / NIP-01); the legacy ``sig_verified`` flat payload is
+    refused. Off by default — requires an enabled ``gate_bridge`` block
+    with an allowlisted human pubkey and explicit ``agent_pubkeys``.
+
+    Exit codes: 0 = approved / poll with at least one approved or noop;
+    2 = refused, malformed, or poll misconfigured.
+    """
+    from dontpanic_orchestrate import buzz_gate_bridge
+
+    parser = argparse.ArgumentParser(prog="dontpanic buzz-gate")
+    parser.add_argument("plan", help="plan id or plan directory path")
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument(
+        "--payload",
+        help="path to the signed-event payload JSON ('-' reads stdin)",
+    )
+    mode.add_argument(
+        "--poll",
+        action="store_true",
+        help="run configured gate_bridge.poll_command and process candidates",
+    )
+    args = parser.parse_args(argv)
+
+    plan_dir = _resolve_plan_dir(args.plan)
+    loaded = plan_loader.load(plan_dir)
+
+    if args.poll:
+        try:
+            decisions = buzz_gate_bridge.poll_approvals(
+                plan_dir, plan_id=loaded.plan_id
+            )
+        except ValueError as exc:
+            print(f"[buzz-gate] REFUSED — poll failed: {exc}", file=sys.stderr)
+            return 2
+        if not decisions:
+            print("[buzz-gate] poll: no ceremony candidates")
+            return 0
+        any_ok = False
+        for decision in decisions:
+            if decision.outcome in (
+                buzz_gate_bridge.APPROVED,
+                buzz_gate_bridge.NOOP_ALREADY_CLEARED,
+            ):
+                any_ok = True
+                print(
+                    f"[buzz-gate] {decision.outcome} gate {decision.gate!r} "
+                    f"(actor {decision.actor})"
+                )
+            else:
+                print(
+                    f"[buzz-gate] REFUSED gate {decision.gate!r} "
+                    f"({decision.outcome}): {decision.reason}",
+                    file=sys.stderr,
+                )
+        return 0 if any_ok else 2
+
+    try:
+        raw = (
+            sys.stdin.read()
+            if args.payload == "-"
+            else Path(args.payload).read_text(encoding="utf-8")
+        )
+        payload = buzz_gate_bridge.parse_approval_payload(raw)
+    except (OSError, UnicodeError, ValueError) as exc:
+        print(f"[buzz-gate] REFUSED — unreadable/malformed payload: {exc}", file=sys.stderr)
+        return 2
+
+    decision = buzz_gate_bridge.process_approval(
+        plan_dir, plan_id=loaded.plan_id, payload=payload
+    )
+    if decision.outcome == buzz_gate_bridge.APPROVED:
+        print(
+            f"[buzz-gate] cleared gate {decision.gate!r} for {loaded.plan_id} "
+            f"(actor {decision.actor})"
+        )
+        return 0
+    if decision.outcome == buzz_gate_bridge.NOOP_ALREADY_CLEARED:
+        print(f"[buzz-gate] gate {decision.gate!r} already cleared; no change")
+        return 0
+    print(
+        f"[buzz-gate] REFUSED gate {decision.gate!r} ({decision.outcome}): {decision.reason}",
+        file=sys.stderr,
+    )
+    return 2
+
+
 def _print_top_level_help(*, file) -> None:
     # The "Start here (for AI agents)" block is the F004 discovery pointer. It is
     # rendered from the shared guidance helper (projected over the F002 inventory)
@@ -5702,6 +6125,8 @@ Public-alpha command surface:
   manifest init|show             Publish the machine-readable agent manifest
   agent brief|status|setup|commands|guide|register-worker  Machine agent surface (operator vs worker; `commands` = JSON guidance, `guide` = offline operating guide)
   roles show|set                 Assign worker executors to implementer/auditor/goal_auditor roles
+  workers list|add|set|show|buzz-bindings  Named worker profiles (harness+model+roles; F016 bindings display)
+  models list|aliases            Harness model discovery (`list --harness <id>`) + merged model_aliases table
   operator-roles set|list        Operator-role PREFERENCES (intent only; never dispatch authority)
   skills recommend|rubric        Skill recommendations for a plan + rubric migration suggestions
   orchestrate [<plan>]           Teaching gateway: brief/workflow, or forward to dispatch-from-plan
@@ -5722,6 +6147,7 @@ Public-alpha command surface:
   close --operator-resolved      Operator close-out of a stopped_no_progress feature
   dispatch-from-plan             Dry-run or confirm feature-by-feature dispatch
   approve|resume|ps              Clear gates and inspect active supervisors
+  buzz-gate <plan> --payload|--poll  Signed Buzz human approval → pending gate (off-by-default bridge)
   quota-caps|calibrate-claude    Configure local quota guardrails
   mcp serve                      Start the local MCP server
 
@@ -5807,6 +6233,8 @@ def _run_cli(argv: list[str] | None = None) -> int:
         return _approve_main(raw[1:])
     if raw and raw[0] == "resume":
         return _resume_main(raw[1:])
+    if raw and raw[0] == "buzz-gate":
+        return _buzz_gate_main(raw[1:])
     if raw and raw[0] == "claude-touch":
         return _claude_touch_main(raw[1:])
     if raw and raw[0] == "close":
@@ -5839,6 +6267,14 @@ def _run_cli(argv: list[str] | None = None) -> int:
         return _orchestrate_main(raw[1:])
     if raw and raw[0] == "roles":
         return _roles_main(raw[1:])
+    if raw and raw[0] == "workers":
+        from dontpanic_orchestrate.workers_cli import workers_main as _workers_main
+
+        return _workers_main(raw[1:])
+    if raw and raw[0] == "models":
+        from dontpanic_orchestrate.models_cli import models_main as _models_main
+
+        return _models_main(raw[1:])
     if raw and raw[0] == "operator-roles":
         return _operator_roles_main(raw[1:])
     if raw and raw[0] == "skills":

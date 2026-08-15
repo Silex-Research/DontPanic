@@ -95,12 +95,18 @@ def available_worker_executors() -> list[str]:
     return agent_surface.worker_executors()
 
 
-def assert_assignable(name: str) -> None:
+def assert_assignable(
+    name: str, *, role: str | None = None, project_path: Path | None = None
+) -> None:
     """Guard for ``roles set``: raise :class:`agent_surface.RegisterWorkerError`
     when ``name`` has no executor, so the CLI refuses before any write
     (F004 acceptance #5/#6). The message distinguishes operator-only from
-    worker-capable, identical to ``agent register-worker``."""
-    agent_surface.assert_registrable(name)
+    worker-capable, identical to ``agent register-worker``.
+
+    F013: ``name`` may be a worker-profile id; ``role`` scopes the profile's
+    allowed_roles + capability gates to the slot being assigned, and
+    ``project_path`` includes that project's profile layer."""
+    agent_surface.assert_registrable(name, role=role, project_path=project_path)
 
 
 def _layer_role_value(cfg: object | None, role: str) -> tuple[str, str] | None:
@@ -116,7 +122,10 @@ def _layer_role_value(cfg: object | None, role: str) -> tuple[str, str] | None:
 
     roles = getattr(cfg, "roles", None)
     if roles is not None:
-        v = getattr(roles, role, None)
+        # F012 i1 — roles entries may be strings or RoleSpec objects.
+        from dontpanic_orchestrate.config.roles import role_name
+
+        v = role_name(getattr(roles, role, None))
         if v:
             return v, "roles"
 
@@ -135,17 +144,43 @@ def _layer_role_value(cfg: object | None, role: str) -> tuple[str, str] | None:
     return None
 
 
+def _worker_capable_value(role: str, value: str, profiles: dict | None) -> bool:
+    """F013 — a role value is worker-capable when it is a registered harness
+    OR a defined worker profile that passes the role/capability gates for
+    this slot. ``profiles`` is the merged table from
+    :func:`worker_profiles.load_profiles` (None → legacy harness-only).
+
+    F014 — a registered harness is capability-gated per role: an audit-only
+    harness (ollama/openrouter) tags as NOT worker-capable in the
+    implementer slot, matching the resolve_worker dispatch refusal."""
+    if agent_surface.is_worker_capable(value):
+        from dontpanic_orchestrate.config.worker_profiles import (
+            harness_missing_capabilities_for_role,
+        )
+
+        return not harness_missing_capabilities_for_role(value, role)
+    if not profiles or value not in profiles:
+        return False
+    from dontpanic_orchestrate import worker_profiles as wp
+
+    return wp.profile_dispatchable_for_role(value, profiles[value], role)
+
+
 def resolve_role_with_source(
     role: str,
     *,
     project_cfg: pc.ProjectConfig | None,
     global_cfg: gc.GlobalConfig,
+    profiles: dict | None = None,
 ) -> RoleResolution:
     """Resolve ``role`` through the layered chain, reporting the source layer.
 
     Precedence (identical to :func:`config.resolvers.resolve_role`):
     project roles → project legacy → global roles → global legacy →
     (``goal_auditor``: resolved auditor) → hardcoded fallback.
+
+    ``profiles`` (F013) widens the ``worker_capable`` tag to include valid
+    worker-profile ids; omit for the legacy harness-only classification.
     """
     if role not in ROLES:
         raise ValueError(f"unknown role {role!r}; expected one of {ROLES}")
@@ -154,19 +189,19 @@ def resolve_role_with_source(
     if project_hit is not None:
         value, kind = project_hit
         layer: SourceLayer = "project_roles" if kind == "roles" else "project_legacy"
-        return RoleResolution(role, value, layer, agent_surface.is_worker_capable(value))
+        return RoleResolution(role, value, layer, _worker_capable_value(role, value, profiles))
 
     global_hit = _layer_role_value(global_cfg, role)
     if global_hit is not None:
         value, kind = global_hit
         layer = "global_roles" if kind == "roles" else "global_legacy"
-        return RoleResolution(role, value, layer, agent_surface.is_worker_capable(value))
+        return RoleResolution(role, value, layer, _worker_capable_value(role, value, profiles))
 
     if role == "goal_auditor":
         # No goal_auditor anywhere — inherit the resolved auditor so the
         # cross-vendor invariant still holds by default (D013).
         auditor = resolve_role_with_source(
-            "auditor", project_cfg=project_cfg, global_cfg=global_cfg
+            "auditor", project_cfg=project_cfg, global_cfg=global_cfg, profiles=profiles
         )
         return RoleResolution(
             role,
@@ -176,16 +211,21 @@ def resolve_role_with_source(
         )
 
     value = _FALLBACK[role]
-    return RoleResolution(role, value, "fallback", agent_surface.is_worker_capable(value))
+    return RoleResolution(role, value, "fallback", _worker_capable_value(role, value, profiles))
 
 
 def resolve_all(scope: ProjectScope) -> list[RoleResolution]:
     """Resolve every role for ``scope`` in fixed order. Loads the project +
     global config once and walks each role through the shared resolver."""
+    from dontpanic_orchestrate import worker_profiles as wp
+
     project_cfg = pc.load_project_config(scope.path)
     global_cfg = gc.load_config()
+    profiles = wp.load_profiles(scope.path)
     return [
-        resolve_role_with_source(role, project_cfg=project_cfg, global_cfg=global_cfg)
+        resolve_role_with_source(
+            role, project_cfg=project_cfg, global_cfg=global_cfg, profiles=profiles
+        )
         for role in ROLES
     ]
 

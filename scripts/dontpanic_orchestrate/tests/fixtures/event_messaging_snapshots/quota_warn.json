@@ -15,7 +15,7 @@
       "exact_command": null,
       "human_required_reason": "operator action surfaced by dispatch_event",
       "id": "supervisor:quota_warn:2026-05-24-004-feat-event-messaging-v1:F005",
-      "plain_consequence": "Quota soft-warn for `claude` at `80%` of weekly cap (threshold `75%`). Volley continues under `JARVIS_QUOTA_ENFORCE=soft`; set `hard` to halt at threshold.",
+      "plain_consequence": null,
       "project_name": null,
       "reversible": false,
       "source": "supervisor",

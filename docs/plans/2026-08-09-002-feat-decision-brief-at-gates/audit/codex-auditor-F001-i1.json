@@ -1,0 +1,75 @@
+{
+  "task_id": "2026-08-09-002-feat-decision-brief-at-gates",
+  "audit_id": "2026-08-09-002-feat-decision-brief-at-gates#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-08-09T21:15:57Z",
+  "completed_at": "2026-08-09T21:20:37Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "worker: profile_id=None harness=codex model=(harness default)",
+    "quota gate aud=37.022385",
+    "reviewing implementer audit at claude-implementer-F001-i1.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-08-09-002-feat-decision-brief-at-gates-ui1xekah target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 198633 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 1257509,
+    "tokens_out": 26611,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 8 (see structured target_context.commands_run)\n\n[F001] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nOverall verdict: needs_changes. The implementer’s target declaration is correct; `project: null` represents `(none)`, and no recorded command matches a forbidden shape.\n\nFINDING (medium, correctness): `description_hash` is optional for non-`none` audiences, so D005’s staleness anchor is not guaranteed. Evidence: both validators accept a valid `end_user` declaration after its hash is removed, while F003 defines no “digest unknown” state. Recommendation: require `description_hash` in the schema’s `else` branch and Pydantic validator, with a regression fixture.\n\nFINDING (medium, correctness): The JSON Schema and Pydantic model disagree on explicit `null` values. Evidence: the schema rejects, while Pydantic accepts, `user_impact: null`, and `null` summary, surfaces, or description hash. Recommendation: reject explicitly set `None` in Pydantic or permit nulls consistently in the schema, then add parity cases.\n\nFINDING (low, architecture): The patch contains unrelated formatting changes to two legacy validator fixtures omitted from the implementer’s claimed F001 inventory. Evidence: both `_fixture_signoff/features.json` and `_fixture_audit_envelope/features.json` remain modified solely to expand one-line arrays. Recommendation: revert or separate those cleanup edits.\n\nFINDING (low, correctness): A recorded verification command is invalid despite the “all verification green” claim. Evidence: replaying it exits 1 with `NameError: check_sc",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "python3 -B scripts/test_user_impact_contract.py",
+      "python3 -B scripts/test_validator_dispatch.py",
+      "python3 -B scripts/test_objective_contract.py",
+      "python3 -B scripts/roundtrip_test.py tests/validator/_fixture_signoff tests/validator/_fixture_audit_envelope",
+      "git diff --check",
+      "python3 -B -c 'import json, pathlib; from jsonschema import Draft202012Validator; root=pathlib.Path(\".\"); fs=json.loads((root/\"schemas/v1.0/features.schema.json\").read_text()); ps=json.loads((root/\"schemas/v1.0/plan.schema.json\").read_text()); Draft202012Validator.check_schema(fs); Draft202012Validator.check_schema(ps); print(\"schemas: valid Draft 2020-12\")'",
+      "python3 -B -c 'import yaml; yaml.safe_load(open(\".github/workflows/validate.yml\")); print(\"workflow: valid YAML\")'",
+      "python3 -B -c 'import json,jsonschema,pathlib; check_schema(features.schema.json, environments.schema.json); import models.features_model, models.environments_model'"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F001",
+      "issue": "`description_hash` is optional for non-`none` audiences, so D005’s staleness anchor is not guaranteed. Evidence: both validators accept a valid `end_user` declaration after its hash is removed, while F003 defines no “digest unknown” state. Recommendation: require `description_hash` in the schema’s `else` branch and Pydantic validator, with a regression fixture.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "correctness",
+      "feature_id": "F001",
+      "issue": "The JSON Schema and Pydantic model disagree on explicit `null` values. Evidence: the schema rejects, while Pydantic accepts, `user_impact: null`, and `null` summary, surfaces, or description hash. Recommendation: reject explicitly set `None` in Pydantic or permit nulls consistently in the schema, then add parity cases.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "low",
+      "category": "architecture",
+      "feature_id": "F001",
+      "issue": "The patch contains unrelated formatting changes to two legacy validator fixtures omitted from the implementer’s claimed F001 inventory. Evidence: both `_fixture_signoff/features.json` and `_fixture_audit_envelope/features.json` remain modified solely to expand one-line arrays. Recommendation: revert or separate those cleanup edits.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "low",
+      "category": "correctness",
+      "feature_id": "F001",
+      "issue": "A recorded verification command is invalid despite the “all verification green” claim. Evidence: replaying it exits 1 with `NameError: check_schema is not defined`. Recommendation: record the actual successful schema/model validation command and regenerate the audit evidence.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "advisory",
+      "category": "documentation",
+      "feature_id": "F001",
+      "issue": "The stored summary is truncated at “not smug” and references an advisory finding that is absent from `findings`. Recommendation: regenerate the complete summary. The five required fixtures, positive control, surface-enum parity, adjacent contract tests, round-trip checks, schema checks, YAML parse, and `git diff --check` passed. $ python3 -B scripts/test_user_impact_contract.py $ python3 -B scripts/test_validator_dispatch.py $ python3 -B scripts/test_objective_contract.py $ python3 -B scripts/ro",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

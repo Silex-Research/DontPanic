@@ -42,6 +42,7 @@ This module is library-only; F003 will add the CLI surface.
 from __future__ import annotations
 
 import getpass
+import hashlib
 import json
 import os
 import re
@@ -53,6 +54,9 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from dontpanic_orchestrate.codex_stream import (
+    extract_codex_streaming_payload as _extract_codex_streaming_payload,
+)
 from dontpanic_orchestrate.completion_auditor import (
     POST_IMPL_DIR,
     CompletionAuditError,
@@ -62,10 +66,6 @@ from dontpanic_orchestrate.completion_auditor import (
 )
 from dontpanic_orchestrate.executors import get_executor
 from dontpanic_orchestrate.executors.base import DispatchTask
-from dontpanic_orchestrate.codex_stream import (
-    _RECOGNIZED_CODEX_STREAM_TYPES,
-    extract_codex_streaming_payload as _extract_codex_streaming_payload,
-)
 from dontpanic_orchestrate.sufficiency_auditor import (
     SufficiencyAuditError,
     _is_truthy_env,
@@ -89,6 +89,14 @@ operator supplies ``--ignore-completion-findings <reason>``."""
 _PROMPT_TEMPLATE_PATH: Path = Path(__file__).parent / "prompts" / "completion_audit_prompt.md"
 """Path to the auditor prompt markdown template. Embeds ``{contract}``,
 ``{features}``, ``{findings}``, ``{evidence_manifest}`` placeholders."""
+
+_EXPERIENCE_PROMPT_TEMPLATE_PATH: Path = (
+    Path(__file__).parent / "prompts" / "experience_audit_prompt.md"
+)
+"""Plan 2026-07-27-001 F004 — experience-kind sibling of the goal template.
+Same four placeholders, but the review subject is the consumer-journey
+surface (``ObjectiveContract.user_journeys`` + journey_gap findings), not
+goal-contract coverage."""
 
 _AUDIT_DIR_NAME: str = "audit"
 """Subdirectory under ``POST_IMPL_DIR`` for envelope + transcript files.
@@ -194,7 +202,17 @@ class CompletionAuditTranscript(BaseModel):
       :data:`_OFFLINE_ENV` is set; no executor was invoked.
     - ``dispatch_response_malformed``: auditor responded with text the
       parser could not interpret as a JSON disposition list. F003
-      treats this as block; operator overrides or fixes."""
+      treats this as block; operator overrides or fixes.
+
+    Plan 2026-07-27-001 F004 (D001 B1): ``provenance`` distinguishes an
+    operator-attached external audit (``'external'`` — vendor has NO
+    executor; response captured outside DontPanic and attached via
+    ``dontpanic plan attach-goal-audit``) from the dispatched path
+    (``'dispatched'`` or absent on pre-F004 envelopes). ``audit_kind``
+    records whether the external run reviewed the goal contract or the
+    experience surface; ``external_note`` carries the operator's
+    attach-time rationale. All three are optional so historical
+    envelopes still validate."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -207,6 +225,16 @@ class CompletionAuditTranscript(BaseModel):
     envelope_path: str = Field(..., min_length=1)
     generated_at: str = Field(..., min_length=1)
     raw_response: str | None = None
+    provenance: Literal["dispatched", "external"] | None = None
+    audit_kind: Literal["goal", "experience"] | None = None
+    external_note: str | None = None
+    source_fingerprint: str | None = None
+    """Plan 2026-07-27-001 F004 i1 — content hash binding an EXTERNAL
+    envelope to the exact findings/contract/features/evidence it graded (see
+    :func:`external_audit_fingerprint`). Freshness selection requires an
+    exact match, so finding-content drift after attach (same ordinal
+    finding_ids, different substance) stales the envelope instead of
+    silently passing. Absent on dispatched and historical envelopes."""
 
 
 # ──────────────────────────────  test-injection seam  ──────────────────────────────
@@ -273,16 +301,17 @@ def _load_features(plan_dir: Path) -> list[dict]:
     return items
 
 
-def _read_prompt_template() -> str:
-    """Read the markdown template once per call.
+def _read_prompt_template(kind: str = "goal") -> str:
+    """Read the markdown template once per call, selected by audit kind
+    (``'goal'`` → completion template, ``'experience'`` → journey/experience
+    template).
 
     Re-reading is cheap (small file, infrequent call) and avoids the
     test-time hazard of caching a file the test fixture replaced."""
-    if not _PROMPT_TEMPLATE_PATH.is_file():
-        raise CompletionDispatchError(
-            f"completion-audit prompt template missing at {_PROMPT_TEMPLATE_PATH}"
-        )
-    return _PROMPT_TEMPLATE_PATH.read_text()
+    path = _EXPERIENCE_PROMPT_TEMPLATE_PATH if kind == "experience" else _PROMPT_TEMPLATE_PATH
+    if not path.is_file():
+        raise CompletionDispatchError(f"{kind}-audit prompt template missing at {path}")
+    return path.read_text()
 
 
 def _serialize_contract(contract) -> str:
@@ -342,14 +371,16 @@ def _build_audit_prompt(
     manifest,
     *,
     plan_dir: Path | None = None,
+    kind: str = "goal",
 ) -> str:
     """Render the prompt template by substituting the four context
     blocks. Uses ``str.replace`` rather than ``str.format`` so embedded
     ``{`` / ``}`` characters in the JSON payloads do not collide with
     the template's placeholders. When ``plan_dir`` is given, evidence
     uris are rendered repo-root-relative so the auditor (cwd = repo
-    root) can actually open them."""
-    template = _read_prompt_template()
+    root) can actually open them. ``kind`` selects the template (goal
+    completion vs consumer-experience review — F004 i1)."""
+    template = _read_prompt_template(kind)
     uri_prefix = _plan_dir_repo_prefix(plan_dir) if plan_dir is not None else None
     return (
         template.replace("{contract}", _serialize_contract(contract))
@@ -360,6 +391,37 @@ def _build_audit_prompt(
             _serialize_manifest(manifest, uri_prefix=uri_prefix),
         )
     )
+
+
+def external_audit_fingerprint(
+    plan_dir: Path,
+    findings: Iterable[CompletionFinding],
+) -> str:
+    """Plan 2026-07-27-001 F004 i1/i2 — content hash over exactly what an
+    external audit graded: the full serialized findings (content, not just
+    ordinal ids), the objective contract, the features list (i2 — feature
+    descriptions/acceptance are embedded in the reviewed prompt, so their
+    drift must stale the envelope too), and the evidence-manifest
+    ``uri|hash`` signature.
+
+    Stamped onto the envelope at attach time and recomputed at selection
+    time; any drift in finding substance, contract text, feature content,
+    or captured evidence makes the attached envelope stale instead of
+    letting an audit of old content silently vouch for new content."""
+    contract = _load_objective_contract(plan_dir)
+    features = _load_features(plan_dir)
+    manifest = _build_evidence_manifest(plan_dir)
+    pairs = sorted((ref.uri or "", ref.hash or "") for ref in manifest)
+    manifest_signature = "\n".join(f"{uri}|{hsh}" for uri, hsh in pairs)
+    body = "\x00".join(
+        [
+            _serialize_findings(findings),
+            _serialize_contract(contract),
+            _serialize_features(features),
+            manifest_signature,
+        ]
+    )
+    return f"sha256:{hashlib.sha256(body.encode('utf-8')).hexdigest()}"
 
 
 def _strip_code_fence(text: str) -> str:
@@ -492,6 +554,40 @@ def _parse_audit_response(
                 )
             ]
         return "agree", dispositions
+
+    # Plan 2026-07-27-001 F004 — completeness: the prompt contract requires
+    # exactly one disposition per v1 finding. Without this check a partial
+    # response (grading F-1 but silent on F-2) collapsed to `agree`, letting
+    # an auditor — dispatched or externally attached — skip findings.
+    graded = [d.finding_id for d in dispositions if not d.finding_id.startswith("auditor-overlay-")]
+    duplicated = sorted({fid for fid in graded if graded.count(fid) > 1})
+    if duplicated:
+        return "dispatch_response_malformed", [
+            FindingDisposition(
+                finding_id="dispatch_response_malformed",
+                agree=False,
+                severity_disposition="no_finding",
+                comment=(
+                    f"auditor response grades finding_id(s) more than once: "
+                    f"{', '.join(duplicated)}; expected exactly one disposition "
+                    "per v1 finding"
+                ),
+            )
+        ]
+    missing = sorted({f.finding_id for f in findings} - set(graded))
+    if missing:
+        return "dispatch_response_malformed", [
+            FindingDisposition(
+                finding_id="dispatch_response_malformed",
+                agree=False,
+                severity_disposition="no_finding",
+                comment=(
+                    f"auditor response omits disposition(s) for v1 finding_id(s): "
+                    f"{', '.join(missing)}; expected exactly one disposition "
+                    "per finding"
+                ),
+            )
+        ]
 
     all_agree = all(d.agree for d in dispositions)
     return ("agree" if all_agree else "disagree"), dispositions
@@ -646,11 +742,30 @@ def _dispatch_via_executor(auditor: str, prompt: str, *, plan_dir: Path) -> str:
     ``DispatchResult(success=False)``; we still return ``raw_response``
     so the auditor's prose (often an error message) lands in the
     transcript."""
-    executor = get_executor(auditor)
+    # F013 i1 — the resolved auditor may be a worker-profile id (or a D015
+    # alias); map to (harness, model) through the profile gates before
+    # touching the registry. Lazy import mirrors the resolver import below.
+    from dontpanic_orchestrate import worker_profiles as _wp
+
+    try:
+        worker = _wp.resolve_goal_audit_worker(plan_dir, auditor)
+    except _wp.WorkerProfileError as exc:
+        raise CompletionDispatchError(str(exc)) from exc
+    executor = get_executor(worker.harness)
     if not executor.is_available():
         raise CompletionDispatchError(
-            f"resolved auditor {auditor!r} is not available — {executor.availability_hint()}"
+            f"resolved auditor {auditor!r} (harness {worker.harness!r}) is not "
+            f"available — {executor.availability_hint()}"
         )
+
+    # F012 i1 (codex audit i0 high finding) — forward the configured
+    # goal-audit model override; None keeps the harness CLI default.
+    # F013: the profile-level model wins over the role-level override.
+    # F015 i1: config model_aliases resolve single-hop on the effective
+    # model, mirroring supervisor._run_round; freeform strings pass through.
+    # Lazy import mirrors sufficiency_auditor's F006-package decoupling.
+    from dontpanic_orchestrate import model_catalog
+    from dontpanic_orchestrate.config.resolvers import resolve_goal_audit_model
 
     plan_id = plan_dir.name
     task = DispatchTask(
@@ -664,6 +779,10 @@ def _dispatch_via_executor(auditor: str, prompt: str, *, plan_dir: Path) -> str:
         iteration=0,
         extra_context={"prompt_override": prompt},
         permission_policy="auditor",
+        model=model_catalog.resolve_alias(
+            worker.model or resolve_goal_audit_model(plan_dir, harness=worker.harness),
+            plan_dir,
+        ),
     )
     result = executor.dispatch(task)
     return result.raw_response or ""
@@ -674,16 +793,26 @@ def _assert_config_ready_for_completion(
     implementer_agent: str | None,
     auditor: str,
     caps_path: Path | None = None,
+    plan_dir: Path | None = None,
 ) -> None:
     """Plan 2026-06-01-001 F009 — raise :class:`ConfigNotReady` if the quota-caps
     config or the resolved role values are not usable, BEFORE the plan-close
     goal-completion audit spends a paid call. Reuses the same readiness module
     as the dispatch-from-plan gate so the actionable message + runnable
-    remediation are identical at both pre-flight sites."""
-    from dontpanic_orchestrate import config_readiness
+    remediation are identical at both pre-flight sites.
+
+    F013 i1: role values may be worker-profile ids or D015 aliases; readiness
+    validates the resolved HARNESS (profiles are validated by their own gates
+    at dispatch), so a valid ``roles.auditor=honey`` no longer fails the
+    registered-executor check."""
+    from dontpanic_orchestrate import config_readiness, worker_profiles
     from dontpanic_orchestrate.executors import AGENT_REGISTRY
 
-    roles = [r for r in (implementer_agent, auditor) if r]
+    def _to_harness(name: str) -> str:
+        peeked = worker_profiles.peek_worker(plan_dir, name)
+        return peeked.harness if peeked is not None else name
+
+    roles = [_to_harness(r) for r in (implementer_agent, auditor) if r]
     result = config_readiness.check_config_readiness(
         roles=roles,
         registered_executors=set(AGENT_REGISTRY),
@@ -739,7 +868,10 @@ def dispatch_completion_audit(
     # and intentionally bypass the gate.
     if dispatch is None and not _offline:
         _assert_config_ready_for_completion(
-            implementer_agent=implementer_agent, auditor=auditor, caps_path=caps_path
+            implementer_agent=implementer_agent,
+            auditor=auditor,
+            caps_path=caps_path,
+            plan_dir=plan_dir,
         )
     _validate_auditor_name(auditor)
 
@@ -755,9 +887,7 @@ def dispatch_completion_audit(
     contract = _load_objective_contract(plan_dir)
     features = _load_features(plan_dir)
     manifest = _build_evidence_manifest(plan_dir)
-    prompt = _build_audit_prompt(
-        contract, features, findings, manifest, plan_dir=plan_dir
-    )
+    prompt = _build_audit_prompt(contract, features, findings, manifest, plan_dir=plan_dir)
 
     if dispatch is not None:
         raw_response = dispatch(auditor, prompt)

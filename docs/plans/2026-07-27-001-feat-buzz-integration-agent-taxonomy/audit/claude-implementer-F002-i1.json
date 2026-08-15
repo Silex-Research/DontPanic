@@ -1,0 +1,34 @@
+{
+  "task_id": "2026-07-27-001-feat-buzz-integration-agent-taxonomy",
+  "audit_id": "2026-07-27-001-feat-buzz-integration-agent-taxonomy#claude#1",
+  "agent": "claude",
+  "agent_role": "implementer",
+  "model_version": "claude-fable-5",
+  "iteration": 1,
+  "started_at": "2026-07-27T11:26:03Z",
+  "completed_at": "2026-07-27T11:29:53Z",
+  "validation_performed": [
+    "claude implementer round (iteration 1)",
+    "quota gate impl=31.85791309311491",
+    "prior_auditor_path=/Users/bayesian/Documents/GitHub/DontPanic/docs/plans/2026-07-27-001-feat-buzz-integration-agent-taxonomy/audit/codex-auditor-F002-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-07-27-001-feat-buzz-integration-agent-taxonomy-ttvkx83j target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 3903 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 851588,
+    "tokens_out": 19123,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 3 (see structured target_context.commands_run)\n\n[F002] Both findings are addressed; all 10 tests pass and both files are ruff-clean.\n\nRepo: DontPanic\nEnv: dev\nProject: (none)\n\n**Finding 1 (high, correctness — unit-wide disclaimer suppression):** `scan_text()` no longer skips a whole unit when any disclaimer appears. Units that make an executor claim are now split into clauses at semicolons and sentence ends (`_CLAUSE_SPLIT_RE` in `scripts/dontpanic_orchestrate/doc_drift.py:73`), and an agent is excused only when *every* clause naming it carries a disclaimer. Clauses deliberately do not split on commas or dashes: commas would break \"Gemini, Grok, Ollama executors\" as one claim list, and dashes would false-positive on README's honest em-dash apposition at line 29 (\"**Operator-only runtimes** — Gemini and Grok today — … cannot be dispatched as workers\"). The auditor's exact probe `Gemini is a shipped executor; Grok is operator-only` now flags gemini, covered by the parametrized regression `test_disclaimer_for_one_agent_does_not_excuse_another` (semicolon and sentence-boundary variants) plus `test_em_dash_apposition_disclaimer_still_counts` guarding the no-dash-split decision.\n\n**Finding 2 (medium, test_coverage — tests contradict registry-driven relaxation):** Added `HISTORICAL_REGISTRY = frozenset({\"claude\", \"codex\"})` (the registry as of the drift incident) and injected it into every historical-fixture test — pre-F001 checklist, bare prose claim, corrected phrasing, mixed-claim probes, and the tmp-path allowlist test — so legitima",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "python3 -m pytest scripts/dontpanic_orchestrate/tests/test_doc_drift_guard_f002.py -q   # 10 passed",
+      "ruff check scripts/dontpanic_orchestrate/doc_drift.py scripts/dontpanic_orchestrate/tests/test_doc_drift_guard_f002.py   # clean",
+      "ruff format scripts/dontpanic_orchestrate/doc_drift.py scripts/dontpanic_orchestrate/tests/test_doc_drift_guard_f002.py   # then re-ran tests: 10 passed"
+    ]
+  },
+  "findings": [],
+  "audit_status": "signed_off"
+}

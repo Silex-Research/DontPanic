@@ -1,0 +1,31 @@
+{
+  "gate": "patch_completeness_cross_feature",
+  "plan_id": "2026-07-27-001-feat-buzz-integration-agent-taxonomy",
+  "current_feature_id": "F009",
+  "reason": "shared plan ledger and multi-feature plan surface",
+  "acknowledged_findings": [
+    {
+      "mode": "cross_feature_edit",
+      "severity": "block",
+      "current_feature_id": "F009",
+      "foreign_feature_id": "F002",
+      "paths": [
+        "README.md"
+      ],
+      "reason": "Dispatch for F009 touched 1 path(s) owned by F002: README.md. Cross-feature edits leak scope between features and should be split out or explicitly acknowledged.",
+      "recommendation": "Revert the foreign-owned paths from this dispatch and land them under F002, OR re-run with --acknowledge-cross-feature <reason> (>=8 chars) if the shared edit is legitimate."
+    },
+    {
+      "mode": "cross_feature_edit",
+      "severity": "block",
+      "current_feature_id": "F009",
+      "foreign_feature_id": "F003",
+      "paths": [
+        "docs/AGENT_CAPABILITY_MATRIX.md"
+      ],
+      "reason": "Dispatch for F009 touched 1 path(s) owned by F003: docs/AGENT_CAPABILITY_MATRIX.md. Cross-feature edits leak scope between features and should be split out or explicitly acknowledged.",
+      "recommendation": "Revert the foreign-owned paths from this dispatch and land them under F003, OR re-run with --acknowledge-cross-feature <reason> (>=8 chars) if the shared edit is legitimate."
+    }
+  ],
+  "recorded_at": "2026-07-28T06:58:21Z"
+}

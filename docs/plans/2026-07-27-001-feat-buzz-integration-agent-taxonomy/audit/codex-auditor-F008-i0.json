@@ -1,0 +1,72 @@
+{
+  "task_id": "2026-07-27-001-feat-buzz-integration-agent-taxonomy",
+  "audit_id": "2026-07-27-001-feat-buzz-integration-agent-taxonomy#codex#0",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 0,
+  "started_at": "2026-07-28T16:42:43Z",
+  "completed_at": "2026-07-28T16:47:02Z",
+  "validation_performed": [
+    "codex auditor round (iteration 0)",
+    "worker: profile_id=None harness=codex model=(harness default)",
+    "quota gate aud=37.022385",
+    "reviewing implementer audit at claude-implementer-F008-i0.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-07-27-001-feat-buzz-integration-agent-taxonomy-ka9waxia target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 516590 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 2227235,
+    "tokens_out": 22018,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 5 (see structured target_context.commands_run)\n\n[F008] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nOverall verdict: **needs_changes**. The implementer correctly declared the target in prose and structured context; `commands_run` is empty, so no forbidden command shapes occurred.\n\nFINDING (high, correctness): The iteration-0 completion claim is unsupported. Evidence: the implementer audit says `DISPATCH FAILED`, has `audit_status: blocked`, records no commands, and F008 remains `passes: false`; the current implementation is staged among later audit artifacts. Recommendation: rerun F008 and persist a successful implementation audit with passing verification.\n\nFINDING (medium, security): Agent-key exclusion remains configuration-dependent and can fail open. Evidence: an explicitly empty `agent_pubkeys` list enables the bridge, so an unclassified agent key placed in `approver_pubkeys` is accepted. Recommendation: derive agent identities from an authoritative registry or refuse approval when identity classification is incomplete.\n\nFINDING (medium, architecture): Approval persistence is not atomic. Evidence: `approve_gate` commits gate state before the consumed-event ledger, INBOX event, and decision note are written; an exception or concurrent process can leave a cleared gate with incomplete evidence or duplicate decision IDs. Recommendation: serialize approval under a plan lock and make the state/evidence update transactional or retry-repairable.\n\nFINDING (medium, documentation): `GETTING_STARTED.md` documents obsolete and unsafe b",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_f008_buzz_gate_bridge.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -c 'import ast, importlib, pathlib; paths=[\"scripts/dontpanic_orchestrate/buzz_gate_bridge.py\",\"scripts/dontpanic_orchestrate/nostr_event.py\",\"scripts/dontpanic_orchestrate/cli.py\",\"scripts/dontpanic_orchestrate/tests/test_f008_buzz_gate_bridge.py\"]; [ast.parse(pathlib.Path(p).read_text(encoding=\"utf-8\"), filename=p) for p in paths]; importlib.import_module(\"dontpanic_orchestrate.buzz_gate_bridge\"); importlib.import_module(\"dontpanic_orchestrate.nostr_event\"); print(\"AST/import OK:\", \", \".join(paths))' && python3 -m ruff check --no-cache --select E,F,I,UP scripts/dontpanic_orchestrate/buzz_gate_bridge.py scripts/dontpanic_orchestrate/nostr_event.py scripts/dontpanic_orchestrate/tests/test_f008_buzz_gate_bridge.py scripts/dontpanic_orchestrate/cli.py && git diff --check HEAD~1 -- scripts/dontpanic_orchestrate/buzz_gate_bridge.py scripts/dontpanic_orchestrate/nostr_event.py scripts/dontpanic_orchestrate/tests/test_f008_buzz_gate_bridge.py scripts/dontpanic_orchestrate/cli.py docs/CONFIGURATION.md README.md",
+      "rg -n -C 18 'gate_bridge|approver_pubkeys|agent_pubkeys|webhook_secret_ref|poll_command|buzz-gate' docs/CONFIGURATION.md README.md docs/GETTING_STARTED.md && git diff --check HEAD~1 -- scripts/dontpanic_orchestrate/buzz_gate_bridge.py scripts/dontpanic_orchestrate/nostr_event.py scripts/dontpanic_orchestrate/tests/test_f008_buzz_gate_bridge.py scripts/dontpanic_orchestrate/cli.py docs/CONFIGURATION.md README.md",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -c 'from pathlib import Path; from dontpanic_orchestrate import buzz_gate_bridge as b, nostr_event as n; msg=bytes(32); pub=bytes.fromhex(\"F9308A019258C31049344F85F89D5229B531C845836F99B08601F113BCE036F9\"); sig=bytes.fromhex(\"E907831F80848D1069A5371B402410364BDF1C5F8307B0084C55F1CE2DCA821525F66A4A85EA8B71E482A74F382D2CE5EBEEE8FDB2172F477DF4900D310536C0\"); assert n.pubkey_from_seckey(3)==pub.hex(); assert n.schnorr_sign(msg,3)==sig; assert n.schnorr_verify(msg,pub,sig); assert not b.load_bridge_config(Path(\"/definitely/not/present/buzz.json\")).enabled; print(\"BIP-340 vector and off-by-default checks passed\")'",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts pytest -s --collect-only -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_f008_buzz_gate_bridge.py -q && python3 -m ruff check --no-cache --select E,F,I,UP scripts/dontpanic_orchestrate/buzz_gate_bridge.py scripts/dontpanic_orchestrate/nostr_event.py scripts/dontpanic_orchestrate/tests/test_f008_buzz_gate_bridge.py"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F008",
+      "issue": "The iteration-0 completion claim is unsupported. Evidence: the implementer audit says `DISPATCH FAILED`, has `audit_status: blocked`, records no commands, and F008 remains `passes: false`; the current implementation is staged among later audit artifacts. Recommendation: rerun F008 and persist a successful implementation audit with passing verification.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "security",
+      "feature_id": "F008",
+      "issue": "Agent-key exclusion remains configuration-dependent and can fail open. Evidence: an explicitly empty `agent_pubkeys` list enables the bridge, so an unclassified agent key placed in `approver_pubkeys` is accepted. Recommendation: derive agent identities from an authoritative registry or refuse approval when identity classification is incomplete.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "architecture",
+      "feature_id": "F008",
+      "issue": "Approval persistence is not atomic. Evidence: `approve_gate` commits gate state before the consumed-event ledger, INBOX event, and decision note are written; an exception or concurrent process can leave a cleared gate with incomplete evidence or duplicate decision IDs. Recommendation: serialize approval under a plan lock and make the state/evidence update transactional or retry-repairable.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "medium",
+      "category": "documentation",
+      "feature_id": "F008",
+      "issue": "`GETTING_STARTED.md` documents obsolete and unsafe behavior. Evidence: it says relayed reactions and caller-supplied `sig_verified: true` authorize approval, while the implementation rejects both and requires a raw signed event with an exact ceremony. Recommendation: document the signed-event payload, poll adapter, webhook HMAC behavior, and reaction prohibition accurately.",
+      "evidence": "Extracted from auditor summary."
+    },
+    {
+      "severity": "low",
+      "category": "style",
+      "feature_id": "F008",
+      "issue": "Focused Ruff reports two overlong lines in `test_f008_buzz_gate_bridge.py` at lines 115 and 226. Recommendation: wrap both signatures. Checks: 60 tests collected; AST/import, official BIP-340 vector, off-by-default behavior, and `git diff --check` passed. Full pytest execution was blocked because the read-only sandbox provides no writable temporary directory. $ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_f008_buzz_gate_bridge.p",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

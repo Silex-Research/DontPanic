@@ -1,0 +1,177 @@
+{
+  "task_id": "2026-08-12-001-infra-admitted-state-and-process-behaviors",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "schema",
+      "phase": 0,
+      "description": "Define a verified-admission claim contract in agent-conventions so a finding, failed hypothesis, or binding constraint can enter shared state only when grounded in evidence",
+      "steps": [
+        "Add claim.schema.json with status enum proposed|admitted|rejected|stale, required evidence_refs, content_hash, admitted_by, admitted_at",
+        "Admit only when status is admitted and evidence_refs is non-empty; rejected and stale carry a reason",
+        "Pydantic twin in schemas/v1.0/models/ plus fixtures that prove JSON Schema and the model return the same verdict",
+        "Reuse the existing evidence_ref shape from features.schema.json rather than inventing a second pointer grammar"
+      ],
+      "acceptance": "(1) A claim with status admitted and at least one evidence_ref validates. (2) A claim with status admitted and empty evidence_refs is rejected by both JSON Schema and Pydantic. (3) status outside proposed|admitted|rejected|stale is rejected by both. (4) The JSON Schema and the Pydantic model return the same verdict on the fixture set. (5) additionalProperties is false.",
+      "passes": false,
+      "depends_on": [],
+      "user_impact": {
+        "audience": "agent",
+        "summary": "The next worker only inherits findings that were admitted against evidence, not a rewritten summary.",
+        "surfaces": [
+          "backend"
+        ],
+        "description_hash": "6e3c3b1eecf392ff5b02ae23b509f70642c5eb4592c7bb2158d128b566bbd1ba"
+      }
+    },
+    {
+      "id": "F002",
+      "category": "schema",
+      "phase": 0,
+      "description": "Define a decisions.jsonl line schema matching the existing DontPanic convention so plan decisions are validated rather than free-form",
+      "steps": [
+        "Add decisions.schema.json for one jsonl line: id matching ^D\\d{3}$, date or ts, question or title, status open|resolved|deferred",
+        "Accept the two line shapes already on disk (question/answer/status and id/ts/by/title/body) without requiring a mass rewrite",
+        "Pydantic twin plus fixtures; validator dispatch can remain advisory for jsonl until a later consumer plan",
+        "Do not migrate existing decisions.jsonl files in this feature"
+      ],
+      "acceptance": "(1) A fixture matching the current DontPanic decisions.jsonl convention validates. (2) A line missing an id is rejected by both validators. (3) Existing plan decisions.jsonl files are not edited. (4) JSON Schema and Pydantic agree on the fixture set.",
+      "passes": false,
+      "depends_on": [],
+      "user_impact": {
+        "audience": "operator",
+        "summary": "Plan decisions become a checkable contract instead of an untyped log.",
+        "surfaces": [
+          "docs",
+          "backend"
+        ],
+        "description_hash": "864b37eac40af0479db780df754fd8e9e0b45a8e7a559e9489630dacc0a20267"
+      }
+    },
+    {
+      "id": "F003",
+      "category": "schema",
+      "phase": 0,
+      "description": "Define a process-behavior contract that is never shown to worker agents and can be judged from an existing audit envelope",
+      "steps": [
+        "Add behavior.schema.json with id, trigger, owner_role implementer|auditor|supervisor, and adherence expected|n/a|violated",
+        "Verdict records reference evidence_refs on the existing audit envelope (commands_run, vendor, declaration) rather than free text",
+        "Document in the schema description that behavior specs are hidden from worker prompts",
+        "Pydantic twin plus fixtures"
+      ],
+      "acceptance": "(1) A behavior verdict with adherence n/a and no evidence_refs validates. (2) adherence violated requires at least one evidence_ref. (3) owner_role outside the closed enum is rejected by both validators. (4) JSON Schema and Pydantic agree on the fixture set.",
+      "passes": false,
+      "depends_on": [],
+      "user_impact": {
+        "audience": "agent",
+        "summary": "How the agent worked can be graded from the trajectory without putting the rubric in the worker prompt.",
+        "surfaces": [
+          "backend"
+        ],
+        "description_hash": "71eb946753340856845d13044844661e64060dce32532922415130c576aa8ef5"
+      }
+    },
+    {
+      "id": "F004",
+      "category": "infra",
+      "phase": 1,
+      "description": "Publish the three contracts: bump agent-conventions, subtree-pull into DontPanic, and prove every existing plan still validates",
+      "steps": [
+        "Bump agent-conventions VERSION and changelog",
+        "Subtree-pull into DontPanic claude/shared/",
+        "Re-validate every existing plan directory; exit codes must match the pre-change run",
+        "No existing plan file is edited as part of this feature"
+      ],
+      "acceptance": "(1) No existing plan directory's validation exit code changes. (2) git status shows no existing plan file modified by this feature. (3) The subtree-pulled schemas in DontPanic are byte-identical to the ones committed in agent-conventions.",
+      "passes": false,
+      "depends_on": [
+        "F001",
+        "F002",
+        "F003"
+      ],
+      "user_impact": {
+        "audience": "operator",
+        "summary": "DontPanic and other subtree consumers can depend on the new contracts without breaking existing plans.",
+        "surfaces": [
+          "docs",
+          "backend"
+        ],
+        "description_hash": "6291470a2249e1181ccf68a70ea0c92bb02f23b7d6d0cac8b9f271a6a323d636"
+      }
+    },
+    {
+      "id": "F005",
+      "category": "functional",
+      "phase": 2,
+      "description": "Change the next-implementer findings handoff to show only admitted claims plus an unfold pointer to the full audit JSON, instead of a lossy severity/issue/recommendation bullet list",
+      "steps": [
+        "Write a failing test that feeds an auditor envelope containing one grounded finding and one ungrounded sentence and asserts the next implementer prompt includes only the admitted claim plus the audit path",
+        "Admit findings that already carry evidence into claim objects at audit-write time; do not invent claim prose",
+        "Replace prompts._findings_block consumption with admitted claims + unfold path",
+        "Keep the existing audit JSON filename and path so unfold is a file read, not a new store"
+      ],
+      "acceptance": "(1) A fixture auditor envelope with one evidenced finding and one unevidenced sentence produces a next-implementer prompt that contains the admitted claim and the audit JSON path. (2) The unevidenced sentence does not appear in the prompt. (3) The existing audit JSON file is still written and is the unfold target. (4) The prior event_copy and supervisor suites show no new failures against a same-scope baseline.",
+      "passes": false,
+      "depends_on": [
+        "F004"
+      ],
+      "user_impact": {
+        "audience": "agent",
+        "summary": "The next coding pass starts from grounded claims and a file it can open, not from a rewritten bullet list.",
+        "surfaces": [
+          "backend"
+        ],
+        "description_hash": "61e6a8d50fe74b15973b1eee22b65984f0baef0006a76f0bf58d0a6d16e9941f"
+      }
+    },
+    {
+      "id": "F006",
+      "category": "functional",
+      "phase": 2,
+      "description": "Judge a small closed set of deterministic process behaviors off existing audit envelopes and persist the verdicts next to the volley",
+      "steps": [
+        "Define 3–5 behaviors: acceptance test invoked when steps name a test; {repo,env,project} declared when target_context is present; implementer vendor ≠ auditor vendor; protected path untouched unless gated; commands_run recorded when the prompt required commands",
+        "Each judge is a pure function of the audit envelope and git-state sidecar — no model call",
+        "Persist verdicts as behavior records beside the feature audit, not in the worker prompt",
+        "A fixture envelope that omitted the named test yields adherence violated with an evidence_ref"
+      ],
+      "acceptance": "(1) Each of the closed behaviors returns adhered, violated, or n/a from a fixture envelope with no network and no model. (2) A fixture that lists a test in steps and has no matching command in commands_run is violated. (3) Behavior text does not appear in implementer_prompt or auditor_prompt. (4) Existing volley tests show no new failures against a same-scope baseline.",
+      "passes": false,
+      "depends_on": [
+        "F004"
+      ],
+      "user_impact": {
+        "audience": "operator",
+        "summary": "You can see whether the agent followed the required process even when the patch looks right.",
+        "surfaces": [
+          "backend"
+        ],
+        "description_hash": "0c0a903af1ff68ffc4430bb41e4a4a5af473ab0a4714e5ab443ee7583c3b1f12"
+      }
+    },
+    {
+      "id": "F007",
+      "category": "doc",
+      "phase": 3,
+      "description": "Record the research non-goals and the harness/loop/graph diagnostic vocabulary in platform docs so later work does not rebuild a runtime, a vector context layer, or an LLM supervisor",
+      "steps": [
+        "Add a short section to docs/PLATFORM.md naming harness, loop, and graph as diagnostic layers mapped to existing DontPanic objects",
+        "Add a non-goals subsection pointing at ECOSYSTEM.md for Hermes/AG-UI, caller UIs, and vector context platforms",
+        "Link the requirements brainstorm from the plan evidence dir",
+        "Do not rewrite PRODUCT.md positioning"
+      ],
+      "acceptance": "(1) PLATFORM.md names harness, loop, and graph and maps each to an existing DontPanic object. (2) The non-goals list includes LLM supervisor, Claude-authored control graph, vector context layer, and in-app agent UI. (3) PRODUCT.md and ECOSYSTEM.md caller boundary are unchanged except for a link if needed.",
+      "passes": false,
+      "depends_on": [],
+      "user_impact": {
+        "audience": "operator",
+        "summary": "Later plans can see which research ideas were rejected and why, instead of rediscovering them as features.",
+        "surfaces": [
+          "docs"
+        ],
+        "description_hash": "ca8991ce021d6332ecdcbe9a7e11d297bac688356dd4f6b6d69d02e802e024d3"
+      }
+    }
+  ]
+}

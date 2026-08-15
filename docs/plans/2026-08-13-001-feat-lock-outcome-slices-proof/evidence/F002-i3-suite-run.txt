@@ -1,0 +1,20 @@
+F002 iteration 3 — outcome-score suite, real run output
+Repo: DontPanic | Env: dev | Project: (none) | Date: 2026-08-13
+
+Note on the i0 blocker: the default temp dir is not writable in this
+sandbox, which is why the earlier run died before collection. Pointing
+TMPDIR at a repo-local scratch dir makes tmp_path fixtures work.
+
+$ TMPDIR="$PWD/.tmp-f002" PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -m pytest -p no:cacheprovider scripts/dontpanic_orchestrate/tests/test_outcome_score_f002.py -q
+........................................................................ [ 82%]
+...............                                                          [100%]
+87 passed in 24.53s
+
+$ ... pytest <outcome_score + 6 lock/close-adjacent modules> -q
+........................................................................ [ 63%]
+........................................................................ [ 95%]
+...........                                                              [100%]
+227 passed in 39.06s
+
+$ ruff check scripts/dontpanic_orchestrate/outcome_score.py scripts/dontpanic_orchestrate/tests/test_outcome_score_f002.py
+All checks passed!

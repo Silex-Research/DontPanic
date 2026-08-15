@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "reason": "All 16 features passes=true; residual child_plan cluster is classifier noise on already-shipped honesty/docs track (F001-F004). Operator closeout memo records follow-ups. Live Buzz posts deferred to human credentials.",
+  "approved_by": "bayesian",
+  "approved_at": "2026-07-28T18:38:07Z",
+  "plan_id": "2026-07-27-001-feat-buzz-integration-agent-taxonomy",
+  "goal_type": "new_feature",
+  "objective_contract_path": "./objective_contract.json",
+  "decision_summary": "cluster cli_human/new-user-reads-honest-executor-panel (12 finding(s)) classified as 'child_plan'",
+  "features_hash": "sha256:2ce18550a68dc964c1f1b3f548c55a6dadf134ce857ca73cd0455dedacc1bde2",
+  "objective_contract_hash": "sha256:48c0a1b3ecbefcbff208e862b9975746d55955a4b5f07d7ac7b905889ca4733a",
+  "completion_findings_hash": "sha256:0d023de2c2fcd18c4e297184a9288fe512b763d87ce76efeb53d361b711cf864",
+  "evidence_manifest_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

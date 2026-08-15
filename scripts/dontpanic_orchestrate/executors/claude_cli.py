@@ -58,6 +58,9 @@ def _permission_flags(policy: str | None) -> tuple[str, ...]:
 class ClaudeCLIExecutor(BaseExecutor):
     agent_name = "claude"
     cli_binary = DEFAULT_BIN
+    # F014: full coding harness — sandboxed non-interactive CLI with tool
+    # use + file edit, so it may hold the implementer role.
+    capabilities = frozenset({"file_edit", "tool_use", "non_interactive"})
 
     def __init__(self, binary: str = DEFAULT_BIN) -> None:
         self.binary = shutil.which(binary) or binary
@@ -74,6 +77,10 @@ class ClaudeCLIExecutor(BaseExecutor):
             "--exclude-dynamic-system-prompt-sections",
         ]
         argv.extend(_permission_flags(task.permission_policy))
+        # F012 — model pass-through: forward the resolved model when set;
+        # unset keeps the harness CLI default (pre-F012 argv unchanged).
+        if task.model:
+            argv.extend(["--model", task.model])
         # F005b — final pre-dispatch assertion that no bypass flag slipped in.
         check_forbidden_flags(argv)
 

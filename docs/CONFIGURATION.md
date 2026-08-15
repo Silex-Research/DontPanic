@@ -120,7 +120,7 @@ duplicate volley orchestration.
 
 | Surface | Default | Configurable | Reference |
 |---|---|---|---|
-| **Agents (models)** | `claude`, `codex` | Yes — agent registry | [Agents](#agents-models) |
+| **Agents (harnesses)** | `claude`, `codex` | Yes — harness registry | [Agents](#agents-harnesses) |
 | **Implementer/auditor pair** | `claude` impl + `codex` aud | Per-plan or global | [Agent pairing](#agent-pairing) |
 | **Notification sinks** | terminal (macOS) | Discord webhook (optional) | [Notifications](#notifications) |
 | **Quota awareness** | per-vendor weekly caps | `~/.dontpanic/quota_caps.json` | [Quota](#quota--caps) |
@@ -159,27 +159,84 @@ The rest of this document explains each knob.
 
 ---
 
-## Agents (models)
+## Agents (harnesses)
 
 The supervisor dispatches **two cross-vendor agents per volley** — one
 implementer, one auditor (per plan 2026-04-19-001 F005 and the cross-vendor
 adversarial design).
 
-**Currently supported agents:**
+The names here are **harnesses**, not models: a harness is the stable code
+adapter that knows how to invoke an agent runtime (argv, auth, sandbox,
+output parsing). Which model runs behind a harness is a separate,
+data-level concern — see the [vocabulary
+section](./AGENT_CAPABILITY_MATRIX.md#vocabulary-harness-vs-model-vs-profile-vs-role)
+of the capability matrix.
 
-| Agent | Vendor | Surface |
-|---|---|---|
-| `claude` | Anthropic | Claude Code CLI |
-| `codex` | OpenAI | Codex CLI |
+**Currently registered harnesses:**
+
+| Harness | Vendor | Surface | Roles |
+|---|---|---|---|
+| `claude` | Anthropic | Claude Code CLI | coding (implementer / auditor / goal_auditor) |
+| `codex` | OpenAI | Codex CLI | coding (implementer / auditor / goal_auditor) |
+| `openrouter` | OpenRouter | Chat completions API (`OPENROUTER_API_KEY`) | **audit-only** (`auditor` / `goal_auditor`; implementer refused — no file_edit/tool_use) |
+| `ollama` | Local Ollama | `ollama run <model>` CLI | **audit-only** (`auditor` / `goal_auditor`; implementer refused — no file_edit/tool_use) |
 
 These are the names used throughout `agents_required:` in plan frontmatter
-and `--implementer / --auditor` flags on `dontpanic dispatch`. The
-canonical source of truth is `scripts/dontpanic_orchestrate/executors/__init__.py:15`.
+and `--implementer / --auditor` flags on `dontpanic dispatch`. Role
+eligibility is capability-gated per harness (see
+`config/worker_profiles.HARNESS_CAPABILITIES`). The canonical source of
+truth is `scripts/dontpanic_orchestrate/executors/__init__.py`
+(`AGENT_REGISTRY`); `dontpanic agent status` reports live availability.
 
-> **Adding a model:** drop a new executor class under
-> `scripts/dontpanic_orchestrate/executors/` extending `BaseExecutor`,
-> register it in `AGENT_REGISTRY`, and add a quota_caps entry. No
-> agent-conventions schema bump required.
+> **Adding a harness** (a new way to *invoke* an agent runtime — e.g. a
+> planned `gemini_cli` executor once non-interactive smoke is proven): drop
+> a new executor class under `scripts/dontpanic_orchestrate/executors/`
+> extending `BaseExecutor`, register it in `AGENT_REGISTRY`, declare
+> capability flags, and add a quota_caps entry. No agent-conventions
+> schema bump required. `openrouter` and `ollama` already ship as
+> audit-only harnesses (F014); only `gemini_cli` remains planned.
+
+**Adopting a new model** (the next Claude release, an OpenRouter OSS
+slug, an Ollama tag, or any other vendor model id) is **not** a registry
+change: model ids are catalog data configured on a worker profile, never
+`AGENT_REGISTRY` keys. Never add a model version string to the registry —
+no Python change is involved in switching models behind an existing
+harness.
+
+### Model catalog & aliases (`dontpanic models`)
+
+The model catalog is **data, not registry keys** (plan 2026-07-27-001 F015,
+Track D4). Two subcommands expose it:
+
+```bash
+# What models does a harness know about?
+dontpanic models list --harness ollama       # live `ollama list`
+dontpanic models list --harness openrouter   # 24h on-disk cache; --refresh to refetch
+dontpanic models list --harness claude       # documented pass-through (no discovery surface)
+
+# The merged alias table (global config overlaid by project config)
+dontpanic models aliases [--project NAME]
+```
+
+Discovery is offline-safe: the OpenRouter catalog is cached under
+`~/.dontpanic/cache/models/` and served (marked stale) when the network is
+unavailable; harnesses without a discovery surface report **pass-through**
+rather than failing. Exit codes: `0` success or pass-through, `1` catalog
+unavailable, `2` unknown harness.
+
+`model_aliases` maps short names to vendor model ids and lives in
+`~/.dontpanic/config.json` and/or `<project>/.dontpanic/dontpanic.json`
+(project wins per key):
+
+```json
+{ "model_aliases": { "sonnet": "claude-sonnet-5" } }
+```
+
+Aliases resolve **single-hop** (alias → vendor id, never alias → alias) at
+dispatch time, wherever a worker profile or role sets a model. Freeform model
+strings are always allowed — no code change to adopt a new model. `dontpanic
+doctor` distinguishes the failure modes: a configured model that is merely
+*unknown* to the catalog is a WARN; a model the harness *rejects* is a FAIL.
 
 ### Agent pairing
 

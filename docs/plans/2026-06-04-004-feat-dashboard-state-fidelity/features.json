@@ -16,7 +16,9 @@
       "acceptance": "Every section's displayed provenance equals the file(s) it was actually built from; with the canonical projection active, no section cites or renders legacy tasks/agents/activity.json. Verified by tests asserting provenance==source.",
       "passes": true,
       "depends_on": [],
-      "verified_by": "operator-style-implementation",
+      "verified_by": [
+        "operator-style-implementation"
+      ],
       "verified_at": "2026-06-05T02:34:23Z",
       "evidence_refs": [
         {
@@ -52,7 +54,9 @@
       "depends_on": [
         "F001"
       ],
-      "verified_by": "operator-style-implementation",
+      "verified_by": [
+        "operator-style-implementation"
+      ],
       "verified_at": "2026-06-05T02:48:40Z",
       "evidence_refs": [
         {
@@ -88,7 +92,9 @@
       "depends_on": [
         "F001"
       ],
-      "verified_by": "operator-style-implementation",
+      "verified_by": [
+        "operator-style-implementation"
+      ],
       "verified_at": "2026-06-05T02:50:51Z",
       "evidence_refs": [
         {
@@ -124,7 +130,9 @@
       "depends_on": [
         "F002"
       ],
-      "verified_by": "operator-style-implementation",
+      "verified_by": [
+        "operator-style-implementation"
+      ],
       "verified_at": "2026-06-05T02:56:49Z",
       "evidence_refs": [
         {
@@ -164,7 +172,9 @@
         "F003",
         "F004"
       ],
-      "verified_by": "operator-style-implementation",
+      "verified_by": [
+        "operator-style-implementation"
+      ],
       "verified_at": "2026-06-05T02:57:56Z",
       "evidence_refs": [
         {
@@ -190,7 +200,9 @@
       "acceptance": "Editing a watched repo/plan file causes serve to auto-regen the architecture map exactly once per debounced burst, within capped runtime/scope, deferred during active write/dispatch; a regen failure records failed+last_error and never blocks the serve loop; large repos mark stale/queued rather than thrash. Verified by watch\u2192debounce\u2192regen, failure-isolation, and deferral tests.",
       "passes": true,
       "depends_on": [],
-      "verified_by": "operator-style-implementation",
+      "verified_by": [
+        "operator-style-implementation"
+      ],
       "verified_at": "2026-06-05T03:01:15Z",
       "evidence_refs": [
         {
@@ -223,7 +235,9 @@
         "F003",
         "F006"
       ],
-      "verified_by": "operator-style-implementation",
+      "verified_by": [
+        "operator-style-implementation"
+      ],
       "verified_at": "2026-06-05T03:01:15Z",
       "evidence_refs": [
         {

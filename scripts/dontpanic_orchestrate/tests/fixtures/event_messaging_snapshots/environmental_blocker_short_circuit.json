@@ -15,7 +15,7 @@
       "exact_command": "dontpanic approve 2026-05-24-004-feat-event-messaging-v1 breaker:environmental_blocker",
       "human_required_reason": "operator action surfaced by dispatch_event",
       "id": "supervisor:environmental_blocker_short_circuit:2026-05-24-004-feat-event-messaging-v1:F005",
-      "plain_consequence": "Every auditor finding classified as `environmental_reproduction_failure`; volley short-circuited without another paid implementer round.",
+      "plain_consequence": null,
       "project_name": null,
       "reversible": false,
       "source": "supervisor",

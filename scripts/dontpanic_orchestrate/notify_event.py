@@ -8,7 +8,8 @@ Two responsibilities:
 
 2. ``dispatch_event`` — fans the event to all sinks honoring the
    ``DONTPANIC_NOTIFY_LEVEL`` (legacy ``JARVIS_NOTIFY_LEVEL``) filter.
-   Returns ``{terminal: bool, discord: bool}``. Never raises — sink
+   Returns ``{terminal: bool, discord: bool, buzz: bool, ...}``. Never
+   raises — sink
    exceptions are swallowed and recorded as ``False`` in the result map.
 
 Level matrix:
@@ -31,8 +32,8 @@ import sys
 from dataclasses import dataclass, field
 from typing import Final
 
-from dontpanic_orchestrate import notify, notify_discord
-
+from dontpanic_orchestrate import notify, notify_buzz, notify_discord
+from dontpanic_orchestrate.decision_brief import DecisionBrief
 
 SEVERITY_INFO: Final[str] = "info"
 SEVERITY_ACTION_REQUIRED: Final[str] = "action_required"
@@ -103,6 +104,15 @@ class NotifyEvent:
         volley_terminal's ``final_status``/``rounds``;
         gate_state_reconciliation_failed's ``persisted_state_path``;
         etc.). Empty dict by default.
+      decision_brief: plan 2026-08-09-002 F003 — immutable snapshot of what
+        the operator is being asked to decide (what changes / who feels it /
+        what approving does), taken at the emit site where the plan and
+        feature records are in scope. ``None`` for events emitted outside a
+        pause, and for any emit site that has not been threaded yet.
+        Necessary because :func:`event_copy.render` is called from
+        :func:`dispatch_event` below with the event alone — its ``plan_meta``
+        / ``feature_meta`` parameters are never populated on the production
+        path, so a renderer reading them would be dead code in practice.
     """
 
     kind: str
@@ -127,6 +137,7 @@ class NotifyEvent:
     technical_metadata: dict[str, str | int | bool | None] = field(
         default_factory=dict
     )
+    decision_brief: DecisionBrief | None = None
 
     def __post_init__(self) -> None:
         # D005 alias reconciliation: action_link and evidence_uri are two
@@ -198,7 +209,8 @@ def _allowed_at_level(event: NotifyEvent) -> bool:
 
 SINK_TERMINAL: Final[str] = "terminal"
 SINK_DISCORD: Final[str] = "discord"
-ALL_SINKS: Final[tuple[str, ...]] = (SINK_TERMINAL, SINK_DISCORD)
+SINK_BUZZ: Final[str] = "buzz"
+ALL_SINKS: Final[tuple[str, ...]] = (SINK_TERMINAL, SINK_DISCORD, SINK_BUZZ)
 
 
 def dispatch_event(
@@ -236,6 +248,7 @@ def dispatch_event(
     out: dict[str, bool] = {
         "terminal": False,
         "discord": False,
+        "buzz": False,
         "sidecar": False,
         "inbox_annotation": False,
     }
@@ -316,6 +329,17 @@ def dispatch_event(
                 f"[notify_event] discord sink raised {type(exc).__name__}; suppressed.",
                 file=sys.stderr,
             )
+    if SINK_BUZZ in sinks and level_allows_live and is_live:
+        try:
+            # Plan 2026-07-27-001 F006: Buzz sink fans out alongside Discord,
+            # consuming the same already-produced RenderedEvent. Fail-soft —
+            # unconfigured Buzz records False without raising.
+            out["buzz"] = bool(notify_buzz.notify(event, rendered=rendered))
+        except Exception as exc:  # noqa: BLE001 — sinks must never propagate.
+            print(
+                f"[notify_event] buzz sink raised {type(exc).__name__}; suppressed.",
+                file=sys.stderr,
+            )
 
     # Sidecar + INBOX annotation: fire for both live AND dashboard_action.
     # Per plan.md § Implementation Strategy + D003 + D018:
@@ -373,11 +397,21 @@ def dispatch_event(
                     f"{type(exc).__name__}; suppressed.",
                     file=sys.stderr,
                 )
+        if SINK_BUZZ in sinks and not out["buzz"]:
+            try:
+                out["buzz"] = bool(notify_buzz.notify(event))
+            except Exception as exc:  # noqa: BLE001
+                print(
+                    f"[notify_event] buzz sink (legacy path) raised "
+                    f"{type(exc).__name__}; suppressed.",
+                    file=sys.stderr,
+                )
     return out
 
 
 __all__ = [
     "ALL_SINKS",
+    "DecisionBrief",
     "LEVEL_NORMAL",
     "LEVEL_QUIET",
     "LEVEL_VERBOSE",
@@ -386,6 +420,7 @@ __all__ = [
     "SEVERITY_ACTION_REQUIRED",
     "SEVERITY_ESCALATION",
     "SEVERITY_INFO",
+    "SINK_BUZZ",
     "SINK_DISCORD",
     "SINK_TERMINAL",
     "dispatch_event",

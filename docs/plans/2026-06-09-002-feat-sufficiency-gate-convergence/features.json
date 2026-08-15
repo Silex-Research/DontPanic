@@ -6,7 +6,7 @@
       "id": "F001",
       "category": "functional",
       "description": "Sufficiency round tracking: every auditor run appends a durable round record to an append-only rounds ledger in plan evidence, with stable finding ids and fingerprints (identity semantics in F006), prior-id clearance accounting, new-finding severities, and a closed per-finding class enum with conservative fallback.",
-      "acceptance": "a round record is appended to an append-only rounds ledger (stored beside sufficiency-findings.json in the plan's evidence directory) ONLY when the auditor actually runs — a disposition-resolution lock pass (F002/F005) never invokes the auditor and never appends an auditor round. Each round record carries the round number, the input_fingerprint, the total finding count, each finding's stable finding_id and content fingerprint (identity semantics defined by F006), which prior-round finding ids CLEARED vs PERSISTED (clearance accounting is by finding_id), each new finding's severity, and each finding's class from a CLOSED enum (plan_contract / implementation_detail / editorial / scope_guard / matrix_pin). The auditor emits the class per finding via the findings schema; a missing or invalid class falls back CONSERVATIVELY to plan_contract, never silently to a disposition-eligible class. The ledger is append-only and fully reconstructable from committed evidence. Tests assert clearance accounting against a prior round, the conservative class fallback, and that a disposition-resolution pass appends no auditor round.",
+      "acceptance": "a round record is appended to an append-only rounds ledger (stored beside sufficiency-findings.json in the plan's evidence directory) ONLY when the auditor actually runs \u2014 a disposition-resolution lock pass (F002/F005) never invokes the auditor and never appends an auditor round. Each round record carries the round number, the input_fingerprint, the total finding count, each finding's stable finding_id and content fingerprint (identity semantics defined by F006), which prior-round finding ids CLEARED vs PERSISTED (clearance accounting is by finding_id), each new finding's severity, and each finding's class from a CLOSED enum (plan_contract / implementation_detail / editorial / scope_guard / matrix_pin). The auditor emits the class per finding via the findings schema; a missing or invalid class falls back CONSERVATIVELY to plan_contract, never silently to a disposition-eligible class. The ledger is append-only and fully reconstructable from committed evidence. Tests assert clearance accounting against a prior round, the conservative class fallback, and that a disposition-resolution pass appends no auditor round.",
       "passes": true,
       "introduces": [
         "rounds_ledger",
@@ -19,17 +19,29 @@
         "matrix_pin"
       ],
       "evidence_refs": [
-        "scripts/dontpanic_orchestrate/sufficiency_convergence.py",
-        "scripts/dontpanic_orchestrate/tests/test_convergence_rounds_f001.py",
-        "docs/plans/2026-06-09-002-feat-sufficiency-gate-convergence/evidence/test-runs/convergence-suite-verbose.txt",
-        "docs/plans/2026-06-09-002-feat-sufficiency-gate-convergence/evidence/test-runs/full-sweep-summary.txt"
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/sufficiency_convergence.py"
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_convergence_rounds_f001.py"
+        },
+        {
+          "type": "test_output",
+          "uri": "docs/plans/2026-06-09-002-feat-sufficiency-gate-convergence/evidence/test-runs/convergence-suite-verbose.txt"
+        },
+        {
+          "type": "test_output",
+          "uri": "docs/plans/2026-06-09-002-feat-sufficiency-gate-convergence/evidence/test-runs/full-sweep-summary.txt"
+        }
       ]
     },
     {
       "id": "F002",
       "category": "functional",
-      "description": "Convergence policy: a pure, deterministic function over the rounds ledger plus recorded dispositions that decides whether the latest round hard-blocks, requires operator disposition, or proceeds — exhaustive over severity x class; full clearance with only medium/low disposition-eligible-class findings demands disposition instead of another paid hard block.",
-      "acceptance": "a pure, deterministic policy function consumes the rounds ledger plus recorded dispositions and returns the verdict for the latest round: (a) when the round FULLY CLEARED all prior findings AND every new finding is severity medium, low, or advisory AND every new finding is classed in the DISPOSITION-ELIGIBLE set {matrix_pin, implementation_detail, editorial, scope_guard}, the verdict is operator_disposition_required — demanding per-finding disposition (F003) rather than another tighten-and-paid-relock round; (b) any new high-or-critical-severity finding keeps the plain hard block; (c) any new plan_contract finding keeps the hard block, and plan_contract is neutralizable ONLY by an explicit waiver disposition recorded with a reason (F003) or by genuinely clearing through a plan edit — no other disposition kind bypasses it; (d) a first round with no ledger history defers to the plain gate unchanged. The verdict mapping is EXHAUSTIVE over severity x class: every combination of severity (critical/high/medium/low/advisory — the full existing sufficiency severity vocabulary) and class (all five enum values, plus the unclassified->plan_contract fallback) has a defined verdict, advisory findings never hard-block on their own (matching the existing gate), and a test enumerates the full matrix. The function performs no I/O beyond its arguments (no network, no filesystem, no paid calls) and is pure (same inputs -> same verdict); tests pin all four branches.",
+      "description": "Convergence policy: a pure, deterministic function over the rounds ledger plus recorded dispositions that decides whether the latest round hard-blocks, requires operator disposition, or proceeds \u2014 exhaustive over severity x class; full clearance with only medium/low disposition-eligible-class findings demands disposition instead of another paid hard block.",
+      "acceptance": "a pure, deterministic policy function consumes the rounds ledger plus recorded dispositions and returns the verdict for the latest round: (a) when the round FULLY CLEARED all prior findings AND every new finding is severity medium, low, or advisory AND every new finding is classed in the DISPOSITION-ELIGIBLE set {matrix_pin, implementation_detail, editorial, scope_guard}, the verdict is operator_disposition_required \u2014 demanding per-finding disposition (F003) rather than another tighten-and-paid-relock round; (b) any new high-or-critical-severity finding keeps the plain hard block; (c) any new plan_contract finding keeps the hard block, and plan_contract is neutralizable ONLY by an explicit waiver disposition recorded with a reason (F003) or by genuinely clearing through a plan edit \u2014 no other disposition kind bypasses it; (d) a first round with no ledger history defers to the plain gate unchanged. The verdict mapping is EXHAUSTIVE over severity x class: every combination of severity (critical/high/medium/low/advisory \u2014 the full existing sufficiency severity vocabulary) and class (all five enum values, plus the unclassified->plan_contract fallback) has a defined verdict, advisory findings never hard-block on their own (matching the existing gate), and a test enumerates the full matrix. The function performs no I/O beyond its arguments (no network, no filesystem, no paid calls) and is pure (same inputs -> same verdict); tests pin all four branches.",
       "passes": true,
       "introduces": [
         "convergence_policy",
@@ -37,17 +49,29 @@
         "full_clearance"
       ],
       "evidence_refs": [
-        "scripts/dontpanic_orchestrate/sufficiency_convergence.py",
-        "scripts/dontpanic_orchestrate/tests/test_convergence_policy_f002.py",
-        "docs/plans/2026-06-09-002-feat-sufficiency-gate-convergence/evidence/test-runs/convergence-suite-verbose.txt",
-        "docs/plans/2026-06-09-002-feat-sufficiency-gate-convergence/evidence/test-runs/full-sweep-summary.txt"
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/sufficiency_convergence.py"
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_convergence_policy_f002.py"
+        },
+        {
+          "type": "test_output",
+          "uri": "docs/plans/2026-06-09-002-feat-sufficiency-gate-convergence/evidence/test-runs/convergence-suite-verbose.txt"
+        },
+        {
+          "type": "test_output",
+          "uri": "docs/plans/2026-06-09-002-feat-sufficiency-gate-convergence/evidence/test-runs/full-sweep-summary.txt"
+        }
       ]
     },
     {
       "id": "F003",
       "category": "functional",
       "description": "Disposition artifact: durable per-finding operator dispositions (accepted_into_plan / deferred_to_impl / waived_with_reason / split_to_followup_plan) recorded via a CLI surface, honored by the lock path, mirrored to decisions.jsonl, and invalidated when a disposed finding recurs materially changed.",
-      "acceptance": "per-finding operator dispositions are recorded durably in plan evidence, each one of accepted_into_plan / deferred_to_impl / waived_with_reason / split_to_followup_plan; waived_with_reason REQUIRES a non-empty reason and split_to_followup_plan REQUIRES a follow-up plan reference. Each disposition binds the finding's SEMANTIC id AND the content fingerprint it was recorded against (F006 two-level identity). PER-CLASS VALIDITY: deferred_to_impl and split_to_followup_plan are REFUSED for plan_contract-classed findings — only waived_with_reason (or an actual plan edit that clears the finding) neutralizes plan_contract; the CLI enforces this refusal. A CLI surface records dispositions against finding ids (no hand-editing of evidence files); each recorded disposition is mirrored into the plan's decisions.jsonl for the audit trail. The lock path treats a disposed finding as non-blocking with one explicit kind split: accepted_into_plan means the operator commits to EDITING THE PLAN — it stays BLOCKING until the plan input_fingerprint has actually changed from the one bound at disposition time, and the edited plan then goes through the PLAIN gate (a fresh audit) where the finding is expected to clear naturally; accepted_into_plan deliberately does NOT participate in the no-paid resolution path. Only deferred_to_impl / waived_with_reason / split_to_followup_plan suppress the block without a plan edit and without a new audit. LEGACY OVERRIDE INTERACTION: the existing --ignore-sufficiency-findings whole-plan override (override.json) remains the blunt escape hatch and takes precedence over the policy/disposition path entirely — it bypasses per-finding dispositions, is recorded in override.json exactly as today, never modifies and is never modified by disposition records, and its use alongside recorded dispositions is permitted but logged in the rounds ledger; a test pins that the legacy override still works unchanged and that its use is recorded. STRICT INVALIDATION: a disposition is INVALIDATED whenever its finding id recurs with a content fingerprint different from the bound one — the materially changed finding re-surfaces as BLOCKING and can never hide behind the old waiver; ambiguity resolves toward blocking. Tests cover each disposition kind end-to-end through the lock path, the plan_contract per-class refusal, the accepted-but-unedited still-blocking case, the invalidation-on-change case, the missing-reason and missing-followup-ref refusals, and that an undisposed blocking finding still refuses the lock.",
+      "acceptance": "per-finding operator dispositions are recorded durably in plan evidence, each one of accepted_into_plan / deferred_to_impl / waived_with_reason / split_to_followup_plan; waived_with_reason REQUIRES a non-empty reason and split_to_followup_plan REQUIRES a follow-up plan reference. Each disposition binds the finding's SEMANTIC id AND the content fingerprint it was recorded against (F006 two-level identity). PER-CLASS VALIDITY: deferred_to_impl and split_to_followup_plan are REFUSED for plan_contract-classed findings \u2014 only waived_with_reason (or an actual plan edit that clears the finding) neutralizes plan_contract; the CLI enforces this refusal. A CLI surface records dispositions against finding ids (no hand-editing of evidence files); each recorded disposition is mirrored into the plan's decisions.jsonl for the audit trail. The lock path treats a disposed finding as non-blocking with one explicit kind split: accepted_into_plan means the operator commits to EDITING THE PLAN \u2014 it stays BLOCKING until the plan input_fingerprint has actually changed from the one bound at disposition time, and the edited plan then goes through the PLAIN gate (a fresh audit) where the finding is expected to clear naturally; accepted_into_plan deliberately does NOT participate in the no-paid resolution path. Only deferred_to_impl / waived_with_reason / split_to_followup_plan suppress the block without a plan edit and without a new audit. LEGACY OVERRIDE INTERACTION: the existing --ignore-sufficiency-findings whole-plan override (override.json) remains the blunt escape hatch and takes precedence over the policy/disposition path entirely \u2014 it bypasses per-finding dispositions, is recorded in override.json exactly as today, never modifies and is never modified by disposition records, and its use alongside recorded dispositions is permitted but logged in the rounds ledger; a test pins that the legacy override still works unchanged and that its use is recorded. STRICT INVALIDATION: a disposition is INVALIDATED whenever its finding id recurs with a content fingerprint different from the bound one \u2014 the materially changed finding re-surfaces as BLOCKING and can never hide behind the old waiver; ambiguity resolves toward blocking. Tests cover each disposition kind end-to-end through the lock path, the plan_contract per-class refusal, the accepted-but-unedited still-blocking case, the invalidation-on-change case, the missing-reason and missing-followup-ref refusals, and that an undisposed blocking finding still refuses the lock.",
       "passes": true,
       "introduces": [
         "finding_disposition",
@@ -57,60 +81,111 @@
         "split_to_followup_plan"
       ],
       "evidence_refs": [
-        "scripts/dontpanic_orchestrate/sufficiency_convergence.py",
-        "scripts/dontpanic_orchestrate/cli.py",
-        "scripts/dontpanic_orchestrate/tests/test_convergence_disposition_f003.py",
-        "docs/plans/2026-06-09-002-feat-sufficiency-gate-convergence/evidence/test-runs/convergence-suite-verbose.txt",
-        "docs/plans/2026-06-09-002-feat-sufficiency-gate-convergence/evidence/test-runs/full-sweep-summary.txt"
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/sufficiency_convergence.py"
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/cli.py"
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_convergence_disposition_f003.py"
+        },
+        {
+          "type": "test_output",
+          "uri": "docs/plans/2026-06-09-002-feat-sufficiency-gate-convergence/evidence/test-runs/convergence-suite-verbose.txt"
+        },
+        {
+          "type": "test_output",
+          "uri": "docs/plans/2026-06-09-002-feat-sufficiency-gate-convergence/evidence/test-runs/full-sweep-summary.txt"
+        }
       ]
     },
     {
       "id": "F004",
       "category": "functional",
-      "description": "Dogfood against the six committed C0 rounds: replay plan 2026-06-09-001's real finding sequences as offline fixtures, asserting ledger reconstruction, full-clearance detection, per-round policy verdicts, and round-6 disposition eligibility — with zero paid auditor calls.",
-      "acceptance": "the six committed C0 sufficiency rounds (plan 2026-06-09-001, finding counts 3 -> 2 -> 4 -> 3 -> 4 -> 5, recoverable from the plan's git evidence history) are replayed as OFFLINE fixtures. Because the historical evidence predates the class field, the fixture corpus carries EXPLICIT RETROSPECTIVE class annotations (operator-reviewed fixture metadata, clearly marked as retrospective, never produced by the auditor or the fallback path); a COMPANION test runs the same corpus WITHOUT annotations and asserts the conservative fallback classes every finding plan_contract and the policy blocks — proving the fallback and the policy independently. With annotations applied, tests reconstruct a rounds ledger from the real finding sequences, assert FULL CLEARANCE is detected at every round boundary (each round cleared 100% of the prior round's findings), and assert the policy verdict per round — every C0 round that introduced a high-severity or plan_contract-class finding verdicts as a hard block, and round 6's three medium findings (F003 purity parity = matrix_pin, F005 empty-repo wording = editorial, missing no-new-parser-extractors scope guard = scope_guard) are recognized as disposition-eligible under the eligible-class set while round 6's high tier-1 language-set finding keeps the overall block. The fixture suite makes ZERO live auditor invocations and asserts that guarantee explicitly (no paid calls under any test path).",
+      "description": "Dogfood against the six committed C0 rounds: replay plan 2026-06-09-001's real finding sequences as offline fixtures, asserting ledger reconstruction, full-clearance detection, per-round policy verdicts, and round-6 disposition eligibility \u2014 with zero paid auditor calls.",
+      "acceptance": "the six committed C0 sufficiency rounds (plan 2026-06-09-001, finding counts 3 -> 2 -> 4 -> 3 -> 4 -> 5, recoverable from the plan's git evidence history) are replayed as OFFLINE fixtures. Because the historical evidence predates the class field, the fixture corpus carries EXPLICIT RETROSPECTIVE class annotations (operator-reviewed fixture metadata, clearly marked as retrospective, never produced by the auditor or the fallback path); a COMPANION test runs the same corpus WITHOUT annotations and asserts the conservative fallback classes every finding plan_contract and the policy blocks \u2014 proving the fallback and the policy independently. With annotations applied, tests reconstruct a rounds ledger from the real finding sequences, assert FULL CLEARANCE is detected at every round boundary (each round cleared 100% of the prior round's findings), and assert the policy verdict per round \u2014 every C0 round that introduced a high-severity or plan_contract-class finding verdicts as a hard block, and round 6's three medium findings (F003 purity parity = matrix_pin, F005 empty-repo wording = editorial, missing no-new-parser-extractors scope guard = scope_guard) are recognized as disposition-eligible under the eligible-class set while round 6's high tier-1 language-set finding keeps the overall block. The fixture suite makes ZERO live auditor invocations and asserts that guarantee explicitly (no paid calls under any test path).",
       "passes": true,
       "introduces": [
         "convergence_fixtures"
       ],
       "evidence_refs": [
-        "scripts/dontpanic_orchestrate/tests/fixtures/convergence_rounds/real_rounds.json",
-        "scripts/dontpanic_orchestrate/tests/test_convergence_fixtures_f004.py",
-        "docs/plans/2026-06-09-002-feat-sufficiency-gate-convergence/evidence/test-runs/convergence-suite-verbose.txt",
-        "docs/plans/2026-06-09-002-feat-sufficiency-gate-convergence/evidence/test-runs/full-sweep-summary.txt"
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/tests/fixtures/convergence_rounds/real_rounds.json"
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_convergence_fixtures_f004.py"
+        },
+        {
+          "type": "test_output",
+          "uri": "docs/plans/2026-06-09-002-feat-sufficiency-gate-convergence/evidence/test-runs/convergence-suite-verbose.txt"
+        },
+        {
+          "type": "test_output",
+          "uri": "docs/plans/2026-06-09-002-feat-sufficiency-gate-convergence/evidence/test-runs/full-sweep-summary.txt"
+        }
       ]
     },
     {
       "id": "F005",
       "category": "functional",
-      "description": "Lock-path wiring: the F002 convergence policy drives dontpanic plan lock — refusals name the policy branch that fired, and a disposition-resolution pass covering the latest round's blocking findings with an unchanged input_fingerprint proceeds with zero auditor invocations.",
-      "acceptance": "dontpanic plan lock evaluates the F002 policy verdict for the latest round, and its refusal output NAMES which policy branch fired and why. The no_auditor_resolution path is wired: when the latest round's verdict was operator_disposition_required and recorded dispositions of the no-audit kinds (deferred_to_impl / waived_with_reason / split_to_followup_plan — accepted_into_plan does NOT count, it requires a plan edit and fresh audit per F003) now cover every blocking finding of that round AND the plan input_fingerprint is unchanged, the lock proceeds by re-evaluating the EXISTING ledger and dispositions with ZERO auditor invocations — no new paid call and no new auditor round appended; if the input_fingerprint HAS changed since that round, the plain gate (fresh audit) applies instead of the resolution path. Tests drive the lock path end-to-end: refusal branch naming, the zero-auditor disposition-resolution pass (asserting the auditor is never invoked), and the changed-fingerprint fallback to the plain gate.",
+      "description": "Lock-path wiring: the F002 convergence policy drives dontpanic plan lock \u2014 refusals name the policy branch that fired, and a disposition-resolution pass covering the latest round's blocking findings with an unchanged input_fingerprint proceeds with zero auditor invocations.",
+      "acceptance": "dontpanic plan lock evaluates the F002 policy verdict for the latest round, and its refusal output NAMES which policy branch fired and why. The no_auditor_resolution path is wired: when the latest round's verdict was operator_disposition_required and recorded dispositions of the no-audit kinds (deferred_to_impl / waived_with_reason / split_to_followup_plan \u2014 accepted_into_plan does NOT count, it requires a plan edit and fresh audit per F003) now cover every blocking finding of that round AND the plan input_fingerprint is unchanged, the lock proceeds by re-evaluating the EXISTING ledger and dispositions with ZERO auditor invocations \u2014 no new paid call and no new auditor round appended; if the input_fingerprint HAS changed since that round, the plain gate (fresh audit) applies instead of the resolution path. Tests drive the lock path end-to-end: refusal branch naming, the zero-auditor disposition-resolution pass (asserting the auditor is never invoked), and the changed-fingerprint fallback to the plain gate.",
       "passes": true,
       "introduces": [
         "no_auditor_resolution"
       ],
       "evidence_refs": [
-        "scripts/dontpanic_orchestrate/sufficiency_gate.py",
-        "scripts/dontpanic_orchestrate/tests/test_convergence_lock_wiring_f005.py",
-        "docs/plans/2026-06-09-002-feat-sufficiency-gate-convergence/evidence/test-runs/convergence-suite-verbose.txt",
-        "docs/plans/2026-06-09-002-feat-sufficiency-gate-convergence/evidence/test-runs/full-sweep-summary.txt"
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/sufficiency_gate.py"
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_convergence_lock_wiring_f005.py"
+        },
+        {
+          "type": "test_output",
+          "uri": "docs/plans/2026-06-09-002-feat-sufficiency-gate-convergence/evidence/test-runs/convergence-suite-verbose.txt"
+        },
+        {
+          "type": "test_output",
+          "uri": "docs/plans/2026-06-09-002-feat-sufficiency-gate-convergence/evidence/test-runs/full-sweep-summary.txt"
+        }
       ]
     },
     {
       "id": "F006",
       "category": "functional",
       "description": "Two-level finding identity: a stable semantic finding id from locator fields with deterministic same-cell ordinals, plus a content fingerprint over severity, class, description, and recommendation; material-change and fail-closed cell-invalidation semantics are defined here as pure functions.",
-      "acceptance": "finding identity is TWO-LEVEL. The semantic finding_id is derived from the finding's locator fields (journey_id + gap_class + sorted feature_refs + a same-cell ordinal), deliberately excluding free text so a reworded or evolved finding in the same cell KEEPS its id across rounds; same-cell ordinals are assigned by a DETERMINISTIC sort over the cell's content fingerprints, never by auditor output order. The content fingerprint (finding_fingerprint) hashes the severity, class, description, AND recommendation — material change is defined as same finding_id with a different fingerprint, so a severity or class escalation is always a material change that invalidates dispositions. FAIL-CLOSED CELL RULE (cell_invalidation): whenever the SET of findings sharing a locator cell changes between rounds (insertion, removal, or content change), every disposition bound to that cell is INVALIDATED and its findings re-surface as blocking — within-cell identity ambiguity always resolves toward blocking, never toward keeping an old disposition. All identity functions are pure (no I/O). Tests assert id stability when a cell's single finding is reworded (same id, new fingerprint), deterministic ordinals under auditor output reordering, severity/class escalation registering as material change, and the fail-closed cell invalidation.",
+      "acceptance": "finding identity is TWO-LEVEL. The semantic finding_id is derived from the finding's locator fields (journey_id + gap_class + sorted feature_refs + a same-cell ordinal), deliberately excluding free text so a reworded or evolved finding in the same cell KEEPS its id across rounds; same-cell ordinals are assigned by a DETERMINISTIC sort over the cell's content fingerprints, never by auditor output order. The content fingerprint (finding_fingerprint) hashes the severity, class, description, AND recommendation \u2014 material change is defined as same finding_id with a different fingerprint, so a severity or class escalation is always a material change that invalidates dispositions. FAIL-CLOSED CELL RULE (cell_invalidation): whenever the SET of findings sharing a locator cell changes between rounds (insertion, removal, or content change), every disposition bound to that cell is INVALIDATED and its findings re-surface as blocking \u2014 within-cell identity ambiguity always resolves toward blocking, never toward keeping an old disposition. All identity functions are pure (no I/O). Tests assert id stability when a cell's single finding is reworded (same id, new fingerprint), deterministic ordinals under auditor output reordering, severity/class escalation registering as material change, and the fail-closed cell invalidation.",
       "passes": true,
       "introduces": [
         "finding_fingerprint",
         "cell_invalidation"
       ],
       "evidence_refs": [
-        "scripts/dontpanic_orchestrate/sufficiency_convergence.py",
-        "scripts/dontpanic_orchestrate/tests/test_convergence_identity_f006.py",
-        "docs/plans/2026-06-09-002-feat-sufficiency-gate-convergence/evidence/test-runs/convergence-suite-verbose.txt",
-        "docs/plans/2026-06-09-002-feat-sufficiency-gate-convergence/evidence/test-runs/full-sweep-summary.txt"
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/sufficiency_convergence.py"
+        },
+        {
+          "type": "test_output",
+          "uri": "scripts/dontpanic_orchestrate/tests/test_convergence_identity_f006.py"
+        },
+        {
+          "type": "test_output",
+          "uri": "docs/plans/2026-06-09-002-feat-sufficiency-gate-convergence/evidence/test-runs/convergence-suite-verbose.txt"
+        },
+        {
+          "type": "test_output",
+          "uri": "docs/plans/2026-06-09-002-feat-sufficiency-gate-convergence/evidence/test-runs/full-sweep-summary.txt"
+        }
       ]
     }
   ]

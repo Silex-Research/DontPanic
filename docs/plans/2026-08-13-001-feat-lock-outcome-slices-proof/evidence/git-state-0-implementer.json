@@ -1,0 +1,40 @@
+{
+  "staged": [],
+  "unstaged_modified": [
+    {
+      "path": "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/INBOX.md",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/partials/2026-08-13-001-feat-lock-outcome-slices-proof#claude#0.stdout.txt",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/plan-run-fingerprint.json",
+      "status": "M"
+    },
+    {
+      "path": "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/decisions.jsonl",
+      "status": "M"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/cli.py",
+      "status": "M"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/outcome_score.py",
+      "status": "M"
+    },
+    {
+      "path": "scripts/dontpanic_orchestrate/tests/test_outcome_score_f004.py",
+      "status": "M"
+    }
+  ],
+  "untracked": [
+    ".claude/",
+    "docs/plans/2026-08-13-001-feat-lock-outcome-slices-proof/audit/claude-implementer-F005-i0.json",
+    "scripts/dontpanic_orchestrate/tests/test_outcome_score_f005.py"
+  ],
+  "deleted_staged": [],
+  "deleted_unstaged": []
+}

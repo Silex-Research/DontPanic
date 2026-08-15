@@ -1,0 +1,93 @@
+{
+  "plan_id": "2026-08-13-001-feat-lock-outcome-slices-proof",
+  "cleared_gates": [
+    "pre_impl",
+    "pre_merge"
+  ],
+  "history": [
+    {
+      "action": "pause",
+      "at": "2026-08-13T15:47:14Z",
+      "actor": "supervisor",
+      "pause_gates": [
+        "pre_impl"
+      ],
+      "stage": "pre_impl"
+    },
+    {
+      "action": "approve",
+      "gate": "pre_impl",
+      "at": "2026-08-13T15:47:14Z",
+      "actor": "supervisor:plan_status_active"
+    },
+    {
+      "action": "pause",
+      "at": "2026-08-13T16:00:53Z",
+      "actor": "supervisor",
+      "pause_gates": [
+        "pre_merge"
+      ],
+      "stage": "pre_merge"
+    },
+    {
+      "action": "approve",
+      "gate": "pre_merge",
+      "at": "2026-08-13T20:28:28Z",
+      "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:iteration_cap",
+      "at": "2026-08-13T21:33:38Z",
+      "actor": "supervisor",
+      "reason": "max_iterations=2 reached without signoff"
+    },
+    {
+      "action": "approve",
+      "gate": "breaker:iteration_cap",
+      "at": "2026-08-13T22:42:38Z",
+      "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:iteration_cap",
+      "at": "2026-08-14T16:08:43Z",
+      "actor": "supervisor",
+      "reason": "max_iterations=2 reached without signoff"
+    },
+    {
+      "action": "approve",
+      "gate": "breaker:iteration_cap",
+      "at": "2026-08-14T17:12:53Z",
+      "actor": "operator"
+    },
+    {
+      "action": "breaker_trip",
+      "gate": "breaker:iteration_cap",
+      "at": "2026-08-14T21:36:21Z",
+      "actor": "supervisor",
+      "reason": "max_iterations=2 reached without signoff"
+    }
+  ],
+  "gate_events": [
+    {
+      "gate": "pre_impl",
+      "stage": "pre_impl",
+      "cleared_at": "2026-08-13T15:47:14Z",
+      "cleared_by": "supervisor:plan_status_active"
+    },
+    {
+      "gate": "pre_merge",
+      "stage": "pre_merge",
+      "cleared_at": "2026-08-13T20:28:28Z",
+      "cleared_by": "operator"
+    }
+  ],
+  "completed_stages": [
+    "pre_impl",
+    "pre_merge"
+  ],
+  "active_breakers": [
+    "breaker:iteration_cap"
+  ]
+}

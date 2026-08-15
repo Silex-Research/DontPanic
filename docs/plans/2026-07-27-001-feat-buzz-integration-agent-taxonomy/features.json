@@ -1,0 +1,464 @@
+{
+  "task_id": "2026-07-27-001-feat-buzz-integration-agent-taxonomy",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "doc",
+      "phase": 0,
+      "description": "Taxonomy honesty pass: align README, ECOSYSTEM, and operator-facing docs with AGENT_REGISTRY reality. Shipped dispatchable workers are only agents present in executors.AGENT_REGISTRY (today: claude, codex). Gemini and Grok are documented as known operator-only runtimes. Remove or reword any checklist item that marks Gemini/Grok/Ollama as shipped executors.",
+      "steps": [
+        "Inventory every README/docs claim that lists Gemini, Grok, or Ollama as shipped dispatch executors",
+        "Rewrite setup checklist line that claims volley dispatch for Gemini/Grok/Ollama as shipped",
+        "Keep multi-vendor design language as intent, with an explicit 'dispatchable today' vs 'operator-only / planned' split",
+        "Cross-link agent status / agent brief as the machine source of truth"
+      ],
+      "acceptance": "No remaining committed doc claims Gemini, Grok, or Ollama are registered dispatch executors while they are absent from AGENT_REGISTRY; README onboarding section and agent-status wording agree on worker vs operator.",
+      "passes": true,
+      "depends_on": [],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=operator_judgment)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-07-28T07:31:51Z"
+    },
+    {
+      "id": "F002",
+      "category": "test",
+      "phase": 0,
+      "description": "Doc-drift guard: a unit or doctor test fails if operator-facing docs assert non-registry agents as shipped executors. Source of truth is sorted(AGENT_REGISTRY.keys()); the guard scans a fixed allowlist of paths (README.md and any matrix doc this plan adds).",
+      "steps": [
+        "Add a pure helper that returns registered worker names from AGENT_REGISTRY",
+        "Add a test (or doctor check) that parses the honesty matrix / forbidden phrase list against README",
+        "Prove the guard fails on a fixture that claims gemini is a shipped executor and passes on corrected text"
+      ],
+      "acceptance": "A automated check fails when README-style prose claims a non-registry agent is a shipped executor, and passes on the post-F001 corrected docs.",
+      "passes": true,
+      "depends_on": [
+        "F001"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=operator_judgment)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-07-28T07:31:51Z"
+    },
+    {
+      "id": "F003",
+      "category": "doc",
+      "phase": 0,
+      "description": "Publish a single Agent capability matrix (docs/AGENT_CAPABILITY_MATRIX.md or equivalent section) derived from runtime concepts: can_operate, can_be_dispatched, can_orchestrate, worker roles (implementer/auditor/goal_auditor), known operator surfaces including opencode. Documents the new-user cost topology as the recommended low-cost panel once Gemini path is decided.",
+      "steps": [
+        "Add matrix table: agent × can_operate × can_be_dispatched × can_orchestrate × notes",
+        "Document OpenCode as operator/planning surface calling DontPanic (ECOSYSTEM caller table)",
+        "Document the recommended cost topology: OpenCode → DontPanic → Claude implement / Codex audit / Gemini goal-experience (path per D001)",
+        "Link matrix from README agent section and agent brief"
+      ],
+      "acceptance": "Committed matrix + ECOSYSTEM/OpenCode caller row exist; a reader can map the four-agent cost topology onto can_operate vs can_be_dispatched without reading Python source.",
+      "passes": true,
+      "depends_on": [
+        "F001"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=operator_judgment)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-07-28T07:31:51Z"
+    },
+    {
+      "id": "F004",
+      "category": "functional",
+      "phase": 1,
+      "description": "Gemini goal/experience audit path per D001. Either (B1) operator-driven external evidence attach for goal/experience audits without registering gemini as a worker, or (B2) GeminiCLIExecutor registered in AGENT_REGISTRY with role policy allowing goal_auditor (and optionally auditor) but not implementer until tool-use maturity is proven. Must not silently accept roles.goal_auditor=gemini if no executor exists.",
+      "steps": [
+        "Resolve D001 in decisions.jsonl before coding",
+        "B1 path: CLI/docs to record external goal-audit evidence with vendor=gemini and wire experience/goal gate consumers OR",
+        "B2 path: implement gemini_cli executor, register, tests for register-worker goal_auditor=gemini, refuse implementer",
+        "Update agent_surface.KNOWN_OPERATOR_AGENTS filtering so newly registered workers leave the operator-only list",
+        "Doctor --agent reflects the new capability honestly"
+      ],
+      "acceptance": "After D001, either (B1) an operator can attach a Gemini goal/experience audit as first-class evidence without register-worker, or (B2) gemini is in AGENT_REGISTRY and can be assigned goal_auditor with tests; illegal role assignments still refuse with a clear message.",
+      "passes": true,
+      "depends_on": [
+        "F001",
+        "F003"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=operator_judgment)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-07-28T06:20:48Z"
+    },
+    {
+      "id": "F005",
+      "category": "doc",
+      "phase": 1,
+      "description": "ECOSYSTEM + GETTING_STARTED: Buzz as strongly recommended caller/notify surface. Document community model (private operator community = default work surface; public Silex and optional DontPanic communities = discovery/support only; never require maintainer-owned community). Buzz-as-caller sketch parallel to OpenClaw; non-goals; self-host vs buzz.xyz for sensitive work.",
+      "steps": [
+        "Add Buzz row to ECOSYSTEM callers table marked strongly recommended",
+        "Document private-vs-public community split and first-hour private-community checklist",
+        "Add non-goals: no relay inside DontPanic, no forced join of Silex/DontPanic public, no auto-confirm from chat",
+        "Document identity mapping: builder key ≠ auditor key as legibility, not as substitute for AGENT_REGISTRY",
+        "Note maintainer dogfood: Silex community exists; public DontPanic community is optional and not the notify default"
+      ],
+      "acceptance": "docs state Buzz signup+setup is strongly recommended; private community is the default work surface; public communities are optional support only; ECOSYSTEM non-goals and caller sketch present; no text requires joining a maintainer-owned community.",
+      "passes": true,
+      "depends_on": [
+        "F001"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=operator_judgment)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-07-28T07:31:52Z"
+    },
+    {
+      "id": "F009",
+      "category": "tooling",
+      "phase": 1,
+      "description": "Setup and doctor surface: treat missing Buzz config as advisory WARN (strongly recommended), not hard fail. README setup checklist includes Buzz signup + private community steps. CI/headless may silence via documented skip env/flag. Remediation text points at the private-community checklist from F005.",
+      "steps": [
+        "Add setup-checklist and/or doctor check: buzz configured | warn if missing",
+        "Remediation names private community + ~/.dontpanic/buzz.json keys (no secrets in output)",
+        "Document DONTPANIC_SKIP_BUZZ or equivalent for CI-only silence",
+        "Do not default any config template to a public community URL"
+      ],
+      "acceptance": "Unconfigured Buzz yields advisory WARN with private-community remediation on doctor/setup paths; configured Buzz is ok; hard install does not fail solely because Buzz is absent; no default public community URL is written.",
+      "passes": true,
+      "depends_on": [
+        "F005"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=operator_judgment)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-07-28T07:31:52Z"
+    },
+    {
+      "id": "F006",
+      "category": "functional",
+      "phase": 2,
+      "description": "notify_buzz sink: fail-soft NotifyEvent fan-out via buzz-cli (or minimal signed-event client), config at ~/.dontpanic/buzz.json (relay_url, channel, reporter private key path or env), never raise when unconfigured. Mirror notify_discord shape and wire through dispatch_event. Config docs and examples default language is private community, never a public support community.",
+      "steps": [
+        "Add notify_buzz.py with fail-soft notify(event) -> bool",
+        "Config loader: env override + ~/.dontpanic/buzz.json; secrets not logged",
+        "Register sink in notify_event.dispatch_event alongside discord",
+        "Unit tests with mocked buzz-cli / HTTP; no network in unit tests",
+        "Redact: body is summary-only; no raw home paths, tokens, or full transcripts",
+        "Example config comments: private community URL; do not paste public support community"
+      ],
+      "acceptance": "dispatch_event fans to buzz when configured; returns False and does not raise when buzz is absent; unit tests cover both; content redaction checks pass; example/config copy steers operators to a private community.",
+      "passes": true,
+      "depends_on": [
+        "F005",
+        "F009"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=operator_judgment)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-07-28T07:31:44Z"
+    },
+    {
+      "id": "F007",
+      "category": "tooling",
+      "phase": 2,
+      "description": "Buzz-as-caller thin skill example (docs + optional scripts/examples): read agent-manifest, validate_plan, surface preview, require human confirm, dispatch(confirm=true), poll status, surface gate pauses. Safety rule: never auto-confirm.",
+      "steps": [
+        "Author example skill/README under examples/ or docs/",
+        "Map MCP tools list_projects validate_plan dispatch status approve_gate",
+        "Safety checklist identical to OpenClaw recipe",
+        "Manual smoke checklist in evidence/ (not required automated E2E against live Buzz)"
+      ],
+      "acceptance": "Committed caller recipe documents the full confirm-gated flow and explicit non-auto-confirm rule; operator can follow it without reading orchestrator source.",
+      "passes": true,
+      "depends_on": [
+        "F005",
+        "F006"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=operator_judgment)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-07-28T08:04:56Z"
+    },
+    {
+      "id": "F008",
+      "category": "functional",
+      "phase": 3,
+      "description": "Optional gate bridge: allowlisted Buzz human pubkey reaction or workflow webhook maps to approve_gate with actor recorded as buzz:<pubkey>. Deferred if Buzz native approval gates are insufficient; reaction/webhook adapter is acceptable v0.",
+      "steps": [
+        "Define allowlist config (pubkeys, channel, gate kinds)",
+        "Adapter polls or receives webhook; verifies signature/allowlist",
+        "Calls approve_gate with durable actor string; writes decisions/audit note",
+        "Refuse if actor not allowlisted; never treat agent keys as human approvers for Tier-3 gates"
+      ],
+      "acceptance": "When enabled, an allowlisted human approval in Buzz clears a DontPanic gate with a durable actor record; non-allowlisted actors are refused; feature remains off-by-default.",
+      "passes": true,
+      "depends_on": [
+        "F006",
+        "F007"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=operator_judgment)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-07-28T16:56:22Z"
+    },
+    {
+      "id": "F010",
+      "category": "doc",
+      "phase": 3,
+      "description": "Dogfood capture: after maintainer use of Silex (and any optional public DontPanic community), write a short solutions/evidence note on best uses of Buzz with DontPanic — what channels worked, what should stay private, what broke. Updates D007 if a stable pattern emerges.",
+      "steps": [
+        "Dogfood notify + status posts in a private community (Silex or personal)",
+        "Optionally stand up a public DontPanic support community only if it stays free of secrets",
+        "Record findings under evidence/ or docs/solutions/",
+        "Close or refine D007 with the observed pattern"
+      ],
+      "acceptance": "A short committed note records at least one real private-community usage pattern and whether a public DontPanic community is worth running; D007 status updated.",
+      "passes": true,
+      "depends_on": [
+        "F006",
+        "F007"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=operator_judgment)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-07-28T17:02:05Z"
+    },
+    {
+      "id": "F011",
+      "category": "doc",
+      "phase": 1,
+      "description": "Track D0 vocabulary: document harness vs model vs worker-profile vs role. AGENT_REGISTRY is the harness adapter table (stable code). Models are never registry keys. Capability flags gate which roles a harness/profile may hold (implementer requires file_edit+tool_use+non_interactive). Update capability matrix (F003) with this vocabulary.",
+      "steps": [
+        "Add docs section (AGENT_CAPABILITY_MATRIX or ECOSYSTEM) with three-layer diagram",
+        "Explain legacy roles.implementer=claude as shorthand for default claude_cli profile",
+        "State that Grok 4.5 / OpenRouter / Ollama model ids are catalog entries, not new Python registry keys",
+        "Cross-link from README agent section"
+      ],
+      "acceptance": "Committed docs define harness, model, profile, and role as four distinct concepts; no doc instructs operators to add model version strings to AGENT_REGISTRY.",
+      "passes": true,
+      "depends_on": [
+        "F001",
+        "F003"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=operator_judgment)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-07-28T07:31:52Z"
+    },
+    {
+      "id": "F012",
+      "category": "functional",
+      "phase": 2,
+      "description": "Model pass-through (D1): DispatchTask gains optional model field; claude_cli and codex_cli (and future harnesses) forward model to the vendor CLI when set. Optional config override for model without full profiles. Evidence/audit records model_version when known. Default remains harness CLI default when model is unset.",
+      "steps": [
+        "Extend DispatchTask with model: str | None",
+        "Wire supervisor/role resolution to pass model when configured",
+        "Claude and Codex executors accept and forward model flags when present",
+        "Unit tests: unset model preserves current argv; set model adds expected flag"
+      ],
+      "acceptance": "When a model is configured for a role/harness, dispatch argv includes the vendor model flag; when unset, behavior matches pre-change defaults; tests cover both.",
+      "passes": true,
+      "depends_on": [
+        "F011"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=operator_judgment)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-07-28T08:45:37Z"
+    },
+    {
+      "id": "F013",
+      "category": "schema",
+      "phase": 2,
+      "description": "Worker profiles (D2): config schema for named profiles {display_name, harness, model, allowed_roles, capability overrides}. CLI dontpanic workers list|add|set|show. roles.implementer|auditor|goal_auditor resolve to profile id or legacy harness name. assert_registrable / is_dispatchable use harness membership + profile allowed_roles + capability gates. Evidence records profile_id, harness, model.",
+      "steps": [
+        "Define profile schema (Pydantic) under global and/or project config",
+        "Implement workers CLI mutations and list",
+        "Resolve roles → profile → harness executor; legacy string still works",
+        "Refuse profile assigned to implementer if harness lacks implementer capabilities",
+        "Tests for legacy alias, profile resolution, capability refusal"
+      ],
+      "acceptance": "Operator can create a Buzz-like profile (e.g. honey: codex_cli + gpt model + auditor-only), assign it to roles.auditor, and dispatch uses that harness+model; legacy roles.implementer=claude still works; illegal capability/role combos refuse clearly.",
+      "passes": true,
+      "depends_on": [
+        "F012"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=operator_judgment)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-07-28T14:21:54Z"
+    },
+    {
+      "id": "F014",
+      "category": "functional",
+      "phase": 3,
+      "description": "Additional harness adapters when capability smoke is green: openrouter and ollama (goal_auditor / read-oriented first); gemini_cli for B2 goal_auditor. Each adapter declares capability flags. Implementer role refused until harness proves file_edit+tool_use+non_interactive sandbox. Never register model version strings as harness keys.",
+      "steps": [
+        "Add harness modules + register in harness/AGENT registry under stable ids",
+        "Declare capabilities per harness",
+        "Smoke tests with mocks (no live API required in unit tests)",
+        "Doctor availability probes for binary/env keys",
+        "Document which roles each new harness may hold at ship time"
+      ],
+      "acceptance": "At least one of openrouter|ollama|gemini_cli ships as a harness with declared capabilities and tests; implementer remains refused for harnesses that lack coding capabilities; no model version appears as a registry key.",
+      "passes": true,
+      "depends_on": [
+        "F013",
+        "F004"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=operator_judgment)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-07-28T15:50:01Z"
+    },
+    {
+      "id": "F015",
+      "category": "tooling",
+      "phase": 3,
+      "description": "Model catalog discovery (D4): dontpanic models list --harness <id> uses harness discovery (ollama list, OpenRouter models API cache, or documented pass-through). Support config model_aliases. Freeform model strings allowed; doctor warns if unknown, fails only if harness probe rejects. Catalog is data, not AGENT_REGISTRY keys.",
+      "steps": [
+        "Per-harness list_models() optional interface",
+        "CLI models list with offline-safe cache where network is used",
+        "model_aliases in config",
+        "Doctor check: configured model unknown → warn; harness rejects → fail"
+      ],
+      "acceptance": "models list works for at least one discoverable harness; aliases resolve; freeform model does not require a code change; doctor distinguishes unknown vs rejected.",
+      "passes": true,
+      "depends_on": [
+        "F013"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=operator_judgment)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-07-28T15:07:02Z"
+    },
+    {
+      "id": "F016",
+      "category": "functional",
+      "phase": 3,
+      "description": "Optional Buzz agent ↔ worker profile binding (D5/C6): config maps buzz_agent_id or display name to a local profile id so Fizz/Honey/Bumble in Buzz can correspond to DontPanic dispatch profiles without duplicating model selection as source of truth in two places. Off by default; notify reporter remains a separate thin identity.",
+      "steps": [
+        "Config shape: buzz.agent_bindings[buzz_id] = profile_id",
+        "Document that Buzz remains UX for membership; DontPanic remains dispatch authority",
+        "No auto-dispatch from Buzz agent messages without confirm-gated caller (F007)"
+      ],
+      "acceptance": "When bindings are configured, docs and status can show Buzz agent → profile → harness+model; unbound agents do not gain dispatch; feature off by default.",
+      "passes": true,
+      "depends_on": [
+        "F013",
+        "F007"
+      ],
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/closeout-memo.md",
+          "note": "operator_resolved close-out (class=operator_judgment)"
+        }
+      ],
+      "verified_by": [
+        "operator"
+      ],
+      "verified_at": "2026-07-28T16:13:52Z"
+    }
+  ]
+}

@@ -309,7 +309,7 @@ class TestOperatorVerified:
             signoff = json.loads(result.signoff_path.read_text())
             assert "operator_verified" in (signoff.get("signoff_reason") or "")
             sidecar = json.loads(
-                closeout.operator_resolution_path(plan_dir, plan_dir.name).read_text()
+                closeout.operator_resolution_path(plan_dir, plan_dir.name, "F001").read_text()
             )
             assert sidecar.get("note") == note
             assert sidecar.get("class") == "operator_verified"

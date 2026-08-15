@@ -274,8 +274,17 @@ def test_plan_lock_with_override_records_and_flips(tmp_path: Path, capsys) -> No
     rc = cli._plan_lock_main([str(plan_dir), "--allow-oversize", reason])
     assert rc == 0
     assert _status_of(plan_dir) == "active"  # transition happened
-    appended = json.loads((plan_dir / "decisions.jsonl").read_text().splitlines()[-1])
-    assert appended["reason"] == reason
+    # Not the last line: a successful lock also appends its outcome-score
+    # receipt (2026-08-13-001 F005), which lands after the override because the
+    # score is recorded after the scope gate. The acceptance is that the reason
+    # is in the ledger verbatim, not where in it.
+    entries = [
+        json.loads(line)
+        for line in (plan_dir / "decisions.jsonl").read_text().splitlines()
+        if line.strip()
+    ]
+    overrides = [e for e in entries if e.get("reason") == reason]
+    assert len(overrides) == 1, entries
     print("  ✓ exit 0; status active; verbatim reason in decisions.jsonl")
 
 

@@ -1,0 +1,44 @@
+{
+  "task_id": "2026-07-27-001-feat-buzz-integration-agent-taxonomy",
+  "audit_id": "2026-07-27-001-feat-buzz-integration-agent-taxonomy#codex#1",
+  "agent": "codex",
+  "agent_role": "auditor",
+  "iteration": 1,
+  "started_at": "2026-07-28T14:07:47Z",
+  "completed_at": "2026-07-28T14:10:10Z",
+  "validation_performed": [
+    "codex auditor round (iteration 1)",
+    "worker: profile_id=None harness=codex model=(harness default)",
+    "quota gate aud=37.022385",
+    "reviewing implementer audit at claude-implementer-F013-i1.json",
+    "execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-07-27-001-feat-buzz-integration-agent-taxonomy-ee_xmozx target_env=dev target_project=(none) target_source=plan env_registry=(none) cwd=(inherit)",
+    "captured stdout 365541 bytes"
+  ],
+  "quota_consumed": {
+    "tokens_in": 952916,
+    "tokens_out": 11244,
+    "api_calls": 1
+  },
+  "summary": "## Target context\n- Repo: DontPanic\n- Env: dev\n- Project: (none)\n- Command: 5 (see structured target_context.commands_run)\n\n[F013] Repo: DontPanic  \nEnv: dev  \nProject: (none)\n\nOverall verdict: **needs_changes**. The implementer’s Repo/Env/Project declaration matches the structured target context, and no forbidden command shapes were logged.\n\nFINDING (high, correctness): Project-level shadowing of a global profile ID can send a global model to the wrong vendor harness. Evidence: global `honey → codex` with `gpt-global`, overridden by project `honey → claude`, resolves to `{'dispatch_harness': 'claude', 'resolved_model': 'gpt-global'}`; the new helper incorrectly uses the fully merged profile table for every model layer. Recommendation: resolve profile identity using only the current model layer and deeper layers, then add a same-profile-ID global/project cross-vendor regression test.\n\nChecks run:\n\n$ PYTHONPATH=scripts PYTHONDONTWRITEBYTECODE=1 python3 -m pytest scripts/dontpanic_orchestrate/tests/test_f013_worker_profiles.py scripts/dontpanic_orchestrate/tests/test_f012_model_passthrough.py -q -p no:cacheprovider\n\nPytest was blocked before collection because the read-only environment has no writable temporary directory.\n\n$ ruff check --no-cache scripts/dontpanic_orchestrate/config/resolvers.py scripts/dontpanic_orchestrate/config/worker_profiles.py scripts/dontpanic_orchestrate/worker_profiles.py scripts/dontpanic_orchestrate/workers_cli.py scripts/dontpanic_orchestrate/tests/test_f013_worker_profiles.py\n\n$ git diff --check -- ../scripts/dontpanic_orchestrate/config/resolvers.py ../scripts/dontpanic_orch",
+  "target_context": {
+    "env": "dev",
+    "project": null,
+    "commands_run": [
+      "PYTHONPATH=scripts PYTHONDONTWRITEBYTECODE=1 python3 -m pytest scripts/dontpanic_orchestrate/tests/test_f013_worker_profiles.py scripts/dontpanic_orchestrate/tests/test_f012_model_passthrough.py -q -p no:cacheprovider",
+      "ruff check --no-cache scripts/dontpanic_orchestrate/config/resolvers.py scripts/dontpanic_orchestrate/config/worker_profiles.py scripts/dontpanic_orchestrate/worker_profiles.py scripts/dontpanic_orchestrate/workers_cli.py scripts/dontpanic_orchestrate/tests/test_f013_worker_profiles.py",
+      "git diff --check -- ../scripts/dontpanic_orchestrate/config/resolvers.py ../scripts/dontpanic_orchestrate/tests/test_f013_worker_profiles.py",
+      "PYTHONPATH=scripts PYTHONDONTWRITEBYTECODE=1 python3 -c 'from pathlib import Path; from dontpanic_orchestrate import global_config as gc, project_config as pc, worker_profiles as wp; from dontpanic_orchestrate.config.resolvers import resolve_model; cfg=gc.GlobalConfig.model_validate({\"roles\":{\"implementer\":\"claude\",\"auditor\":{\"name\":\"honey\",\"model\":\"gpt-role\"}},\"worker_profiles\":{\"honey\":{\"harness\":\"codex_cli\",\"allowed_roles\":[\"auditor\"]},\"readonly\":{\"harness\":\"claude\",\"capabilities\":{\"file_edit\":False}}}}); gc.load_config=lambda:cfg; pc.load_project_config=lambda path:None; pc.find_project_for_plan_dir=lambda path:None; honey=wp.resolve_worker(None,\"auditor\",\"honey\"); assert (honey.profile_id,honey.harness,honey.model)==(\"honey\",\"codex\",None); assert resolve_model(Path(\"/does-not-exist\"),\"auditor\",harness=honey.harness)==\"gpt-role\"; legacy=wp.resolve_worker(None,\"implementer\",\"claude\"); assert (legacy.profile_id,legacy.harness)==(None,\"claude\"); refused=False; exec(\"try:\\n wp.resolve_worker(None, \\\"implementer\\\", \\\"readonly\\\")\\nexcept wp.ProfileCapabilityRefusedError:\\n refused=True\"); assert refused; print(\"F013 primary profile + role model + legacy + capability refusal: PASS\")'",
+      "PYTHONPATH=scripts PYTHONDONTWRITEBYTECODE=1 python3 -c 'from pathlib import Path; from dontpanic_orchestrate import global_config as gc, project_config as pc, worker_profiles as wp; from dontpanic_orchestrate.config.resolvers import resolve_model; global_cfg=gc.GlobalConfig.model_validate({\"roles\":{\"auditor\":{\"name\":\"honey\",\"model\":\"gpt-global\"}},\"worker_profiles\":{\"honey\":{\"harness\":\"codex\",\"allowed_roles\":[\"auditor\"]}}}); project_cfg=pc.ProjectConfig.model_validate({\"worker_profiles\":{\"honey\":{\"harness\":\"claude\",\"allowed_roles\":[\"auditor\"]}}}); gc.load_config=lambda:global_cfg; pc.load_project_config=lambda path:project_cfg; pc.find_project_for_plan_dir=lambda path:(Path(\"/project\"),\"project\"); worker=wp.resolve_worker(Path(\"/project\"),\"auditor\",\"honey\"); model=resolve_model(Path(\"/project\"),\"auditor\",harness=worker.harness); print({\"dispatch_harness\":worker.harness,\"resolved_model\":model}); assert model is None, \"global codex-paired model crossed onto project-shadowed claude profile\"'"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "high",
+      "category": "correctness",
+      "feature_id": "F013",
+      "issue": "Project-level shadowing of a global profile ID can send a global model to the wrong vendor harness. Evidence: global `honey → codex` with `gpt-global`, overridden by project `honey → claude`, resolves to `{'dispatch_harness': 'claude', 'resolved_model': 'gpt-global'}`; the new helper incorrectly uses the fully merged profile table for every model layer. Recommendation: resolve profile identity using only the current model layer and deeper layers, then add a same-profile-ID global/project cross-v",
+      "evidence": "Extracted from auditor summary."
+    }
+  ],
+  "audit_status": "needs_changes"
+}

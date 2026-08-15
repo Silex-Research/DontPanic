@@ -429,7 +429,7 @@ class TestExistingSanitizationStillPasses:
 
     def test_regex_tuple_length_is_nine(self) -> None:
         import sanitization_check
-        assert len(sanitization_check.SECRET_REGEXES) == 9, (
+        assert len(sanitization_check.SECRET_REGEXES) == 10, (
             "F004 acceptance #4 + #5: the 9-pattern matrix at "
             "sanitization_check.py:92-102 must remain at 9 patterns; "
             "wire-up tests assume this count."

@@ -1,0 +1,95 @@
+{
+  "goal_type": "new_feature",
+  "source_of_truth": "Operator request 2026-07-27: plan Buzz.xyz integration for DontPanic, incorporating critical new-user feedback that README claims Claude/Codex/Gemini/Grok/Ollama are executors while AGENT_REGISTRY only registers claude+codex and runtime/tests classify Gemini/Grok as operator-only. Cost topology: OpenCode → DontPanic → Claude implement / Codex audit / Gemini goal-experience → human merge. Buzz is strongly recommended (signup + private community), not a hard dependency. Community model: private default; Silex dogfood; optional public DontPanic support. Follow-up 2026-07-27: Buzz agent UI makes harness+model selection trivial — fold Track D so AGENT_REGISTRY becomes harness adapters, models are catalog data (Grok 4.5, OpenRouter, Ollama), and worker profiles provide Buzz-like operator UX without putting model versions in the registry.",
+  "completion_test": "Done when (1) docs no longer claim non-registry harnesses are shipped dispatch executors and a drift guard enforces honesty; (2) capability matrix + three-layer vocabulary (harness/model/profile) is published; (3) Gemini goal/experience path is B1 and/or B2 via harness+profile not fake registry keys; (4) Buzz signup+private community is strongly recommended (doctor WARN, not hard fail); (5) notify_buzz fail-soft + confirm-gated caller recipe exist; (6) model pass-through and worker profiles let operators select harness+model (including future versions) without new AGENT_REGISTRY keys per model; evidence records harness+model+profile when applicable. Gate-bridge (F008), dogfood (F010), extra harnesses (F014), discovery (F015), and Buzz bindings (F016) may trail core F001–F013+F005–F007+F009+F011–F012.",
+  "user_journeys": [
+    {
+      "name": "new-user-reads-honest-executor-panel",
+      "description": "A new user reading README and the agent capability matrix can answer which harnesses DontPanic can dispatch today (claude, codex) versus which can only operate DontPanic (gemini, grok as operator-only until harnesses land; OpenCode as surface) without contradiction from the setup checklist, and understands that model names are not harness registry keys.",
+      "surfaces": ["cli_human", "docs"],
+      "states": ["docs_aligned", "status_matches_docs"],
+      "acceptance_signals": [
+        "README does not list Gemini/Grok/Ollama as shipped executors while absent from harness registry",
+        "agent status / agent brief classification matches the matrix",
+        "doc-drift guard fails on reintroduced false shipped-executor claims",
+        "Docs define harness vs model vs profile"
+      ]
+    },
+    {
+      "name": "cost-topology-goal-audit",
+      "description": "An operator uses OpenCode for planning, DontPanic for plan lock and dispatch, Claude as implementer, Codex as implementation auditor, and Gemini for goal/experience audit — either via gemini_cli harness + goal_auditor profile (B2) or via operator-driven attach-evidence (B1).",
+      "surfaces": ["cli_human", "backend"],
+      "states": ["roles_set", "audit_evidence_present", "no_silent_refusal"],
+      "acceptance_signals": [
+        "Illegal goal_auditor assignment without harness capability still refuses with a clear message",
+        "B1: Gemini-produced goal/experience audit can be recorded as first-class evidence",
+        "B2: gemini_cli harness + profile allowed for goal_auditor with tests",
+        "OpenCode is documented as operator surface, not a fake worker"
+      ]
+    },
+    {
+      "name": "buzz-strongly-recommended-setup",
+      "description": "A new operator following GETTING_STARTED is told to sign up for Buzz and create a private community for DontPanic work. Doctor/setup warns (does not fail) if Buzz is unconfigured. They never have to join Silex or a public DontPanic community for the product to work; notify config points only at their private community.",
+      "surfaces": ["cli_human", "docs"],
+      "states": ["setup_checklist", "doctor_warn", "private_community_default"],
+      "acceptance_signals": [
+        "First-run docs strongly recommend Buzz signup + private community",
+        "Doctor/setup emits advisory WARN with private-community remediation when Buzz is missing",
+        "Install does not hard-fail solely because Buzz is absent",
+        "No default config writes a maintainer public community URL",
+        "Public Silex/DontPanic communities are documented as optional support only"
+      ]
+    },
+    {
+      "name": "buzz-status-and-gates",
+      "description": "An operator with Buzz configured to their private community receives DontPanic gate/signoff/breaker notifications via the notify sink, and can follow a skill recipe to validate and confirm-gated dispatch without DontPanic owning the Buzz relay.",
+      "surfaces": ["cli_human", "backend"],
+      "states": ["buzz_unconfigured_failsoft", "buzz_configured_posts", "confirm_gated_dispatch"],
+      "acceptance_signals": [
+        "Unconfigured buzz sink returns False and does not raise",
+        "Configured sink is invoked from dispatch_event for inventory events",
+        "Caller recipe never auto-confirms dispatch",
+        "ECOSYSTEM states Buzz is external caller/notify only",
+        "Example config steers to private community, not public support rooms"
+      ]
+    },
+    {
+      "name": "buzz-like-harness-and-model-selection",
+      "description": "An operator configures workers the way Buzz does: pick a harness (Codex/Claude/Gemini/OpenRouter/Ollama) and a model (including future versions like Grok 4.5 or openrouter/… slugs) via worker profiles or model pass-through, without adding a new Python registry entry per model. Roles resolve to profiles; legacy claude/codex strings still work. Dispatch evidence records harness + model + profile id.",
+      "surfaces": ["cli_human", "backend"],
+      "states": ["profile_created", "model_selected", "role_bound", "dispatched"],
+      "acceptance_signals": [
+        "Worker profile can set harness + model independently",
+        "New model version requires catalog/profile change only, not a new AGENT_REGISTRY key",
+        "Implementer refused when harness lacks coding capabilities",
+        "Legacy roles.implementer=claude still dispatches",
+        "Audit/evidence includes harness and model when known"
+      ]
+    }
+  ],
+  "required_evidence": [
+    "diff or file evidence of README/docs honesty fix (F001)",
+    "test_output for doc-drift guard (F002)",
+    "file evidence of capability matrix + OpenCode ECOSYSTEM row (F003)",
+    "test_output or CLI evidence for Gemini path B1 or B2 (F004)",
+    "file evidence of Buzz ECOSYSTEM + community model (F005)",
+    "doctor/setup evidence of advisory WARN for missing Buzz (F009)",
+    "test_output for notify_buzz fail-soft + configured path (F006)",
+    "file evidence of Buzz-as-caller recipe (F007)",
+    "file evidence of harness/model/profile vocabulary (F011)",
+    "test_output for model pass-through (F012)",
+    "test_output for worker profiles + legacy alias (F013)"
+  ],
+  "non_goals": [
+    "Implementing a Nostr relay or full Buzz client inside DontPanic",
+    "Replacing Jarvis dashboard or Firebase state projection with Buzz",
+    "Auto-merge or Tier-3 approval from unallowlisted agent keys",
+    "Registering model version strings (e.g. grok-4.5) as AGENT_REGISTRY keys",
+    "Making Grok/Ollama dispatchable without a real sandboxed harness",
+    "Multi-tenant RBAC or team billing",
+    "Posting full audit transcripts or secrets to public Buzz communities",
+    "Requiring users to join maintainer-owned Silex or DontPanic public communities",
+    "Hard-failing install when Buzz is not configured",
+    "Building a full GUI clone of Buzz agent cards in v0 (CLI + config first)"
+  ]
+}
