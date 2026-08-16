@@ -11,6 +11,10 @@ Run before opening a PR:
 python3 scripts/test_validator_dispatch.py
 python3 scripts/test_objective_contract.py
 python3 scripts/test_user_impact_contract.py
+python3 scripts/test_objective_contract_proof.py
+python3 scripts/test_claim_contract.py
+python3 scripts/test_decisions_contract.py
+python3 scripts/test_behavior_contract.py
 ```
 
 CI runs the same list in `.github/workflows/validate.yml`; keep the two in step

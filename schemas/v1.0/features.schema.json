@@ -56,7 +56,8 @@
           "enum": ["trivial", "local", "cross-cutting", "architectural", "p0"],
           "description": "Force different audit tier for this feature only"
         },
-        "user_impact": { "$ref": "#/$defs/user_impact" }
+        "user_impact": { "$ref": "#/$defs/user_impact" },
+        "proof": { "$ref": "#/$defs/proof" }
       },
       "allOf": [
         {
@@ -72,6 +73,39 @@
         }
       ],
       "additionalProperties": false
+    },
+    "proof": {
+      "type": "object",
+      "description": "Optional cheap first-principle proof this feature carries on its own: the measurement that would show the feature delivers, and how it is taken. Same shape as objective_contract.schema.json's delivers[].proof — the two are kept in lockstep. A feature that carries one is scored as a slice in its own right by the lock/close scorer (plan 2026-08-13-001 F002), so a plan whose features each carry a proof needs no delivers[] to state an outcome. Optional by design: absence means the feature is not a slice, not that it is invalid.",
+      "required": ["metric", "method"],
+      "additionalProperties": false,
+      "properties": {
+        "metric": {
+          "type": "string",
+          "minLength": 10,
+          "description": "The cheap measurement that would show this feature delivers — a threshold, a count, an observable state change. Substantive enough that a reader can tell whether it was met (hence the 10-character floor); not a KPI programme."
+        },
+        "method": {
+          "enum": ["walk", "request", "named_test", "probe"],
+          "description": "How the metric is taken. 'walk' — a human or agent walks the path end-to-end. 'request' — a single call against a running surface. 'named_test' — an existing or new test identified by name. 'probe' — a one-off script or query run against real state. Closed set on purpose, identical to delivers[].proof.method."
+        },
+        "surface": {
+          "enum": [
+            "web",
+            "ios",
+            "android",
+            "backend",
+            "infra",
+            "security",
+            "data",
+            "ux",
+            "ml",
+            "docs",
+            "external-api-wrap"
+          ],
+          "description": "Optional — where the proof is taken. Mirrors the plan-level `surfaces` enum in plan.schema.json."
+        }
+      }
     },
     "user_impact": {
       "type": "object",

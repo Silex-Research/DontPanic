@@ -1,0 +1,6 @@
+{
+  "id": "acceptance_test_invoked",
+  "trigger": "Feature steps name a test the implementer must run",
+  "owner_role": "implementer",
+  "adherence": "violated"
+}
