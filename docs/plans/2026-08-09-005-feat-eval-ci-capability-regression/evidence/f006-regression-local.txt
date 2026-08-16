@@ -1,0 +1,23 @@
+[quota_admission] vendors{} missing in quota_state.json; using legacy models{}.percent_weekly path.
+[notify_discord] no webhook URL configured; sink silent.
+[notify_buzz] buzz.json not configured; sink silent.
+[env-registry] target_project=None (host-local) — skip
+[admission] class=autonomous quota_over=False backoff_within=False
+[volley] feature=F001 impl=claude aud=codex cap=1
+[volley] execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-19-901-feat-smoke-synthetic-mt0o835c target_env=dev target_project=(none) source=plan cwd=(inherit)
+[smoke] claude: bypassed (mocked)
+[smoke] codex: bypassed (mocked)
+[volley] iter=0 auditor verdict: signed_off
+[env-registry] target_project=None (host-local) — skip
+[admission] class=autonomous quota_over=False backoff_within=False
+[volley] feature=F001 impl=claude aud=codex cap=2
+[volley] execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-19-901-feat-smoke-synthetic-wmf3dzj0 target_env=dev target_project=(none) source=plan cwd=(inherit)
+[smoke] claude: bypassed (mocked)
+[smoke] codex: bypassed (mocked)
+[volley] iter=0 auditor verdict: needs_changes
+[smoke] claude: bypassed (mocked)
+[smoke] codex: bypassed (mocked)
+[volley] iter=1 auditor verdict: signed_off
+regression suite: 2/2 in 0.319s
+judge dimensions not evaluated: rationale, audit summary
+report: eval-regression.json

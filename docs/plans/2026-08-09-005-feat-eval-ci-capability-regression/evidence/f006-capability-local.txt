@@ -1,0 +1,48 @@
+[quota_admission] vendors{} missing in quota_state.json; using legacy models{}.percent_weekly path.
+[notify_discord] no webhook URL configured; sink silent.
+[notify_buzz] buzz.json not configured; sink silent.
+[env-registry] target_project=None (host-local) — skip
+[admission] class=autonomous quota_over=False backoff_within=False
+[volley] feature=F001 impl=claude aud=codex cap=1
+[volley] execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-19-901-feat-smoke-synthetic-o3t5722q target_env=dev target_project=(none) source=plan cwd=(inherit)
+[smoke] claude: bypassed (mocked)
+[smoke] codex: bypassed (mocked)
+[volley] iter=0 auditor verdict: signed_off
+[env-registry] target_project=None (host-local) — skip
+[admission] class=autonomous quota_over=False backoff_within=False
+[volley] feature=F001 impl=claude aud=codex cap=1
+[volley] execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-19-901-feat-smoke-synthetic-77gi_mc0 target_env=dev target_project=(none) source=plan cwd=(inherit)
+[smoke] claude: bypassed (mocked)
+[smoke] codex: bypassed (mocked)
+[volley] iter=0 auditor verdict: signed_off
+[env-registry] target_project=None (host-local) — skip
+[admission] class=autonomous quota_over=False backoff_within=False
+[volley] feature=F001 impl=claude aud=codex cap=1
+[volley] execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-19-901-feat-smoke-synthetic-84ib8sj3 target_env=dev target_project=(none) source=plan cwd=(inherit)
+[smoke] claude: bypassed (mocked)
+[smoke] codex: bypassed (mocked)
+[volley] iter=0 auditor verdict: signed_off
+[env-registry] target_project=None (host-local) — skip
+[admission] class=autonomous quota_over=False backoff_within=False
+[volley] feature=F001 impl=claude aud=codex cap=1
+[volley] execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-19-901-feat-smoke-synthetic-70iwxqg3 target_env=dev target_project=(none) source=plan cwd=(inherit)
+[smoke] claude: bypassed (mocked)
+[smoke] codex: bypassed (mocked)
+[volley] iter=0 auditor verdict: signed_off
+[env-registry] target_project=None (host-local) — skip
+[admission] class=autonomous quota_over=False backoff_within=False
+[volley] feature=F001 impl=claude aud=codex cap=1
+[volley] execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-19-901-feat-smoke-synthetic-9dmllcjv target_env=dev target_project=(none) source=plan cwd=(inherit)
+[smoke] claude: bypassed (mocked)
+[smoke] codex: bypassed (mocked)
+[volley] iter=0 auditor verdict: signed_off
+[env-registry] target_project=None (host-local) — skip
+[admission] class=autonomous quota_over=False backoff_within=False
+[volley] feature=F001 impl=claude aud=codex cap=1
+[volley] execution_env_root=/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/jarvis-exec-2026-05-19-901-feat-smoke-synthetic-9115vq7t target_env=dev target_project=(none) source=plan cwd=(inherit)
+[smoke] claude: bypassed (mocked)
+[smoke] codex: bypassed (mocked)
+[volley] iter=0 auditor verdict: signed_off
+capability suite: 6/6 in 0.368s
+judge dimensions not evaluated: rationale, audit summary
+report: eval-capability.json

@@ -1,0 +1,11 @@
+BEFORE (orchestration-first, the copy this plan replaces)
+
+Approval needed on fixture-sticky-first-closet F001
+Supervisor paused at gate `pre_merge` (stage `implement`).
+Operator must approve before dispatch continues.
+
+Run:
+dontpanic approve fixture-sticky-first-closet pre_merge
+
+A reader of this prompt cannot say what changes, who feels it, or what
+approving does without opening plan.md.

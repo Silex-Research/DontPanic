@@ -20,7 +20,9 @@
       "reversible": false,
       "source": "supervisor",
       "title": "Setup drift on 2026-05-24-004-feat-event-messaging-v1 \u2014 quota config required",
-      "updated_at": "2026-05-24T00:00:00Z"
+      "updated_at": "2026-05-24T00:00:00Z",
+      "user_impact": null,
+      "what_changes": null
     },
     "inbox_block": "<!-- rendered annotation 2026-05-24T00:00:00Z -->\n**Setup drift on 2026-05-24-004-feat-event-messaging-v1 \u2014 quota config required** _(band: needs_action)_\n\nQuota config required (`no_cap_for_signal`). Run `python -m dontpanic_orchestrate quota-caps init` to seed defaults, hand-edit `~/.jarvis/quota_caps.json` for `no_cap_for_signal`, or re-run `scripts/quota_check.py` for `missing_vendor_block`.\n\nRun:\n\n```\npython -m dontpanic_orchestrate quota-caps init\n```\n\nEvidence: `/tmp/INBOX.md`\n\n<details><summary>Technical details</summary>\n\n- `cause` = `no_cap_for_signal`\n- `feature_id` = `F005`\n- `inbox_event` = `config_required`\n- `plan_id` = `2026-05-24-004-feat-event-messaging-v1`\n\n</details>\n\n===\n"
   },

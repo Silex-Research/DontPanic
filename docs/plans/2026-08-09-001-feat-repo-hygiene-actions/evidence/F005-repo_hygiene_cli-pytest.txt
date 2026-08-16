@@ -1,0 +1,19 @@
+# F005 named test: scripts/dontpanic_orchestrate/tests/test_repo_hygiene_cli.py
+# command: PYTHONPATH=scripts pytest scripts/dontpanic_orchestrate/tests/test_repo_hygiene_cli.py -v
+# captured_at: 2026-08-16T00:44:24Z
+
+============================= test session starts ==============================
+platform darwin -- Python 3.11.16, pytest-9.1.1, pluggy-1.6.0 -- /opt/homebrew/opt/python@3.11/bin/python3.11
+cachedir: .pytest_cache
+rootdir: /Users/bayesian/.grok/worktrees/code-dontpanic/subagent-01a007f7-2c22-7851-b16e-a150e59154a8
+configfile: pyproject.toml
+collecting ... collected 6 items
+
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_cli.py::test_next_json_emits_hygiene_items PASSED [ 16%]
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_cli.py::test_clean_repo_emits_zero_hygiene_items PASSED [ 33%]
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_cli.py::test_dashboard_build_project_scopes_hygiene PASSED [ 50%]
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_cli.py::test_missing_project_path_emits_uncertainty_card PASSED [ 66%]
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_cli.py::test_agent_commands_guidance_mentions_hygiene PASSED [ 83%]
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_cli.py::test_fleet_next_tags_project_name PASSED [100%]
+
+============================== 6 passed in 2.56s ===============================

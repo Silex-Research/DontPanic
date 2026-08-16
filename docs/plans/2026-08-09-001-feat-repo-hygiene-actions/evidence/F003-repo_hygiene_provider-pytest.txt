@@ -1,0 +1,22 @@
+# F003 named test: scripts/dontpanic_orchestrate/tests/test_repo_hygiene_provider.py
+# command: PYTHONPATH=scripts pytest scripts/dontpanic_orchestrate/tests/test_repo_hygiene_provider.py -v
+# captured_at: 2026-08-16T00:44:24Z
+
+============================= test session starts ==============================
+platform darwin -- Python 3.11.16, pytest-9.1.1, pluggy-1.6.0 -- /opt/homebrew/opt/python@3.11/bin/python3.11
+cachedir: .pytest_cache
+rootdir: /Users/bayesian/.grok/worktrees/code-dontpanic/subagent-01a007f7-2c22-7851-b16e-a150e59154a8
+configfile: pyproject.toml
+collecting ... collected 9 items
+
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_provider.py::test_source_registered_below_architecture PASSED [ 11%]
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_provider.py::test_every_item_has_registered_clears_when PASSED [ 22%]
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_provider.py::test_suppress_resolved_retires_each_kind PASSED [ 33%]
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_provider.py::test_git_items_have_no_exact_command PASSED [ 44%]
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_provider.py::test_reversible_false_without_named_rerunnable_remedy PASSED [ 55%]
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_provider.py::test_actionitem_accepts_every_item PASSED [ 66%]
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_provider.py::test_aggregate_dedupes_repeats PASSED [ 77%]
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_provider.py::test_d010_impact_first_copy PASSED [ 88%]
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_provider.py::test_branch_kinds_are_operator_attested PASSED [100%]
+
+============================== 9 passed in 0.28s ===============================

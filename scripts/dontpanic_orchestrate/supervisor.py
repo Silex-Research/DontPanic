@@ -498,6 +498,13 @@ def _emit_gate_paused_discord(
         if loaded is not None
         else None
     )
+    # Plan 2026-08-09-002 F007: persist the snapshot so approve/resume read
+    # the same object the notification sinks just received, rather than
+    # re-deriving from features.json later.
+    if brief is not None:
+        from dontpanic_orchestrate import brief_surfaces
+
+        brief_surfaces.persist(plan_dir, brief)
     # Plan 2026-08-09-002 F005 (audit i2 finding 2): until now the only
     # structured orchestration fact this emitter published was ``subtype``
     # (the *stage*). F005 moves the plan label, gate and stage out of the

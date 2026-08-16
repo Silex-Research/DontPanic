@@ -1,0 +1,18 @@
+# F006 named test: scripts/dontpanic_orchestrate/tests/test_repo_hygiene_safety.py
+# command: PYTHONPATH=scripts pytest scripts/dontpanic_orchestrate/tests/test_repo_hygiene_safety.py -v
+# captured_at: 2026-08-16T00:44:24Z
+
+============================= test session starts ==============================
+platform darwin -- Python 3.11.16, pytest-9.1.1, pluggy-1.6.0 -- /opt/homebrew/opt/python@3.11/bin/python3.11
+cachedir: .pytest_cache
+rootdir: /Users/bayesian/.grok/worktrees/code-dontpanic/subagent-01a007f7-2c22-7851-b16e-a150e59154a8
+configfile: pyproject.toml
+collecting ... collected 5 items
+
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_safety.py::test_runner_allowlist_across_f001_fixtures PASSED [ 20%]
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_safety.py::test_git_tree_unchanged_including_stale_index PASSED [ 40%]
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_safety.py::test_optional_locks_env_is_set_on_every_invocation PASSED [ 60%]
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_safety.py::test_token_shaped_branch_scrubbed_from_next_payload PASSED [ 80%]
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_safety.py::test_module_docstring_states_read_only_contract PASSED [100%]
+
+============================== 5 passed in 5.65s ===============================

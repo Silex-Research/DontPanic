@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0",
+  "id": "corpus-dirty-dispatch",
+  "suite": "capability",
+  "source_incident": "Dispatch blocked by unrelated dirty working-tree state",
+  "source_date": "2026-08-09",
+  "intended_behavior": "Unrelated dirty files outside the plan target do not block a dispatch.",
+  "expected_current_behavior": "Patch-completeness can treat unrelated dirty state as blocking.",
+  "plan_fixture": "../2026-05-19-901-feat-smoke-synthetic/plan.md",
+  "features_fixture": "../2026-05-19-901-feat-smoke-synthetic/features.json",
+  "feature_id": "F001",
+  "max_iterations": 1,
+  "replies": [
+    {
+      "agent": "claude",
+      "role": "implementer",
+      "iteration": 0,
+      "summary": "replay of dirty-dispatch incident",
+      "raw_response": "working"
+    },
+    {
+      "agent": "codex",
+      "role": "auditor",
+      "iteration": 0,
+      "summary": "Overall verdict: signed_off.",
+      "raw_response": "signed_off"
+    }
+  ],
+  "expected": {
+    "terminal_state": "signed_off"
+  }
+}

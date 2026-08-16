@@ -3,7 +3,7 @@ id: 2026-08-09-001-feat-repo-hygiene-actions
 title: Repo-hygiene ActionItems — surface between-dispatch git drift in `next`
 type: feat
 tier: cross-cutting
-status: draft
+status: ready_for_audit
 date: "2026-08-09"
 description: >
   Wire read-only git observations (dirty tree outside a bound worktree, local

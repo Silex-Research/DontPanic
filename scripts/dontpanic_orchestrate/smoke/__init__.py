@@ -33,7 +33,6 @@ plan (Roadmap Plan 2 non_goals).
 from __future__ import annotations
 
 import argparse
-import datetime as dt
 import json
 import os
 import shutil
@@ -47,10 +46,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from dontpanic_orchestrate.executors.base import (
-    BaseExecutor,
-    DispatchResult,
-    DispatchTask,
+from dontpanic_orchestrate.smoke.executors import (
+    MockClaudeExecutor,
+    MockCodexExecutor,
 )
 
 SCHEMA_VERSION = "1.0.0"
@@ -153,85 +151,10 @@ class SmokeResult:
 
 
 # ── mock executors ────────────────────────────────────────────────────────
-
-
-def _iso_now() -> str:
-    return dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-class MockClaudeExecutor(BaseExecutor):
-    """Synthetic implementer executor.
-
-    Returns a fixed, schema-valid envelope without touching the real
-    ``claude`` CLI. ``is_available()`` returns True unconditionally — the
-    smoke harness's whole point is to exercise supervisor plumbing
-    regardless of whether the real CLI is on PATH (F003 step 4 + test
-    invariant #2).
-
-    Module-level class so tests can import it directly and assert the
-    no-real-CLI invariant on the type, not on a per-instance closure.
-    """
-
-    agent_name = "claude"
-    cli_binary = None  # bypass shutil.which default
-
-    def is_available(self) -> bool:  # noqa: D401 — overrides BaseExecutor
-        return True
-
-    def dispatch(self, task: DispatchTask) -> DispatchResult:
-        return DispatchResult(
-            agent=self.agent_name,
-            agent_role=task.agent_role,
-            iteration=task.iteration,
-            started_at=_iso_now(),
-            completed_at=_iso_now(),
-            success=True,
-            summary=(
-                f"[smoke mock {self.agent_name}/{task.agent_role}] "
-                f"synthetic implementer envelope for {task.feature_id} "
-                f"(iter={task.iteration}). No real CLI invoked."
-            ),
-            model_version="smoke-mock",
-            raw_response="signed_off",
-            quota_consumed={"tokens_in": 0, "tokens_out": 0},
-        )
-
-
-class MockCodexExecutor(BaseExecutor):
-    """Synthetic auditor executor.
-
-    Returns a signed_off verdict via the prose marker so
-    :func:`audit_writer._derive_status` resolves to ``signed_off``
-    deterministically without a status override.
-
-    Module-level class so tests can import it directly and assert the
-    no-real-CLI invariant on the type, not on a per-instance closure.
-    """
-
-    agent_name = "codex"
-    cli_binary = None
-
-    def is_available(self) -> bool:  # noqa: D401 — overrides BaseExecutor
-        return True
-
-    def dispatch(self, task: DispatchTask) -> DispatchResult:
-        return DispatchResult(
-            agent=self.agent_name,
-            agent_role=task.agent_role,
-            iteration=task.iteration,
-            started_at=_iso_now(),
-            completed_at=_iso_now(),
-            success=True,
-            summary=(
-                "Overall verdict: signed_off.\n"
-                f"[smoke mock {self.agent_name}/{task.agent_role}] "
-                f"synthetic auditor envelope for {task.feature_id} "
-                f"(iter={task.iteration}). No findings; no real CLI invoked."
-            ),
-            model_version="smoke-mock",
-            raw_response="signed_off",
-            quota_consumed={"tokens_in": 0, "tokens_out": 0},
-        )
+# MockClaudeExecutor / MockCodexExecutor live in smoke.executors so they
+# can replay a loaded scenario. Re-exported here for the original import
+# path (dontpanic_orchestrate.smoke). Default construction (no scenario)
+# is byte-compatible with the hardcoded signed_off replies.
 
 
 # ── synthetic plan fixture ────────────────────────────────────────────────
@@ -378,7 +301,11 @@ def synthetic_plan_fixture(
 
 
 @contextmanager
-def _isolated_supervisor_state(state_root: Path) -> Iterator[Path]:
+def _isolated_supervisor_state(
+    state_root: Path,
+    *,
+    bypass_quota: bool = True,
+) -> Iterator[Path]:
     """Redirect operator-state env vars + bypass the quota gate.
 
     Mirrors the pytest conftest fixture (``_isolate_jarvis_state``) so
@@ -408,7 +335,10 @@ def _isolated_supervisor_state(state_root: Path) -> Iterator[Path]:
     try:
         os.environ.update(overrides)
         # Bypass quota lookups — mocked executors don't consume tokens.
-        sup._quota_gate = lambda agent: (None, f"[smoke] {agent}: bypassed (mocked)")
+        # Chaos quota_exhausted leaves the real gate in place so the
+        # existing admission path can observe exhausted state.
+        if bypass_quota:
+            sup._quota_gate = lambda agent: (None, f"[smoke] {agent}: bypassed (mocked)")
         yield state_root
     finally:
         for k, v in saved_env.items():
@@ -835,25 +765,103 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Emit structured JSON output (stable schema, schema_version='%s')."
         % SCHEMA_VERSION,
     )
+    parser.add_argument(
+        "--scenario",
+        type=str,
+        default=None,
+        help="Path to a scenario.json. Default: the ported synthetic plan.",
+    )
+    parser.add_argument(
+        "--trials",
+        type=int,
+        default=1,
+        help="Independent trial count (default 1). Must be >= 1.",
+    )
     return parser
+
+
+def _argv_selects_harness(argv: list[str] | None) -> bool:
+    """True when the caller opted into scenario/trial flags."""
+    if not argv:
+        return False
+    for token in argv:
+        if token in {"--scenario", "--trials"} or token.startswith(
+            ("--scenario=", "--trials=")
+        ):
+            return True
+    return False
+
+
+def _print_summary(result: Any, artifact_path: Path) -> None:
+    reached = sum(1 for t in result.trials if t.reached_expected)
+    print(
+        f"trials={len(result.trials)} reached={reached} artifact={artifact_path}"
+    )
 
 
 def smoke_main(argv: list[str] | None = None) -> int:
     """Console entry point for ``dontpanic smoke``."""
 
+    raw = list(argv) if argv is not None else []
     parser = _build_parser()
-    args = parser.parse_args(argv if argv is not None else [])
+    args = parser.parse_args(raw)
+
+    if getattr(args, "trials", 1) < 1:
+        parser.error("--trials must be >= 1")
+
+    if not _argv_selects_harness(raw):
+        try:
+            result = run_smoke(mode=args.mode)
+        except SmokeEnvBlockerError as exc:
+            result = _env_blocker_result(mode=args.mode, message=str(exc))
+        if args.json:
+            print(result.to_json())
+        else:
+            print(render_smoke_text(result))
+        return result.exit_code
+
+    from dontpanic_orchestrate.smoke.artifact import write_run_artifact
+    from dontpanic_orchestrate.smoke.loader import (
+        DEFAULT_SCENARIO_PATH,
+        ScenarioLoadError,
+        load_scenario,
+    )
+    from dontpanic_orchestrate.smoke.runner import run_scenario
+
+    if args.mode in DEFERRED_MODES or args.mode not in SUPPORTED_MODES:
+        result = _env_blocker_result(
+            mode=args.mode,
+            message=(
+                f"--mode={args.mode} is reserved for a future plan; "
+                "v0 ships --mode=mocked only."
+                if args.mode in DEFERRED_MODES
+                else f"unknown --mode={args.mode!r}; supported: {SUPPORTED_MODES}"
+            ),
+        )
+        if args.json:
+            print(result.to_json())
+        else:
+            print(render_smoke_text(result))
+        return result.exit_code
+
+    scenario_path = Path(args.scenario) if args.scenario else DEFAULT_SCENARIO_PATH
+    if args.scenario and not scenario_path.is_file():
+        print(f"scenario path does not exist: {scenario_path}", file=sys.stderr)
+        return EXIT_ENV_BLOCKER
 
     try:
-        result = run_smoke(mode=args.mode)
-    except SmokeEnvBlockerError as exc:
-        result = _env_blocker_result(mode=args.mode, message=str(exc))
+        scenario = load_scenario(scenario_path)
+    except ScenarioLoadError as exc:
+        print(f"scenario load failed: {exc}", file=sys.stderr)
+        return EXIT_ENV_BLOCKER
 
-    if args.json:
-        print(result.to_json())
-    else:
-        print(render_smoke_text(result))
-    return result.exit_code
+    artifact_path = Path(tempfile.mkdtemp(prefix="dontpanic-smoke-run-")) / "run.json"
+    multi = run_scenario(scenario, n=args.trials, artifact_path=artifact_path)
+    write_run_artifact(multi, artifact_path)
+    _print_summary(multi, artifact_path)
+    if all(t.reached_expected for t in multi.trials) and multi.trials:
+        return EXIT_PASS
+    return EXIT_SUPERVISOR_DEFECT
 
 
 if __name__ == "__main__":  # pragma: no cover

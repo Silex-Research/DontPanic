@@ -1,0 +1,35 @@
+{
+  "rubric_version": "judge-rubric-v0",
+  "caveat": "An agreement rate over a subset this size is an indication, not a guarantee.",
+  "labels": [
+    {
+      "id": "L001",
+      "source": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/decisions.jsonl",
+      "kind": "rationale",
+      "text": "This is the reason the problem has persisted despite USER.md:15 already stating the preferred register.",
+      "human_verdict": "reason",
+      "labeled_by": "grok",
+      "labeled_at": "2026-08-15"
+    },
+    {
+      "id": "L002",
+      "source": "docs/plans/2026-08-09-002-feat-decision-brief-at-gates/decisions.jsonl",
+      "kind": "rationale",
+      "text": "Never.",
+      "decision": "Never.",
+      "human_verdict": "restatement",
+      "labeled_by": "grok",
+      "labeled_at": "2026-08-15"
+    },
+    {
+      "id": "L003",
+      "source": "docs/plans/2026-08-10-001-fix-gate-identity-in-approval-copy/decisions.jsonl",
+      "kind": "rationale",
+      "text": "F005 is prose-only by its own contract.",
+      "decision": "Still worth its own plan.",
+      "human_verdict": "restatement",
+      "labeled_by": "grok",
+      "labeled_at": "2026-08-15"
+    }
+  ]
+}

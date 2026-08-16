@@ -1,0 +1,13 @@
+{
+  "id": "acceptance_test_invoked",
+  "trigger": "Feature steps name a test the implementer must run",
+  "owner_role": "implementer",
+  "adherence": "violated",
+  "evidence_refs": [
+    {
+      "type": "audit_json",
+      "uri": "docs/plans/example/audit/claude-implementer-i0.json",
+      "note": "commands_run has no matching named test"
+    }
+  ]
+}

@@ -67,12 +67,37 @@ def _build_synthetic_repo(root: Path) -> None:
 def _git(repo: Path, *args: str, **kwargs) -> subprocess.CompletedProcess[str]:
     env = kwargs.pop("env", None) or os.environ.copy()
     # Hermetic git config — no global identity, no signing, no hooks dir override.
-    env.setdefault("GIT_AUTHOR_NAME", "Test")
-    env.setdefault("GIT_AUTHOR_EMAIL", "test@example.com")
-    env.setdefault("GIT_COMMITTER_NAME", "Test")
-    env.setdefault("GIT_COMMITTER_EMAIL", "test@example.com")
+    # Unset inherited GIT_* so a prior test's temp repo cannot leak into this
+    # fixture (the install/uninstall roundtrip failed with commit exit 128
+    # after the full suite, and passed alone).
+    for key in (
+        "GIT_DIR",
+        "GIT_WORK_TREE",
+        "GIT_INDEX_FILE",
+        "GIT_OBJECT_DIRECTORY",
+        "GIT_COMMON_DIR",
+        "GIT_CONFIG_GLOBAL",
+        "GIT_CONFIG_SYSTEM",
+        "GIT_CONFIG_NOSYSTEM",
+    ):
+        env.pop(key, None)
+    env["GIT_AUTHOR_NAME"] = "Test"
+    env["GIT_AUTHOR_EMAIL"] = "test@example.com"
+    env["GIT_COMMITTER_NAME"] = "Test"
+    env["GIT_COMMITTER_EMAIL"] = "test@example.com"
+    env["GIT_CONFIG_NOSYSTEM"] = "1"
+    env["GIT_CONFIG_GLOBAL"] = "/dev/null"
     return subprocess.run(
-        ["git", *args],
+        [
+            "git",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "user.name=Test",
+            "-c",
+            "user.email=test@example.com",
+            *args,
+        ],
         cwd=str(repo),
         env=env,
         check=True,
@@ -105,6 +130,20 @@ def _hook_env(repo: Path) -> dict[str, str]:
     # PYTHONPATH must include scripts/ so `python -m dontpanic_orchestrate` resolves.
     src = REPO_ROOT / "scripts"
     env["PYTHONPATH"] = f"{src}{os.pathsep}" + os.environ.get("PYTHONPATH", "")
+    for key in (
+        "GIT_DIR",
+        "GIT_WORK_TREE",
+        "GIT_INDEX_FILE",
+        "GIT_OBJECT_DIRECTORY",
+        "GIT_COMMON_DIR",
+    ):
+        env.pop(key, None)
+    env["GIT_CONFIG_NOSYSTEM"] = "1"
+    env["GIT_CONFIG_GLOBAL"] = "/dev/null"
+    env["GIT_AUTHOR_NAME"] = "Test"
+    env["GIT_AUTHOR_EMAIL"] = "test@example.com"
+    env["GIT_COMMITTER_NAME"] = "Test"
+    env["GIT_COMMITTER_EMAIL"] = "test@example.com"
     return env
 
 

@@ -278,7 +278,15 @@ _EXAMPLES_BY_COMMAND: dict[str, tuple[CommandExample, ...]] = {
     ),
     "mcp": (_example("mcp", "serve", description="Start the MCP server."),),
     "next": (
-        _example("next", "--format", "json", description="Inspect next safe actions."),
+        _example(
+            "next",
+            "--format",
+            "json",
+            description=(
+                "Inspect next safe actions and repo-hygiene drift "
+                "(dirty tree, unpushed or merged branches, unfinished plans)."
+            ),
+        ),
     ),
     "orchestrate": (
         _example(
@@ -315,7 +323,21 @@ _EXAMPLES_BY_COMMAND: dict[str, tuple[CommandExample, ...]] = {
     "skills": (
         _example("skills", "recommend", "--format", "json", description="Inspect skill recommendations."),
     ),
-    "smoke": (_example("smoke", description="Run smoke checks."),),
+    "smoke": (
+        _example("smoke", description="Run smoke checks."),
+        _example(
+            "smoke",
+            "--scenario",
+            "path/to/scenario.json",
+            description="Run a named offline smoke scenario.",
+        ),
+        _example(
+            "smoke",
+            "--trials",
+            "20",
+            description="Run the default smoke scenario twenty times.",
+        ),
+    ),
     "integrations": (
         _example("integrations", "smoke", "static-dashboard", description="Run the static-dashboard integration smoke."),
     ),
@@ -370,6 +392,11 @@ _ESCALATION_BY_CLASS: dict[CommandClass, str] = {
 # misdescribe the surface (codex F002-i0). Commands absent here fall back to
 # the class-derived defaults above.
 _PREDECESSORS_BY_COMMAND: dict[str, tuple[str, ...]] = {
+    "next": (
+        "Safe to run before mutation. The JSON envelope's action_items "
+        "include repo-hygiene findings (uncommitted work, unpublished "
+        "branches, finished-but-open plans) alongside ready features.",
+    ),
     "agent": (
         "`agent brief`/`status` are read-only; inspect roles/config before the "
         "guarded `agent register-worker` write.",

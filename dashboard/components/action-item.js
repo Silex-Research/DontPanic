@@ -108,6 +108,16 @@ export function renderCard(item, opts = {}) {
   const body = el('div', 'dp-item-body');
   body.appendChild(el('h3', 'dp-item-title', item.title || '(untitled)'));
   if (item.why_now) body.appendChild(el('p', 'dp-item-why', item.why_now));
+  // Plan 2026-08-09-002 F008 — dashboard is the unabridged brief surface.
+  if (item.what_changes) {
+    body.appendChild(el('p', 'dp-item-what', item.what_changes));
+  }
+  if (item.user_impact) {
+    body.appendChild(el('p', 'dp-item-impact', item.user_impact));
+  }
+  if (item.plain_consequence) {
+    body.appendChild(el('p', 'dp-item-consequence', item.plain_consequence));
+  }
   body.appendChild(metaLine(item, { showScope }));
   body.appendChild(resolutionBar(item));
   root.appendChild(body);

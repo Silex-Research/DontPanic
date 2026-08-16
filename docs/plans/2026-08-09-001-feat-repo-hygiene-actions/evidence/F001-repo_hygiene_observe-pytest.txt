@@ -1,0 +1,29 @@
+# F001 named test: scripts/dontpanic_orchestrate/tests/test_repo_hygiene_observe.py
+# command: PYTHONPATH=scripts pytest scripts/dontpanic_orchestrate/tests/test_repo_hygiene_observe.py -v
+# captured_at: 2026-08-16T00:44:24Z
+
+============================= test session starts ==============================
+platform darwin -- Python 3.11.16, pytest-9.1.1, pluggy-1.6.0 -- /opt/homebrew/opt/python@3.11/bin/python3.11
+cachedir: .pytest_cache
+rootdir: /Users/bayesian/.grok/worktrees/code-dontpanic/subagent-01a007f7-2c22-7851-b16e-a150e59154a8
+configfile: pyproject.toml
+collecting ... collected 16 items
+
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_observe.py::test_non_repo_cwd_returns_none PASSED [  6%]
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_observe.py::test_clean_repo_tree_clean_branches_populated PASSED [ 12%]
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_observe.py::test_dirty_tracked_populates_tree PASSED [ 18%]
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_observe.py::test_dirty_untracked_populates_tree PASSED [ 25%]
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_observe.py::test_dirty_staged_populates_tree PASSED [ 31%]
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_observe.py::test_ahead_of_remote_counts_commits PASSED [ 37%]
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_observe.py::test_no_upstream_branch_recorded PASSED [ 43%]
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_observe.py::test_merged_into_default_records_sha PASSED [ 50%]
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_observe.py::test_detached_head_reports_dirty_tree_and_no_branches PASSED [ 56%]
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_observe.py::test_zero_commit_reports_dirty_tree_and_no_branches PASSED [ 62%]
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_observe.py::test_no_remote_reports_dirty_tree_and_no_branches PASSED [ 68%]
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_observe.py::test_cap_tripped_sets_branches_partial PASSED [ 75%]
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_observe.py::test_clean_detached_still_populates_tree PASSED [ 81%]
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_observe.py::test_observe_never_raises_on_degenerate_inputs PASSED [ 87%]
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_observe.py::test_worktree_list_marks_checked_out_elsewhere PASSED [ 93%]
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_observe.py::test_injected_runner_records_only_allowlisted_subcommands PASSED [100%]
+
+============================== 16 passed in 3.57s ==============================

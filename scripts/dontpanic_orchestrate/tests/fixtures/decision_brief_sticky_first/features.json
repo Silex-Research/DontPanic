@@ -1,0 +1,25 @@
+{
+  "task_id": "fixture-sticky-first-closet",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "functional",
+      "phase": 0,
+      "description": "Open Closet on the last-worn look instead of an empty grid so the next outfit starts from something real",
+      "steps": [
+        "Persist the last-worn look id",
+        "Hydrate Closet from that id on launch"
+      ],
+      "acceptance": "Launching Closet shows the last-worn look pinned first.",
+      "passes": false,
+      "depends_on": [],
+      "user_impact": {
+        "audience": "end_user",
+        "summary": "Opening Closet starts on the last outfit they wore, not a blank grid.",
+        "surfaces": ["ux", "ios"],
+        "description_hash": "7e4d51a3c21f49ed116feedbd6f467091d13a05202023b7ab14024cf90f740bd"
+      }
+    }
+  ]
+}

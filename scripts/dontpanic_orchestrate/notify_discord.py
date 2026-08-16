@@ -172,6 +172,16 @@ def is_available() -> bool:
     return _is_well_formed(url)
 
 
+def brief_message(event: "NotifyEvent") -> str:
+    """Plan 2026-08-09-002 F008 — Discord sink reads the frozen snapshot."""
+    brief = getattr(event, "decision_brief", None)
+    if brief is None:
+        return ""
+    from dontpanic_orchestrate import brief_surfaces
+
+    return brief_surfaces.format_notify_brief(brief)
+
+
 def notify(event: "NotifyEvent", rendered: Any | None = None) -> bool:
     """Post a single Discord webhook for ``event``. Returns True on 2xx
     response, False on every other outcome. Never raises.
@@ -328,7 +338,11 @@ def _build_payload(event: "NotifyEvent", rendered: Any | None = None) -> dict:
         return scrub_secrets(s) if isinstance(s, str) else s
 
     title = _truncate(_scrub(rendered.title) or "", _DISCORD_TITLE_LIMIT)
-    description = _truncate(_scrub(rendered.detail) or "", _DISCORD_DESCRIPTION_LIMIT)
+    snapshot = brief_message(event)
+    if snapshot:
+        description = _truncate(_scrub(snapshot) or "", _DISCORD_DESCRIPTION_LIMIT)
+    else:
+        description = _truncate(_scrub(rendered.detail) or "", _DISCORD_DESCRIPTION_LIMIT)
     fields: list[dict] = []
     scrubbed_command = _scrub(rendered.exact_command)
     if scrubbed_command:

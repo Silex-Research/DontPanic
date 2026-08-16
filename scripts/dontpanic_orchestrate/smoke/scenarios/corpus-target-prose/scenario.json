@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0",
+  "id": "corpus-target-prose",
+  "suite": "capability",
+  "source_incident": "Plan Target section used prose instead of the required fenced yaml block.",
+  "source_date": "2026-08-09",
+  "intended_behavior": "Lock refuses a plan whose Target is prose.",
+  "expected_current_behavior": "Current lock may still accept some prose Targets depending on the loader.",
+  "plan_fixture": "../2026-05-19-901-feat-smoke-synthetic/plan.md",
+  "features_fixture": "../2026-05-19-901-feat-smoke-synthetic/features.json",
+  "feature_id": "F001",
+  "max_iterations": 1,
+  "replies": [
+    {
+      "agent": "claude",
+      "role": "implementer",
+      "iteration": 0,
+      "summary": "replay of recorded incident corpus-target-prose",
+      "raw_response": "working"
+    },
+    {
+      "agent": "codex",
+      "role": "auditor",
+      "iteration": 0,
+      "summary": "Overall verdict: signed_off.",
+      "raw_response": "signed_off"
+    }
+  ],
+  "expected": {
+    "terminal_state": "signed_off"
+  }
+}

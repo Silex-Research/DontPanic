@@ -1,0 +1,12 @@
+{
+  "id": "C003",
+  "statement": "The next implementer inherits only admitted findings",
+  "status": "approved",
+  "evidence_refs": [
+    {
+      "type": "test_output",
+      "uri": "scripts/test_claim_contract.py"
+    }
+  ],
+  "content_hash": "a8cd1c7d1815d65bc82749f7e816f27c5576f743f8f1ce0e3908456ed37e0cea"
+}

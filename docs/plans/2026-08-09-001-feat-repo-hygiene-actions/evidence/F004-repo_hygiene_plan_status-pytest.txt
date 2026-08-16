@@ -1,0 +1,15 @@
+# F004 named test: scripts/dontpanic_orchestrate/tests/test_repo_hygiene_plan_status.py
+# command: PYTHONPATH=scripts pytest scripts/dontpanic_orchestrate/tests/test_repo_hygiene_plan_status.py -v
+# captured_at: 2026-08-16T00:44:24Z
+
+============================= test session starts ==============================
+platform darwin -- Python 3.11.16, pytest-9.1.1, pluggy-1.6.0 -- /opt/homebrew/opt/python@3.11/bin/python3.11
+cachedir: .pytest_cache
+rootdir: /Users/bayesian/.grok/worktrees/code-dontpanic/subagent-01a007f7-2c22-7851-b16e-a150e59154a8
+configfile: pyproject.toml
+collecting ... collected 2 items
+
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_plan_status.py::test_plan_status_fixture_yields_expected_items PASSED [ 50%]
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_plan_status.py::test_ready_for_audit_and_in_audit_are_explanation_only PASSED [100%]
+
+============================== 2 passed in 0.25s ===============================

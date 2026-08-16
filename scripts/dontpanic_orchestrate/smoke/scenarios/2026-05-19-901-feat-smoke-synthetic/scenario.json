@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0",
+  "id": "2026-05-19-901-feat-smoke-synthetic",
+  "suite": "regression",
+  "plan_fixture": "./plan.md",
+  "features_fixture": "./features.json",
+  "feature_id": "F001",
+  "max_iterations": 1,
+  "replies": [
+    {
+      "agent": "claude",
+      "role": "implementer",
+      "iteration": 0,
+      "success": true,
+      "summary": "[smoke mock claude/implementer] synthetic implementer envelope for F001 (iter=0). No real CLI invoked.",
+      "raw_response": "signed_off",
+      "quota_consumed": {"tokens_in": 0, "tokens_out": 0}
+    },
+    {
+      "agent": "codex",
+      "role": "auditor",
+      "iteration": 0,
+      "success": true,
+      "summary": "Overall verdict: signed_off.\n[smoke mock codex/auditor] synthetic auditor envelope for F001 (iter=0). No findings; no real CLI invoked.",
+      "raw_response": "signed_off",
+      "quota_consumed": {"tokens_in": 0, "tokens_out": 0}
+    }
+  ],
+  "perturbations": [],
+  "expected": {
+    "terminal_state": "signed_off"
+  }
+}

@@ -1,0 +1,9 @@
+AFTER (product-first, rendered from the DecisionBrief snapshot via
+brief_surfaces.format_approve_prompt)
+
+What changes: Open Closet on the last-worn look instead of an empty grid so the next outfit starts from something real
+Who feels it: Opening Closet starts on the last outfit they wore, not a blank grid.
+What approving does: Clearing pre_merge writes the success signoff for F001 and releases it to merge. This is the last stop before the change lands.
+
+A reader of this prompt can state what changes, who feels it, and what
+approving does without opening plan.md.

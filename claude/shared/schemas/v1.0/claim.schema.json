@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-conventions/schemas/v1.0/claim.schema.json",
+  "title": "Claim",
+  "description": "A finding, failed hypothesis, or binding constraint that may enter shared state only when admitted against evidence. Status admitted requires a non-empty evidence_refs list plus admitted_by and admitted_at. Status rejected and stale require a reason.",
+  "type": "object",
+  "required": ["id", "statement", "status", "evidence_refs", "content_hash"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^C\\d{3}$",
+      "description": "C001, C002, ..."
+    },
+    "statement": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The claim text shown to the next worker when status is admitted. Do not invent prose — copy from the source finding."
+    },
+    "status": {
+      "enum": ["proposed", "admitted", "rejected", "stale"]
+    },
+    "evidence_refs": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/evidence_ref" }
+    },
+    "content_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$",
+      "description": "SHA-256 hex digest of the UTF-8 encoded statement, so a later reader can tell whether the claim text changed after admission."
+    },
+    "admitted_by": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Agent or role that admitted the claim. Required when status is admitted."
+    },
+    "admitted_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the claim was admitted. Required when status is admitted."
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Why the claim was rejected or marked stale. Required when status is rejected or stale."
+    }
+  },
+  "allOf": [
+    {
+      "description": "Admitted claims must be grounded: non-empty evidence_refs, who admitted, and when.",
+      "if": {
+        "properties": { "status": { "const": "admitted" } },
+        "required": ["status"]
+      },
+      "then": {
+        "required": ["evidence_refs", "admitted_by", "admitted_at"],
+        "properties": {
+          "evidence_refs": { "minItems": 1 }
+        }
+      }
+    },
+    {
+      "description": "Rejected and stale claims carry a reason.",
+      "if": {
+        "properties": { "status": { "enum": ["rejected", "stale"] } },
+        "required": ["status"]
+      },
+      "then": {
+        "required": ["reason"]
+      }
+    }
+  ],
+  "$defs": {
+    "evidence_ref": {
+      "type": "object",
+      "required": ["type", "uri"],
+      "properties": {
+        "type": { "enum": ["screenshot", "log", "test_output", "diff", "audit_json", "commit", "url", "file"] },
+        "uri": { "type": "string", "description": "Relative path, git SHA, or Firebase Storage signed URL" },
+        "hash": { "type": "string", "description": "SHA-256 of content for integrity" },
+        "captured_at": { "type": "string", "format": "date-time" },
+        "captured_by": { "type": "string", "description": "Agent or tool that captured the evidence" },
+        "note": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,24 @@
+# F002 named test: scripts/dontpanic_orchestrate/tests/test_repo_hygiene_classify.py
+# command: PYTHONPATH=scripts pytest scripts/dontpanic_orchestrate/tests/test_repo_hygiene_classify.py -v
+# captured_at: 2026-08-16T00:44:24Z
+
+============================= test session starts ==============================
+platform darwin -- Python 3.11.16, pytest-9.1.1, pluggy-1.6.0 -- /opt/homebrew/opt/python@3.11/bin/python3.11
+cachedir: .pytest_cache
+rootdir: /Users/bayesian/.grok/worktrees/code-dontpanic/subagent-01a007f7-2c22-7851-b16e-a150e59154a8
+configfile: pyproject.toml
+collecting ... collected 11 items
+
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_classify.py::test_hygiene_kinds_is_the_closed_seven PASSED [  9%]
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_classify.py::test_classify_is_pure PASSED [ 18%]
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_classify.py::test_merged_dominates_ahead PASSED [ 27%]
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_classify.py::test_default_branch_never_gets_cleanup_finding PASSED [ 36%]
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_classify.py::test_current_branch_never_gets_cleanup_finding PASSED [ 45%]
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_classify.py::test_other_worktree_branch_never_gets_cleanup_finding PASSED [ 54%]
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_classify.py::test_current_branch_can_still_be_ahead PASSED [ 63%]
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_classify.py::test_binding_suppresses_dirty_tree PASSED [ 72%]
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_classify.py::test_collapse_threshold_n_minus_1_n_n_plus_1 PASSED [ 81%]
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_classify.py::test_partial_observation_named_in_detail PASSED [ 90%]
+scripts/dontpanic_orchestrate/tests/test_repo_hygiene_classify.py::test_none_observation_yields_no_findings PASSED [100%]
+
+============================== 11 passed in 0.17s ==============================

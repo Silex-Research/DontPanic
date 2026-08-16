@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0",
+  "task_id": "2026-05-19-901-feat-smoke-synthetic",
+  "features": [
+    {
+      "id": "F001",
+      "category": "test",
+      "phase": 0,
+      "description": "Disagree then converge; machinery-proving scenario only.",
+      "steps": ["implement", "audit needs_changes", "re-implement", "audit signed_off"],
+      "acceptance": "Volley terminates signed_off after two iterations.",
+      "passes": false,
+      "depends_on": []
+    }
+  ]
+}

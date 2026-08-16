@@ -3,7 +3,7 @@ id: 2026-08-09-005-feat-eval-ci-capability-regression
 title: Eval suites in CI — regression gates merges, capability climbs separately
 type: feat
 tier: cross-cutting
-status: draft
+status: ready_for_audit
 date: "2026-08-09"
 description: >
   Splits the corpus into two suites with opposite expectations. The regression

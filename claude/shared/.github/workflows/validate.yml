@@ -52,6 +52,10 @@ jobs:
           python scripts/test_objective_contract.py
           python scripts/test_user_impact_contract.py
           python scripts/test_objective_contract_proof.py
+          python scripts/test_claim_contract.py
+          python scripts/test_decisions_contract.py
+          python scripts/test_behavior_contract.py
+          python scripts/test_evidence_read_path.py
 
       - name: Run resolver validator
         run: |

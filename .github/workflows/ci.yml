@@ -70,6 +70,18 @@ jobs:
         # gitignore) must still be green.
         run: python scripts/dontpanic_doctor.py --skip-auth
 
+      - name: Eval — regression suite (gates the build)
+        run: |
+          chmod +x scripts/run-eval-suite.sh
+          PYTHONPATH=scripts bash scripts/run-eval-suite.sh regression
+      - name: Upload regression eval report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-regression
+          path: eval-regression.json
+          if-no-files-found: warn
+
       - name: Sanitization — no campaign IDs in committed surface
         # Scans every file that would land in `git add .` (tracked, staged,
         # and untracked-not-ignored) for the campaign project ID, billing
@@ -79,6 +91,35 @@ jobs:
         # as a counter-example. See scripts/sanitization_check.py for the
         # full allowlist.
         run: python3 scripts/sanitization_check.py
+
+  eval-capability:
+    name: Eval — capability suite (never gates)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - name: Set up Python 3.11
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.11"
+          cache: "pip"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]" jsonschema
+      - name: Eval — capability suite
+        run: |
+          chmod +x scripts/run-eval-suite.sh
+          PYTHONPATH=scripts bash scripts/run-eval-suite.sh capability
+      - name: Upload capability eval report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-capability
+          path: eval-capability.json
+          if-no-files-found: warn
 
   shell:
     name: Shell — bootstrap.sh syntax + arg validation

@@ -1,0 +1,6 @@
+{
+  "id": "D001",
+  "question": "Should DontPanic add an LLM supervisor, router, or Claude-authored control graph?",
+  "answer": "No. The supervisor stays deterministic Python.",
+  "status": "resolved"
+}

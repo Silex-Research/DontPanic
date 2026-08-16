@@ -3,7 +3,7 @@ id: 2026-08-09-003-feat-sim-harness-multi-trial
 title: Sim harness — scenario-driven, multi-trial, reliability-reporting
 type: feat
 tier: cross-cutting
-status: draft
+status: ready_for_audit
 date: "2026-08-09"
 description: >
   The mocked smoke runner already drives one hardcoded synthetic plan through

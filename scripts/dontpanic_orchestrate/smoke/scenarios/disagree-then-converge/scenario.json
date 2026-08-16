@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0",
+  "id": "disagree-then-converge",
+  "suite": "regression",
+  "plan_fixture": "./plan.md",
+  "features_fixture": "./features.json",
+  "feature_id": "F001",
+  "max_iterations": 2,
+  "replies": [
+    {
+      "agent": "claude",
+      "role": "implementer",
+      "iteration": 0,
+      "summary": "first implementer pass",
+      "raw_response": "working"
+    },
+    {
+      "agent": "codex",
+      "role": "auditor",
+      "iteration": 0,
+      "summary": "Overall verdict: needs_changes.",
+      "raw_response": "needs_changes"
+    },
+    {
+      "agent": "claude",
+      "role": "implementer",
+      "iteration": 1,
+      "summary": "addressed auditor findings",
+      "raw_response": "fixed"
+    },
+    {
+      "agent": "codex",
+      "role": "auditor",
+      "iteration": 1,
+      "summary": "Overall verdict: signed_off.",
+      "raw_response": "signed_off"
+    }
+  ],
+  "expected": {
+    "terminal_state": "signed_off"
+  }
+}

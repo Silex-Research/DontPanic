@@ -466,6 +466,13 @@ def _approve_main(argv: list[str]) -> int:
                 file=sys.stderr,
             )
             return 2
+    # Plan 2026-08-09-002 F007: show the pause snapshot before the clearance
+    # line so the operator decides against the same three elements INBOX has.
+    from dontpanic_orchestrate import brief_surfaces
+
+    snapshot = brief_surfaces.load(plan_dir)
+    if snapshot is not None:
+        print(brief_surfaces.format_approve_prompt(snapshot))
     changed = gate_pause.approve_gate(plan_dir, gate, plan_id=loaded.plan_id)
     if changed:
         inbox.append_event(
@@ -770,6 +777,13 @@ def _resume_main(argv: list[str]) -> int:
         # already cleared (or — for transient breaker:* / defer:* — no longer
         # active). In that case we exit 0 with state untouched and emit no
         # INBOX event, no history entry. Parity with `_approve_main`.
+        # Plan 2026-08-09-002 F007: resume --gate is the same decision as
+        # approve; print the same snapshot so the two entry paths do not drift.
+        from dontpanic_orchestrate import brief_surfaces
+
+        snapshot = brief_surfaces.load(plan_dir)
+        if snapshot is not None:
+            print(brief_surfaces.format_approve_prompt(snapshot))
         changed = gate_pause.approve_gate(plan_dir, gate, plan_id=loaded.plan_id)
         if not changed:
             print(f"[resume --gate] gate {gate!r} was already cleared")
@@ -5279,6 +5293,38 @@ def _setup_main(argv: list[str]) -> int:
     return 0
 
 
+def _collect_fleet_hygiene_actions() -> tuple[Any, ...]:
+    """Observe every registered project root (F005 fleet scope)."""
+    from dontpanic_orchestrate import operator_console as _oc
+    from dontpanic_orchestrate import project_config as _pc
+    from dontpanic_orchestrate import projects_registry as _preg
+    from dontpanic_orchestrate import worktrees as _wt
+
+    try:
+        bindings = list(_wt.load_registry().bindings.values())
+    except Exception:  # noqa: BLE001 — missing registry is "no bindings"
+        bindings = []
+    items: list[Any] = []
+    for entry in _preg.load_registry().projects:
+        if entry.active is False:
+            continue
+        proj = Path(entry.path).expanduser()
+        cfg = _pc.load_project_config(proj) if proj.is_dir() else None
+        plans_rel = cfg.plans_dir if cfg is not None else _pc.DEFAULT_PLANS_DIR
+        plans_root = proj / plans_rel if proj.is_dir() else None
+        items.extend(
+            _oc.provide_repo_hygiene_actions(
+                cwd=proj,
+                bindings=bindings,
+                plans_root=plans_root if plans_root is not None and plans_root.is_dir() else None,
+                project_name=entry.name,
+                display_name=getattr(entry, "display_name", None),
+                unusable_if_missing=True,
+            )
+        )
+    return tuple(items)
+
+
 def _next_main(argv: list[str]) -> int:
     """Plan 2026-05-23-007 F002 — read-only parallel-readiness recommender.
 
@@ -5335,6 +5381,12 @@ def _next_main(argv: list[str]) -> int:
         "handoff shape.",
     )
     parser.add_argument(
+        "--json",
+        dest="json_alias",
+        action="store_true",
+        help="alias for --format json",
+    )
+    parser.add_argument(
         "--include-not-ready",
         dest="include_not_ready",
         action="store_true",
@@ -5348,16 +5400,23 @@ def _next_main(argv: list[str]) -> int:
         help="suppress the not-ready section.",
     )
     args = parser.parse_args(argv)
+    if getattr(args, "json_alias", False):
+        args.format = "json"
 
     # Imported here so the planning_readiness module is only loaded when
     # the command is invoked (it pulls in plan_loader's schema discovery).
     from dontpanic_orchestrate import planning_readiness
+    from dontpanic_orchestrate import repo_hygiene as _repo_hygiene
+    from dontpanic_orchestrate import operator_console as _oc
+
+    hygiene_items: tuple[Any, ...] = ()
 
     if args.scope == "fleet":
         report = planning_readiness.analyze_fleet(
             max_parallel=args.max_parallel,
             include_not_ready=args.include_not_ready,
         )
+        hygiene_items = _collect_fleet_hygiene_actions()
     else:
         if args.plans_root is not None:
             plans_root = args.plans_root.expanduser().resolve()
@@ -5379,11 +5438,23 @@ def _next_main(argv: list[str]) -> int:
             max_parallel=args.max_parallel,
             include_not_ready=args.include_not_ready,
         )
+        hygiene_items = _oc.provide_repo_hygiene_actions(
+            cwd=Path.cwd().resolve(),
+            plans_root=plans_root if plans_root.is_dir() else None,
+        )
 
     if args.format == "json":
-        print(planning_readiness.render_json(report))
+        from dontpanic_orchestrate import action_renderers as _ar
+
+        payload = json.loads(planning_readiness.render_json(report))
+        payload["action_items"] = _ar.prepare_for_render(hygiene_items)
+        _oc._assert_no_secret_shapes(payload)
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
     else:
         print(planning_readiness.render_text(report), end="")
+        hygiene_text = _repo_hygiene.render_text(hygiene_items)
+        if hygiene_text:
+            print(hygiene_text, end="")
     return 0
 
 

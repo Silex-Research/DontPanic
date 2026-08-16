@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dontpanic-smoke-scenario.schema.json",
+  "title": "DontPanic smoke scenario",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "suite", "plan_fixture", "replies", "expected"],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "id": {"type": "string", "minLength": 1},
+    "suite": {"type": "string", "enum": ["regression", "capability"]},
+    "source_incident": {"type": "string", "minLength": 1},
+    "source_date": {"type": "string", "minLength": 8},
+    "intended_behavior": {"type": "string", "minLength": 10},
+    "expected_current_behavior": {"type": "string", "minLength": 1},
+    "expected_to_fail": {"type": "boolean"},
+    "expected_to_fail_reason": {"type": "string"},
+    "plan_fixture": {"type": "string", "minLength": 1},
+    "features_fixture": {"type": "string", "minLength": 1},
+    "feature_id": {"type": "string", "pattern": "^F\\d{3}$"},
+    "max_iterations": {"type": "integer", "minimum": 1},
+    "replies": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["agent", "role", "iteration", "summary"],
+        "properties": {
+          "agent": {"type": "string", "minLength": 1},
+          "role": {"type": "string", "minLength": 1},
+          "iteration": {"type": "integer", "minimum": 0},
+          "success": {"type": "boolean"},
+          "summary": {"type": "string"},
+          "raw_response": {"type": "string"},
+          "malformed": {
+            "type": "string",
+            "enum": ["truncated_json", "missing_keys", "verdict_mismatch"]
+          },
+          "quota_consumed": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "tokens_in": {"type": "integer", "minimum": 0},
+              "tokens_out": {"type": "integer", "minimum": 0}
+            }
+          }
+        }
+      }
+    },
+    "perturbations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "call_index"],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": ["timeout", "nonzero_exit", "quota_exhausted"]
+          },
+          "call_index": {"type": "integer", "minimum": 0},
+          "role": {"type": "string"},
+          "agent": {"type": "string"},
+          "exit_code": {"type": "integer"}
+        }
+      }
+    },
+    "expected": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["terminal_state"],
+      "properties": {
+        "terminal_state": {"type": "string", "minLength": 1},
+        "internals": {"type": "object"}
+      }
+    }
+  }
+}

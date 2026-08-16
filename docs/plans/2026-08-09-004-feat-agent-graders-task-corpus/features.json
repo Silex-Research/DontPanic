@@ -15,7 +15,16 @@
         "Scope stops at the contract; concrete graders are F002 to F004"
       ],
       "acceptance": "(1) A grader that attempts to write to the artifacts it was given fails a purity test that monkeypatches the write paths. (2) A grader returning a result omitting a required field is rejected at construction. (3) A grader with no opinion returns not-applicable and the aggregate distinguishes that from a pass. (4) Every result names the component its evidence came from. (5) pytest tests/test_grader_interface.py covers all four and passes.",
-      "passes": false,
+      "passes": true,
+      "verified_by": ["grok"],
+      "verified_at": "2026-08-15T23:40:00Z",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/f001-grader-interface.txt",
+          "note": "test_grader_interface.py 4 passed"
+        }
+      ],
       "depends_on": []
     },
     {
@@ -30,7 +39,16 @@
         "Neither grader writes to the artifacts it inspects"
       ],
       "acceptance": "(1) A trial producing an artifact missing a required frontmatter key is failed with that key named. (2) A trial flipping a feature to passing with an empty evidence list is failed. (3) A clean trial passes both. (4) pytest tests/test_conformance_graders.py covers all three and passes.",
-      "passes": false,
+      "passes": true,
+      "verified_by": ["grok"],
+      "verified_at": "2026-08-15T23:40:00Z",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/f002-conformance-graders.txt",
+          "note": "test_conformance_graders.py 4 passed"
+        }
+      ],
       "depends_on": [
         "F001"
       ]
@@ -47,7 +65,16 @@
         "The boundary grader reports the offending path rather than only a count"
       ],
       "acceptance": "(1) A trial whose gate state records a cleared gate absent from the event log is failed. (2) The reverse case, an event with no corresponding gate-state entry, is also failed. (3) A trial writing outside every declared repository is failed with the path named. (4) A clean trial passes both. (5) pytest tests/test_consistency_graders.py covers all four and passes.",
-      "passes": false,
+      "passes": true,
+      "verified_by": ["grok"],
+      "verified_at": "2026-08-15T23:45:00Z",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/f003-consistency-graders.txt",
+          "note": "test_consistency_graders.py 5 passed"
+        }
+      ],
       "depends_on": [
         "F001"
       ]
@@ -65,7 +92,16 @@
         "No command is ever executed for real by the grader"
       ],
       "acceptance": "(1) The recorded non-active close case is passed by the token check and failed by the operational check, and the report shows both. (2) A close command rendered against an active all-passing plan passes both checks. (3) A command whose handler exposes no safe dry-run is reported not-applicable rather than passing. (4) A monkeypatched execution path proves no command is executed for real during grading. (5) pytest tests/test_operational_validity_grader.py covers all four and passes.",
-      "passes": false,
+      "passes": true,
+      "verified_by": ["grok"],
+      "verified_at": "2026-08-15T23:50:00Z",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/f004-operational-validity.txt",
+          "note": "test_operational_validity_grader.py 4 passed"
+        }
+      ],
       "depends_on": [
         "F001"
       ]
@@ -83,7 +119,21 @@
         "Where a deterministic detector already exists for a dimension, the deterministic result wins and the judge is advisory"
       ],
       "acceptance": "(1) A default run performs no model call, asserted by a monkeypatched executor that raises if invoked. (2) A report produced without the judge names the dimensions it did not evaluate. (3) Every judged result carries the rubric version. (4) On a decision entry whose rationale restates the decision, the judge's verdict and reason are recorded, whatever they are, rather than being discarded. (5) Where the existing verdict-mismatch detector and the judge disagree, the deterministic result is the one reported as authoritative. (6) pytest tests/test_judge_grader.py covers all five and passes.",
-      "passes": false,
+      "passes": true,
+      "verified_by": ["grok"],
+      "verified_at": "2026-08-15T23:55:00Z",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/f005-f006-judge.txt",
+          "note": "test_judge_grader.py 5 passed"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/judge-rubric-v0.md",
+          "note": "versioned rubric"
+        }
+      ],
       "depends_on": [
         "F001"
       ]
@@ -101,7 +151,21 @@
         "State plainly in the report that an agreement rate over a subset this size is an indication, not a guarantee"
       ],
       "acceptance": "(1) The calibration report states the agreement rate and the labeled-set size adjacent to each other. (2) Every divergent case is listed with both verdicts and both reasons. (3) Every label names its assigner and date. (4) The report contains an explicit statement of what the sample size does and does not support. (5) Re-running the judge over the same subset with the same rubric version reproduces the same agreement rate.",
-      "passes": false,
+      "passes": true,
+      "verified_by": ["grok"],
+      "verified_at": "2026-08-15T23:55:00Z",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/f005-f006-judge.txt",
+          "note": "test_judge_calibration.py 5 passed"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/judge-calibration-report.md",
+          "note": "rate + sample size + divergences + caveat"
+        }
+      ],
       "depends_on": [
         "F005"
       ]
@@ -120,7 +184,16 @@
         "Report the share of the corpus drawn from any single incident or session, per D006"
       ],
       "acceptance": "(1) Every corpus scenario names a source incident with a date. (2) Every corpus scenario states intended behavior in a field distinct from expected current behavior. (3) At least one scenario fails against the current implementation, is marked as expected-to-fail with a reason, and does not count as a harness error. (4) The corpus report states the share contributed by the largest single source. (5) Running the whole corpus produces a per-scenario result table with no scenario erroring out.",
-      "passes": false,
+      "passes": true,
+      "verified_by": ["grok"],
+      "verified_at": "2026-08-16T01:00:00Z",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/f007-f008-corpus.txt",
+          "note": "test_corpus_from_failures.py 5 passed"
+        }
+      ],
       "depends_on": [
         "F002",
         "F003",
@@ -140,7 +213,21 @@
         "Record where the corpus lives and how a contributor adds to it without touching harness source"
       ],
       "acceptance": "(1) The guidance exists and names the three artifacts a failure must carry to be promotable. (2) The guidance states the same-sitting anti-pattern explicitly. (3) The plan-artifacts skill references it. (4) A reader following only the guidance can add a scenario without editing any file under the orchestrator package, demonstrated by adding one. (5) The added scenario runs in the corpus.",
-      "passes": false,
+      "passes": true,
+      "verified_by": ["grok"],
+      "verified_at": "2026-08-16T01:00:00Z",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/f007-f008-corpus.txt",
+          "note": "test_corpus_promotion.py 1 passed; corpus-dirty-dispatch is data-only"
+        },
+        {
+          "type": "file",
+          "uri": "docs/authoring-corpus-scenario.md",
+          "note": "promotion guidance"
+        }
+      ],
       "depends_on": [
         "F007"
       ]

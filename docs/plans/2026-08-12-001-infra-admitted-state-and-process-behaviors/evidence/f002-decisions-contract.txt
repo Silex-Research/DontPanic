@@ -1,0 +1,25 @@
+command: /Users/bayesian/Code/DontPanic/.venv/bin/python scripts/test_decisions_contract.py
+cwd: /Users/bayesian/Code/agent-conventions
+date: 2026-08-16T00:34:35Z
+
+decisions line contract (plan 2026-08-12-001 F002)
+  ✓ question-answer-resolved: both validators accepted (agreement)
+  ✓ title-body-legacy: both validators accepted (agreement)
+  ✓ missing-id: both validators rejected (agreement)
+  ✓ bad-id: both validators rejected (agreement)
+  ✓ missing-date-and-ts: both validators rejected (agreement)
+  ✓ missing-question-and-title: both validators rejected (agreement)
+  ✓ status-unknown: both validators rejected (agreement)
+  ✓ extra-key: both validators rejected (agreement)
+  ✓ status [open]: both validators accepted (agreement)
+  ✓ status [resolved]: both validators accepted (agreement)
+  ✓ status [deferred]: both validators accepted (agreement)
+  ✓ null parity [date]: both reject null for the date field
+  ✓ null parity [ts]: both reject null for the timestamp field
+  ✓ null parity [question]: both reject null for the question field
+  ✓ null parity [title]: both reject null for the title field
+  ✓ null parity [status]: both reject null for the status field
+  ✓ additionalProperties is false
+
+PASS: 8 fixtures × 2 validators agree, 3 statuses accepted by both, 5 null cases rejected by both
+exit=0

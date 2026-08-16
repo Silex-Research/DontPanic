@@ -1,0 +1,8 @@
+{
+  "id": "C005",
+  "statement": "This hypothesis was rejected after the named test failed",
+  "status": "rejected",
+  "evidence_refs": [],
+  "content_hash": "8885e25213b367f5525969431a9db57b1cc9ffb6dd0138a51bcc233ddb529643",
+  "reason": "Named acceptance test failed on the recorded command"
+}

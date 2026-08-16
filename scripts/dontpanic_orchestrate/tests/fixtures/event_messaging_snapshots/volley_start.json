@@ -20,7 +20,9 @@
       "reversible": false,
       "source": "supervisor",
       "title": "Active AI work on 2026-05-24-004-feat-event-messaging-v1",
-      "updated_at": "2026-05-24T00:00:00Z"
+      "updated_at": "2026-05-24T00:00:00Z",
+      "user_impact": null,
+      "what_changes": null
     },
     "discord_embed": {
       "allowed_mentions": {
