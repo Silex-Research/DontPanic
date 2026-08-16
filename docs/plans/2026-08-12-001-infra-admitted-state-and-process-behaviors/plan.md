@@ -3,7 +3,7 @@ id: 2026-08-12-001-infra-admitted-state-and-process-behaviors
 title: Admitted shared state and hidden process behaviors
 type: infra
 tier: architectural
-status: draft
+status: completed
 date: "2026-08-12"
 description: >
   The next worker in a volley receives a rewritten findings list, not admitted

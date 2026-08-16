@@ -15,13 +15,15 @@
       ],
       "acceptance": "(1) A claim with status admitted and at least one evidence_ref validates. (2) A claim with status admitted and empty evidence_refs is rejected by both JSON Schema and Pydantic. (3) status outside proposed|admitted|rejected|stale is rejected by both. (4) The JSON Schema and the Pydantic model return the same verdict on the fixture set. (5) additionalProperties is false.",
       "passes": true,
-      "verified_by": ["grok"],
+      "verified_by": [
+        "grok"
+      ],
       "verified_at": "2026-08-16T00:06:00Z",
       "evidence_refs": [
         {
           "type": "test_output",
           "uri": "evidence/f001-claim-contract.txt",
-          "note": "claim contract 9 fixtures × 2 validators agree"
+          "note": "claim contract 9 fixtures \u00d7 2 validators agree"
         }
       ],
       "depends_on": [],
@@ -47,13 +49,15 @@
       ],
       "acceptance": "(1) A fixture matching the current DontPanic decisions.jsonl convention validates. (2) A line missing an id is rejected by both validators. (3) Existing plan decisions.jsonl files are not edited. (4) JSON Schema and Pydantic agree on the fixture set.",
       "passes": true,
-      "verified_by": ["grok"],
+      "verified_by": [
+        "grok"
+      ],
       "verified_at": "2026-08-16T00:06:00Z",
       "evidence_refs": [
         {
           "type": "test_output",
           "uri": "evidence/f002-decisions-contract.txt",
-          "note": "decisions contract 8 fixtures × 2 validators agree"
+          "note": "decisions contract 8 fixtures \u00d7 2 validators agree"
         }
       ],
       "depends_on": [],
@@ -80,13 +84,15 @@
       ],
       "acceptance": "(1) A behavior verdict with adherence n/a and no evidence_refs validates. (2) adherence violated requires at least one evidence_ref. (3) owner_role outside the closed enum is rejected by both validators. (4) JSON Schema and Pydantic agree on the fixture set.",
       "passes": true,
-      "verified_by": ["grok"],
+      "verified_by": [
+        "grok"
+      ],
       "verified_at": "2026-08-16T00:06:00Z",
       "evidence_refs": [
         {
           "type": "test_output",
           "uri": "evidence/f003-behavior-contract.txt",
-          "note": "behavior contract 7 fixtures × 2 validators agree"
+          "note": "behavior contract 7 fixtures \u00d7 2 validators agree"
         }
       ],
       "depends_on": [],
@@ -111,7 +117,7 @@
         "No existing plan file is edited as part of this feature"
       ],
       "acceptance": "(1) No existing plan directory's validation exit code changes. (2) git status shows no existing plan file modified by this feature. (3) The subtree-pulled schemas in DontPanic are byte-identical to the ones committed in agent-conventions.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001",
         "F002",
@@ -125,7 +131,18 @@
           "backend"
         ],
         "description_hash": "6291470a2249e1181ccf68a70ea0c92bb02f23b7d6d0cac8b9f271a6a323d636"
-      }
+      },
+      "verified_by": [
+        "grok"
+      ],
+      "verified_at": "2026-08-16T04:30:00Z",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/f004-subtree-pull.txt",
+          "note": "120/120 validate exit codes unchanged; schemas byte-identical to AC c65357a"
+        }
+      ]
     },
     {
       "id": "F005",
@@ -140,7 +157,9 @@
       ],
       "acceptance": "(1) A fixture auditor envelope with one evidenced finding and one unevidenced sentence produces a next-implementer prompt that contains the admitted claim and the audit JSON path. (2) The unevidenced sentence does not appear in the prompt. (3) The existing audit JSON file is still written and is the unfold target. (4) The prior event_copy and supervisor suites show no new failures against a same-scope baseline.",
       "passes": true,
-      "verified_by": ["grok"],
+      "verified_by": [
+        "grok"
+      ],
       "verified_at": "2026-08-16T00:05:00Z",
       "evidence_refs": [
         {
@@ -167,14 +186,16 @@
       "phase": 2,
       "description": "Judge a small closed set of deterministic process behaviors off existing audit envelopes and persist the verdicts next to the volley",
       "steps": [
-        "Define 3–5 behaviors: acceptance test invoked when steps name a test; {repo,env,project} declared when target_context is present; implementer vendor ≠ auditor vendor; protected path untouched unless gated; commands_run recorded when the prompt required commands",
-        "Each judge is a pure function of the audit envelope and git-state sidecar — no model call",
+        "Define 3\u20135 behaviors: acceptance test invoked when steps name a test; {repo,env,project} declared when target_context is present; implementer vendor \u2260 auditor vendor; protected path untouched unless gated; commands_run recorded when the prompt required commands",
+        "Each judge is a pure function of the audit envelope and git-state sidecar \u2014 no model call",
         "Persist verdicts as behavior records beside the feature audit, not in the worker prompt",
         "A fixture envelope that omitted the named test yields adherence violated with an evidence_ref"
       ],
       "acceptance": "(1) Each of the closed behaviors returns adhered, violated, or n/a from a fixture envelope with no network and no model. (2) A fixture that lists a test in steps and has no matching command in commands_run is violated. (3) Behavior text does not appear in implementer_prompt or auditor_prompt. (4) Existing volley tests show no new failures against a same-scope baseline.",
       "passes": true,
-      "verified_by": ["grok"],
+      "verified_by": [
+        "grok"
+      ],
       "verified_at": "2026-08-16T00:10:00Z",
       "evidence_refs": [
         {
@@ -208,7 +229,9 @@
       ],
       "acceptance": "(1) PLATFORM.md names harness, loop, and graph and maps each to an existing DontPanic object. (2) The non-goals list includes LLM supervisor, Claude-authored control graph, vector context layer, and in-app agent UI. (3) PRODUCT.md and ECOSYSTEM.md caller boundary are unchanged except for a link if needed.",
       "passes": true,
-      "verified_by": ["grok"],
+      "verified_by": [
+        "grok"
+      ],
       "verified_at": "2026-08-15T23:58:00Z",
       "evidence_refs": [
         {

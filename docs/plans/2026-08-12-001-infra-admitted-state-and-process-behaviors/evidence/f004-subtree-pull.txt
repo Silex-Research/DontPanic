@@ -1,0 +1,15 @@
+F004 subtree-pull v1.20.0
+AC commit: c65357a
+DP subtree commit: 26584af
+
+Validate exit-code parity (120 plans):
+identical per-plan exit codes
+
+Byte identity:
+  OK claim.schema.json
+  OK decisions.schema.json
+  OK behavior.schema.json
+  OK models/claim_model.py
+  OK models/decisions_model.py
+  OK models/behavior_model.py
+VERSION 1.20.0 vs AC 1.20.0
