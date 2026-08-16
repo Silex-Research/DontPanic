@@ -23,6 +23,13 @@ pushed upstream out-of-band).
   fixtures under `tests/{claim,decisions,behavior}/`. JSON Schema and
   Pydantic agree on each fixture set.
 
+### Fixed
+- `Features.model_validate` no longer raises on an unbacked `passes: true`.
+  The 1.20.0 Pydantic arm had reintroduced a load-time evidence validator
+  that 1.19 moved to `evidence_gaps()` / `validate.py`. History stays
+  readable; live plans still fail validate. Locked by
+  `scripts/test_evidence_read_path.py`.
+
 ## 1.17.0 — 2026-08-13
 
 ### Added
