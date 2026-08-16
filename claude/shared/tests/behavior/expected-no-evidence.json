@@ -1,0 +1,6 @@
+{
+  "id": "vendor_pair_distinct",
+  "trigger": "Implementer vendor must differ from auditor vendor",
+  "owner_role": "supervisor",
+  "adherence": "expected"
+}

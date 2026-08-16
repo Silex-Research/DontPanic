@@ -1,0 +1,8 @@
+{
+  "id": "D001",
+  "date": "2026-08-12",
+  "question": "Should DontPanic add an LLM supervisor, router, or Claude-authored control graph?",
+  "answer": "No. The supervisor stays deterministic Python. Extra LLM hops are the failure mode the papers name.",
+  "status": "resolved",
+  "rationale": "Google/MIT sequential penalty plus DeLM merge distortion. DontPanic's existing control plane is already the recommended architecture."
+}

@@ -362,6 +362,46 @@ class Feature(BaseModel):
             )
         return data
 
+    @model_validator(mode='after')
+    def _passes_true_requires_evidence(self) -> 'Feature':
+        """A feature claiming `passes: true` must carry what backs the claim.
+
+        `features.schema.json` has always required this — `verified_by`,
+        `verified_at` and `evidence_refs`, the first and last non-empty — under
+        an `if passes == true` conditional. This model did not, so the two
+        validator arms disagreed: `validate.py` runs THIS arm and reported a
+        clean plan while `jsonschema` on the same bytes reported three errors.
+
+        The gap was not theoretical. An implementer flipped a feature to
+        `passes: true` with all three fields absent and the plan validated
+        clean (recorded as D008 on plan 2026-08-13-001). A flip is a claim that
+        the acceptance was met; a claim with nothing behind it is precisely the
+        failure this contract exists to prevent, and the validator was the one
+        place guaranteed to be run.
+
+        Scoped deliberately to `passes == true` — an open feature owes nothing.
+        """
+        if not self.passes:
+            return self
+
+        missing: list[str] = []
+        if not self.verified_by:
+            missing.append('verified_by')
+        if self.verified_at is None:
+            missing.append('verified_at')
+        if not self.evidence_refs:
+            missing.append('evidence_refs')
+
+        if missing:
+            raise ValueError(
+                f'feature {self.id} claims passes=true but is missing '
+                f'{", ".join(missing)} — a flip to true must name who verified '
+                'it, when, and at least one evidence_ref. An empty list is not '
+                'evidence.'
+            )
+        return self
+
+
 
 
 class Features(BaseModel):

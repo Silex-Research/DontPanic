@@ -1,0 +1,6 @@
+{
+  "id": "target_context_declared",
+  "trigger": "Plan target_context names repo, env, or project",
+  "owner_role": "implementer",
+  "adherence": "adhered"
+}

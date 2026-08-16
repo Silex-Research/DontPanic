@@ -5,6 +5,24 @@ canonical history lives in `agent-conventions` itself; entries here record what
 landed in the DontPanic subtree first (and that the operator subsequently
 pushed upstream out-of-band).
 
+## 1.20.0 — 2026-08-16
+
+### Added
+- `claim.schema.json` + `models/claim_model.py`: verified-admission claim
+  contract (`proposed|admitted|rejected|stale`). Admitted requires non-empty
+  `evidence_refs` plus `admitted_by`/`admitted_at`. Reuses the features
+  `evidence_ref` shape. `additionalProperties: false`.
+- `decisions.schema.json` + `models/decisions_model.py`: one `decisions.jsonl`
+  line. Accepts both DontPanic line shapes (question/answer/status and
+  id/ts/by/title/body). `id` matches `^D\\d{3}$`.
+- `behavior.schema.json` + `models/behavior_model.py`: hidden process-behavior
+  verdicts (`owner_role` implementer|auditor|supervisor; `adherence`
+  expected|n/a|violated). Violated requires evidence. Schema description
+  states specs are hidden from worker prompts.
+- Contract tests `scripts/test_{claim,decisions,behavior}_contract.py` plus
+  fixtures under `tests/{claim,decisions,behavior}/`. JSON Schema and
+  Pydantic agree on each fixture set.
+
 ## 1.17.0 — 2026-08-13
 
 ### Added
