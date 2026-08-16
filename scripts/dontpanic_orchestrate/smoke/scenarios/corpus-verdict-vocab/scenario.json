@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0",
+  "id": "corpus-verdict-vocab",
+  "suite": "capability",
+  "source_incident": "An audit whose subject vocabulary contained a status word was misclassified and tripped a global breaker.",
+  "source_date": "2026-07-30",
+  "intended_behavior": "A status word in the subject is not a structured verdict.",
+  "expected_current_behavior": "Current classifier still treats some subject words as verdicts.",
+  "plan_fixture": "../2026-05-19-901-feat-smoke-synthetic/plan.md",
+  "features_fixture": "../2026-05-19-901-feat-smoke-synthetic/features.json",
+  "feature_id": "F001",
+  "max_iterations": 1,
+  "replies": [
+    {
+      "agent": "claude",
+      "role": "implementer",
+      "iteration": 0,
+      "summary": "replay of recorded incident corpus-verdict-vocab",
+      "raw_response": "working"
+    },
+    {
+      "agent": "codex",
+      "role": "auditor",
+      "iteration": 0,
+      "summary": "Overall verdict: signed_off.",
+      "raw_response": "signed_off"
+    }
+  ],
+  "expected": {
+    "terminal_state": "signed_off"
+  }
+}

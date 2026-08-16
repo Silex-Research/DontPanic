@@ -248,10 +248,19 @@
         "Confirm the existing secret scrubbing still runs over the new fields at both emit points"
       ],
       "acceptance": "(1) The approve prompt for a synthetic gate shows the same three brief elements as the INBOX entry for that gate. (2) Both read the single snapshot rather than recomputing, asserted by mutating the snapshot and observing both outputs change. (3) A summary exceeding the cap keeps its impact line and truncates supporting detail. (4) Secret scrubbing passes over both payloads with a token-shaped string planted in the summary. (5) pytest tests/test_brief_cli_inbox_parity.py covers all four and passes.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F005",
         "F006"
+      ],
+      "verified_by": ["grok"],
+      "verified_at": "2026-08-15T23:30:00Z",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/f007-f008-pytest.txt",
+          "note": "test_brief_cli_inbox_parity.py 5 passed"
+        }
       ]
     },
     {
@@ -266,9 +275,18 @@
         "Confirm secret scrubbing runs over the new fields at every emit point"
       ],
       "acceptance": "(1) The Discord payload, the terminal notification, and the dashboard card carry the same three brief elements for one synthetic gate, modulo declared truncation. (2) The dashboard rendering is unabridged while both notification sinks are capped. (3) Truncation preserves the impact line in every capped sink. (4) Secret scrubbing passes over all three payloads with a token-shaped string planted in the summary. (5) pytest tests/test_brief_sink_parity.py covers all four and passes.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F007"
+      ],
+      "verified_by": ["grok"],
+      "verified_at": "2026-08-15T23:30:00Z",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/f007-f008-pytest.txt",
+          "note": "test_brief_sink_parity.py 5 passed"
+        }
       ]
     },
     {
@@ -284,9 +302,33 @@
         "Record in USER.md that the builder-facing preference now has enforcement behind it"
       ],
       "acceptance": "(1) evidence/ holds a before and an after rendering of the fixture gate. (2) The fixture header records what it was modelled on. (3) A reader given only the after rendering can state what changes, who feels it, and what approving does, without opening plan.md. (4) The authoring guidance exists and the plan-artifacts skill references it. (5) git status shows no file modified outside DontPanic and agent-conventions.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F008"
+      ],
+      "verified_by": ["grok"],
+      "verified_at": "2026-08-15T23:30:00Z",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/f009-before-render.txt",
+          "note": "orchestration-first before copy"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/f009-after-render.txt",
+          "note": "product-first after copy from the snapshot"
+        },
+        {
+          "type": "file",
+          "uri": "scripts/dontpanic_orchestrate/tests/fixtures/decision_brief_sticky_first/README.md",
+          "note": "fixture provenance (Glam sticky-first shape)"
+        },
+        {
+          "type": "file",
+          "uri": "docs/authoring-user-impact.md",
+          "note": "authoring guidance; plan-artifacts skill references it"
+        }
       ]
     },
     {
@@ -301,10 +343,24 @@
         "Release-impact advisory should list readme and root_changelog; both files must be in the feature's evidence"
       ],
       "acceptance": "(1) README states in operator language that approval prompts lead with outcome and audience when declared. (2) CHANGELOG.md has a dated or Unreleased entry for this plan's operator-visible change. (3) Neither file claims intake exists or restyles the product. (4) A reader of README alone can tell this is different from 'paused at gate pre_merge'.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F005",
         "F006"
+      ],
+      "verified_by": ["grok"],
+      "verified_at": "2026-08-15T23:30:00Z",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "README.md",
+          "note": "Govern row: gates ask what changes, who feels it, what approving does"
+        },
+        {
+          "type": "file",
+          "uri": "CHANGELOG.md",
+          "note": "2026-08-15 approval gates ask in product terms"
+        }
       ],
       "user_impact": {
         "audience": "operator",

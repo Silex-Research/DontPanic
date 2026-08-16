@@ -258,24 +258,32 @@ Do NOT output JSON; the supervisor extracts findings from your prose and wraps t
 
 
 def _findings_block(audit_path: Path) -> str:
-    """Render auditor findings list as compact text for the next implementer's prompt."""
+    """Admitted claims plus an unfold pointer — not a rewritten bullet list.
+
+    Plan 2026-08-12-001 F005. A finding enters the next implementer prompt
+    only when it already carries evidence. Unevidenced sentences stay in the
+    audit JSON (the unfold target) and are not summarized into the prompt.
+    """
     try:
         data = json.loads(audit_path.read_text())
     except (OSError, json.JSONDecodeError):
         return "(could not read audit file)"
     findings = data.get("findings") or []
-    if not findings:
-        return f"(audit_status: {data.get('audit_status', 'unknown')}, no structured findings; see summary in audit file)"
-    lines = []
-    for f in findings:
-        sev = f.get("severity", "?")
-        cat = f.get("category", "?")
-        issue = f.get("issue", "(no issue text)")
-        rec = f.get("recommendation", "")
-        line = f"  - [{sev}, {cat}] {issue}"
-        if rec:
-            line += f"  →  {rec}"
-        lines.append(line)
+    admitted: list[str] = []
+    for finding in findings:
+        refs = finding.get("evidence_refs") or []
+        if not refs:
+            continue
+        issue = finding.get("issue") or finding.get("statement") or "(no claim text)"
+        admitted.append(f"  - {issue}")
+    if not admitted:
+        return (
+            f"(audit_status: {data.get('audit_status', 'unknown')}, "
+            "no admitted claims; unfold "
+            f"{audit_path})"
+        )
+    lines = ["Admitted claims (evidence on disk):", *admitted]
+    lines.append(f"Unfold the full audit JSON at {audit_path}")
     return "\n".join(lines)
 
 

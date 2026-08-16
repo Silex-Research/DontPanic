@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0",
+  "id": "corpus-signoff-circularity",
+  "suite": "capability",
+  "source_incident": "Signoff classified freshly written INBOX/audit/transcript as unrelated dirty state.",
+  "source_date": "2026-08-09",
+  "intended_behavior": "A run may complete without treating its own receipts as dirty.",
+  "expected_current_behavior": "Current patch-completeness still flags self-authored receipts unless overridden.",
+  "plan_fixture": "../2026-05-19-901-feat-smoke-synthetic/plan.md",
+  "features_fixture": "../2026-05-19-901-feat-smoke-synthetic/features.json",
+  "feature_id": "F001",
+  "max_iterations": 1,
+  "replies": [
+    {
+      "agent": "claude",
+      "role": "implementer",
+      "iteration": 0,
+      "summary": "replay of recorded incident corpus-signoff-circularity",
+      "raw_response": "working"
+    },
+    {
+      "agent": "codex",
+      "role": "auditor",
+      "iteration": 0,
+      "summary": "Overall verdict: signed_off.",
+      "raw_response": "signed_off"
+    }
+  ],
+  "expected": {
+    "terminal_state": "signed_off"
+  }
+}

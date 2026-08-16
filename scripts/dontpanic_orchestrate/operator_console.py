@@ -172,6 +172,9 @@ SOURCE_INTEGRATION = "integration"
 # at the ActionItem boundary, are never dropped by aggregate/render, and sort with
 # a stable key alongside every other source.
 SOURCE_UPGRADE = "upgrade"
+# Plan 2026-08-09-001 — between-dispatch git / plan-status drift. Priority
+# sits below architecture so existing sources keep their relative order.
+SOURCE_REPO_HYGIENE = "repo_hygiene"
 
 # Plan 2026-06-04-005 F004 — the lower-priority section uncertainty (demotion)
 # cards render under: never Needs Action, always "Status could not be refreshed".
@@ -186,6 +189,7 @@ _VALID_SOURCES: frozenset[str] = frozenset(
         SOURCE_ARCHITECTURE,
         SOURCE_INTEGRATION,
         SOURCE_UPGRADE,
+        SOURCE_REPO_HYGIENE,
     }
 )
 
@@ -195,8 +199,9 @@ _SOURCE_PRIORITY: dict[str, int] = {
     SOURCE_CAPABILITY: 2,
     SOURCE_SUPERVISOR: 3,
     SOURCE_ARCHITECTURE: 4,
-    SOURCE_INTEGRATION: 5,
-    SOURCE_UPGRADE: 6,
+    SOURCE_REPO_HYGIENE: 5,
+    SOURCE_INTEGRATION: 6,
+    SOURCE_UPGRADE: 7,
 }
 
 
@@ -366,6 +371,10 @@ class ActionItem:
     credential_env_vars: tuple[str, ...] = ()
     evidence_expected: str | None = None
     trigger_condition: str | None = None
+    # Plan 2026-08-09-002 F008 — unabridged decision brief on the dashboard
+    # card. Optional so existing ActionItems keep constructing.
+    what_changes: str | None = None
+    user_impact: str | None = None
 
     def __post_init__(self) -> None:
         if self.source not in _VALID_SOURCES:
@@ -439,6 +448,8 @@ class ActionItem:
             "credential_env_vars": list(self.credential_env_vars),
             "evidence_expected": self.evidence_expected,
             "trigger_condition": self.trigger_condition,
+            "what_changes": self.what_changes,
+            "user_impact": self.user_impact,
         }
 
 
@@ -877,6 +888,36 @@ def provide_architecture_actions(
             reversible=True,  # regen rebuilds a derived artifact; re-runnable
             plain_consequence="Regenerates the architecture snapshot from the repo.",
         ),
+    )
+
+
+def provide_repo_hygiene_actions(
+    cwd: Path | None = None,
+    *,
+    findings: Any = None,
+    observation: Any = None,
+    bindings: Sequence[Any] | None = None,
+    plans_root: Path | None = None,
+    project_name: str | None = None,
+    display_name: str | None = None,
+    now: _dt.datetime | str | None = None,
+    runner: Any = None,
+    unusable_if_missing: bool = False,
+) -> tuple[ActionItem, ...]:
+    """Plan 2026-08-09-001 — map repo-hygiene findings to ActionItems."""
+    from dontpanic_orchestrate import repo_hygiene as _rh
+
+    return _rh.provide_actions(
+        cwd,
+        findings=findings,
+        observation=observation,
+        bindings=bindings,
+        plans_root=plans_root,
+        project_name=project_name,
+        display_name=display_name,
+        now=now,
+        runner=runner,
+        unusable_if_missing=unusable_if_missing,
     )
 
 
@@ -1321,6 +1362,10 @@ def _rendered_to_action_item_dict(
         "reversible": bool(getattr(rendered, "reversible", False)),
         "plain_consequence": getattr(rendered, "plain_consequence", None),
         "dashboard_url": None,
+        # F008: dashboard is the unabridged surface — pass the brief slots
+        # through without clipping. The card renderer reads these fields.
+        "what_changes": getattr(rendered, "what_changes", None),
+        "user_impact": getattr(rendered, "user_impact", None),
     }
 
 
@@ -1421,6 +1466,8 @@ def _action_item_from_sidecar_dict(entry: Mapping[str, Any]) -> ActionItem | Non
             credential_env_vars=tuple(entry.get("credential_env_vars") or ()),
             evidence_expected=entry.get("evidence_expected"),
             trigger_condition=entry.get("trigger_condition"),
+            what_changes=entry.get("what_changes"),
+            user_impact=entry.get("user_impact"),
         )
     except (KeyError, ValueError, TypeError):
         return None
@@ -1574,9 +1621,11 @@ __all__ = [
     "SOURCE_GATE",
     "SOURCE_INTEGRATION",
     "SOURCE_RECONCILE",
+    "SOURCE_REPO_HYGIENE",
     "SOURCE_SUPERVISOR",
     "SOURCE_UPGRADE",
     "aggregate",
+    "provide_repo_hygiene_actions",
     "default_cache_path",
     "default_event_sidecar_path",
     "merge_with_event_sidecar",

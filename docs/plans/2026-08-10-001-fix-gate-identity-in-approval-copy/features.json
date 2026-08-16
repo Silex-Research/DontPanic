@@ -16,7 +16,16 @@
         "Sweep the other emit sites for reliance on the removed alias and record any that lose a previously-rendered gate"
       ],
       "acceptance": "(1) Driving the real _emit_gate_paused_discord with pending_gates=['pre_merge'], stage='general' renders gate `pre_merge` and stage `general` as distinct values, and no rendered slot contains the string 'gate `general`'. (2) The same holds for pending_gates=['breaker:iteration_cap'], stage='upfront': no rendered slot contains 'upfront' as a gate. (3) The two call sites that pass a non-gate stage (supervisor.py:1316 'general' and supervisor.py:2021 'upfront') are both covered by a test, and the test names them so a future re-homing of the call is caught. (4) _gather_fields no longer falls back to subtype for the gate slot, and a gate-shaped event with no pending_gates metadata renders with the gate omitted rather than substituted. (5) A multi-gate pause with pending_gates of length 2 renders a documented, runnable-or-absent command — specifically it must not print a single approve command containing a comma. (6) The stage='pre_merge' site still renders exactly as it does today, proving the change did not regress the two already-correct call sites. (7) The full existing event_copy and messaging suites pass with no new failures against a same-scope baseline.",
-      "passes": false,
+      "passes": true,
+      "verified_by": ["grok"],
+      "verified_at": "2026-08-15T23:30:00Z",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/f001-f002-pytest.txt",
+          "note": "test_gate_identity_in_approval_copy.py 9 passed"
+        }
+      ],
       "depends_on": [],
       "user_impact": {
         "audience": "operator",
@@ -40,7 +49,16 @@
         "Confirm the invariant would have caught the original defect by running it against the pre-F001 emit path"
       ],
       "acceptance": "(1) A test asserts the rendered exact_command for a gate pause on pre_merge is exactly 'dontpanic approve <plan_id> pre_merge'. (2) An invariant test iterates every renderable kind and fails if any rendered slot names a gate absent from the source event. (3) The invariant is proven non-vacuous: a deliberate mutation reintroducing the subtype-to-gate alias makes it fail, and that failure is captured as evidence. (4) The parametrized kind set is derived from the disposition table rather than hardcoded, and is asserted non-empty. (5) pytest passes for the new module and the full suite shows no new failures against a same-scope baseline.",
-      "passes": false,
+      "passes": true,
+      "verified_by": ["grok"],
+      "verified_at": "2026-08-15T23:30:00Z",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/f001-f002-pytest.txt",
+          "note": "F002 exact_command + invariant tests in the same module"
+        }
+      ],
       "depends_on": [
         "F001"
       ],
@@ -66,7 +84,21 @@
         "Do not restyle the README hook"
       ],
       "acceptance": "(1) README states that the approve command names the gate that is actually pending. (2) CHANGELOG.md has an Unreleased or dated entry for this fix. (3) No second 'what is DontPanic' section is invented. (4) A reader can tell this is different from `dontpanic approve <plan> general`, the non-gate token the command used to print.",
-      "passes": false,
+      "passes": true,
+      "verified_by": ["grok"],
+      "verified_at": "2026-08-15T23:30:00Z",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "README.md",
+          "note": "Govern row extended: printed approve command names the pending gate"
+        },
+        {
+          "type": "file",
+          "uri": "CHANGELOG.md",
+          "note": "2026-08-15 approve command names the pending gate"
+        }
+      ],
       "depends_on": [
         "F002"
       ],

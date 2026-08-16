@@ -15,14 +15,25 @@
         "Backfill the existing corpus scenarios with an explicit membership"
       ],
       "acceptance": "(1) A scenario file with no suite field is rejected at load with the field named. (2) A scenario declaring an unrecognized suite name is rejected. (3) Every scenario in the existing corpus carries an explicit membership after backfill. (4) Changing a scenario's suite is visible as a one-line diff in that scenario's own file. (5) pytest tests/test_suite_membership.py covers all four and passes.",
-      "passes": false,
-      "depends_on": []
+      "passes": true,
+      "depends_on": [],
+      "verified_by": [
+        "grok"
+      ],
+      "verified_at": "2026-08-16T01:20:00Z",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/f001-f005-suites.txt",
+          "note": "test_suite_membership.py"
+        }
+      ]
     },
     {
       "id": "F002",
       "category": "test",
       "phase": 1,
-      "description": "Regression runner — runs the gating suite offline and exits non-zero on any failure, naming each one",
+      "description": "Regression runner \u2014 runs the gating suite offline and exits non-zero on any failure, naming each one",
       "steps": [
         "Run every scenario whose membership is the regression suite, using the deterministic graders only",
         "Exit non-zero if any scenario fails, and print each failing scenario with the grader verdict and reason that failed it",
@@ -31,24 +42,50 @@
         "Exit zero only when every regression scenario passes every deterministic grader"
       ],
       "acceptance": "(1) A regression run with all scenarios passing exits zero. (2) A regression run with one failing scenario exits non-zero and names that scenario, its grader, and the reason. (3) A guard raises if any model call is attempted during a regression run. (4) The run output states the suite duration. (5) A regression run is unaffected by the contents of the capability suite. (6) pytest tests/test_regression_runner.py covers all five and passes.",
-      "passes": false,
-      "depends_on": ["F001"]
+      "passes": true,
+      "depends_on": [
+        "F001"
+      ],
+      "verified_by": [
+        "grok"
+      ],
+      "verified_at": "2026-08-16T01:20:00Z",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/f001-f005-suites.txt",
+          "note": "test_regression_runner.py"
+        }
+      ]
     },
     {
       "id": "F003",
       "category": "test",
       "phase": 1,
-      "description": "Capability runner — runs the aspirational suite, reports the pass rate with raw counts, and always exits zero",
+      "description": "Capability runner \u2014 runs the aspirational suite, reports the pass rate with raw counts, and always exits zero",
       "steps": [
         "Run every scenario whose membership is the capability suite",
         "Report passes over total as raw counts alongside any rate, so a small sample cannot read as a measured percentage",
-        "Exit zero regardless of outcome — a capability failure is information, not a build break",
+        "Exit zero regardless of outcome \u2014 a capability failure is information, not a build break",
         "Report per-scenario outcome so a newly-passing scenario is visible as a candidate for promotion",
         "Judge-scored dimensions may run here, unlike the regression suite, and the report names whether they did"
       ],
       "acceptance": "(1) A capability run where every scenario fails exits zero. (2) The report states passes and total as counts, not only a percentage. (3) The report lists per-scenario outcomes. (4) A capability run with the judge disabled names the dimensions it did not evaluate. (5) A capability failure never changes a regression run's exit code. (6) pytest tests/test_capability_runner.py covers all five and passes.",
-      "passes": false,
-      "depends_on": ["F001"]
+      "passes": true,
+      "depends_on": [
+        "F001"
+      ],
+      "verified_by": [
+        "grok"
+      ],
+      "verified_at": "2026-08-16T01:20:00Z",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/f001-f005-suites.txt",
+          "note": "test_capability_runner.py"
+        }
+      ]
     },
     {
       "id": "F004",
@@ -58,13 +95,27 @@
       "steps": [
         "Persist each suite run as an immutable record identified by its content, so a promotion can cite exactly which runs justified it",
         "A capability scenario passing in N consecutive recorded runs is reported as promotion-eligible; N is configurable with a documented default",
-        "Promotion is a separate explicit action, not automatic — eligibility is computed, promotion is chosen",
+        "Promotion is a separate explicit action, not automatic \u2014 eligibility is computed, promotion is chosen",
         "Promoting writes a decision entry naming the scenario, the run identifiers that justified it, and who promoted it",
         "Demotion is manual only and also writes a decision entry with a reason; no automatic demotion exists"
       ],
       "acceptance": "(1) A scenario passing in N consecutive recorded runs is reported eligible; one that failed in any of them is not. (2) Eligibility alone does not change any scenario's membership. (3) Promoting writes a decision entry naming the scenario, the justifying run identifiers, and the actor. (4) A promoted scenario appears in the next regression run and can fail it. (5) No code path demotes a scenario automatically, asserted by a source-level check. (6) pytest tests/test_suite_promotion.py covers all five and passes.",
-      "passes": false,
-      "depends_on": ["F002", "F003"]
+      "passes": true,
+      "depends_on": [
+        "F002",
+        "F003"
+      ],
+      "verified_by": [
+        "grok"
+      ],
+      "verified_at": "2026-08-16T01:20:00Z",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/f001-f005-suites.txt",
+          "note": "test_suite_promotion.py"
+        }
+      ]
     },
     {
       "id": "F005",
@@ -79,14 +130,27 @@
         "A missing or unreadable previous run degrades to reporting no comparison rather than treating everything as new"
       ],
       "acceptance": "(1) A scenario failing in both the previous and current run is classified still-failing, not newly-failing. (2) A scenario passing previously and failing now is classified newly-failing. (3) A still-passing scenario whose duration moved beyond the threshold is flagged. (4) With no previous run available the report states that no comparison was possible rather than classifying everything as new. (5) One report covers both suites. (6) pytest tests/test_drift_report.py covers all five and passes.",
-      "passes": false,
-      "depends_on": ["F004"]
+      "passes": true,
+      "depends_on": [
+        "F004"
+      ],
+      "verified_by": [
+        "grok"
+      ],
+      "verified_at": "2026-08-16T01:20:00Z",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/f001-f005-suites.txt",
+          "note": "test_drift_report.py"
+        }
+      ]
     },
     {
       "id": "F006",
       "category": "infra",
       "phase": 2,
-      "description": "CI wiring — the regression suite can fail a build and the capability suite cannot, demonstrated by a run of each",
+      "description": "CI wiring \u2014 the regression suite can fail a build and the capability suite cannot, demonstrated by a run of each",
       "steps": [
         "Add a CI job running the regression suite whose failure fails the build",
         "Add a separate CI job running the capability suite and publishing its report, configured so its outcome never fails the build",
@@ -95,8 +159,36 @@
         "Document in CONTRIBUTING which suite gates and which does not, and how to add a scenario to each"
       ],
       "acceptance": "(1) A commit introducing a regression-suite failure fails the build, demonstrated on a scratch branch. (2) A commit introducing a capability-suite failure does not fail the build, demonstrated the same way. (3) Both jobs publish their reports as retrievable artifacts. (4) The gating job performs no model call. (5) CONTRIBUTING states which suite gates and how to add to each. (6) The two demonstration runs are captured under the plan's evidence directory.",
-      "passes": false,
-      "depends_on": ["F005"]
+      "passes": true,
+      "depends_on": [
+        "F005"
+      ],
+      "verified_by": [
+        "grok"
+      ],
+      "verified_at": "2026-08-16T01:20:00Z",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/f006-regression-local.txt",
+          "note": "local regression+capability runs + .github/workflows/ci.yml"
+        },
+        {
+          "type": "file",
+          "uri": ".github/workflows/ci.yml",
+          "note": "regression job gates; capability job continue-on-error"
+        },
+        {
+          "type": "file",
+          "uri": "CONTRIBUTING.md",
+          "note": "which suite gates and how to add"
+        },
+        {
+          "type": "file",
+          "uri": "evidence/f006-capability-local.txt",
+          "note": "capability suite exit 0"
+        }
+      ]
     }
   ]
 }

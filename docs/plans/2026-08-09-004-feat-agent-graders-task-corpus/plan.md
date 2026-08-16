@@ -3,7 +3,7 @@ id: 2026-08-09-004-feat-agent-graders-task-corpus
 title: Graders and a task corpus built from failures that actually happened
 type: feat
 tier: cross-cutting
-status: active
+status: ready_for_audit
 date: "2026-08-09"
 description: >
   A harness that can run a scenario twenty times still needs something to judge

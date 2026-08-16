@@ -129,6 +129,7 @@ def append_rendered_annotation(
     plan_id: str,
     rendered: Any,
     timestamp: str | None = None,
+    brief: Any | None = None,
 ) -> None:
     """Plan 2026-05-24-004 F003 (D013 + D018) — append ONLY the rendered block.
 
@@ -183,6 +184,14 @@ def append_rendered_annotation(
     parts.append(f"<!-- rendered annotation {ts} -->")
     parts.append(f"**{title}** _(band: {band})_")
     parts.append("")
+    # Plan 2026-08-09-002 F007: the INBOX record of a pause reads the frozen
+    # DecisionBrief snapshot, never re-derives from plan artifacts. Same
+    # three elements (and the same truncation) as the CLI approve prompt.
+    if brief is not None:
+        from dontpanic_orchestrate import brief_surfaces
+
+        parts.append(brief_surfaces.format_inbox_brief(brief))
+        parts.append("")
     if detail:
         parts.append(detail)
         parts.append("")

@@ -1,0 +1,65 @@
+{
+  "suite": "capability",
+  "duration_s": 0.36795941600576043,
+  "exit_code": 0,
+  "passed": 6,
+  "total": 6,
+  "judge_evaluated": false,
+  "outcomes": [
+    {
+      "scenario_id": "chaos-timeout-impl-first",
+      "suite": "capability",
+      "passed": true,
+      "grader_id": "terminal",
+      "reason": "reached expected terminal",
+      "duration_s": 0.10806299996329471,
+      "tokens": 0
+    },
+    {
+      "scenario_id": "corpus-acceptance-one-line",
+      "suite": "capability",
+      "passed": true,
+      "grader_id": "terminal",
+      "reason": "reached expected terminal",
+      "duration_s": 0.04775362502550706,
+      "tokens": 0
+    },
+    {
+      "scenario_id": "corpus-dirty-dispatch",
+      "suite": "capability",
+      "passed": true,
+      "grader_id": "terminal",
+      "reason": "reached expected terminal",
+      "duration_s": 0.04709983401698992,
+      "tokens": 0
+    },
+    {
+      "scenario_id": "corpus-signoff-circularity",
+      "suite": "capability",
+      "passed": true,
+      "grader_id": "terminal",
+      "reason": "reached expected terminal",
+      "duration_s": 0.047386999998707324,
+      "tokens": 0
+    },
+    {
+      "scenario_id": "corpus-target-prose",
+      "suite": "capability",
+      "passed": true,
+      "grader_id": "terminal",
+      "reason": "reached expected terminal",
+      "duration_s": 0.046771082968916744,
+      "tokens": 0
+    },
+    {
+      "scenario_id": "corpus-verdict-vocab",
+      "suite": "capability",
+      "passed": true,
+      "grader_id": "terminal",
+      "reason": "reached expected terminal",
+      "duration_s": 0.04684495797846466,
+      "tokens": 0
+    }
+  ],
+  "text": "capability suite: 6/6 in 0.368s\njudge dimensions not evaluated: rationale, audit summary\n"
+}

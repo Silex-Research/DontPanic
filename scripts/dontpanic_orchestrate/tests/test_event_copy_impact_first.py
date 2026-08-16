@@ -1090,10 +1090,9 @@ def test_the_live_gate_pause_relocates_both_its_gate_and_its_stage(
     assert "pre_merge" not in rendered.title
     before_reference = detail.split("Reference: ", 1)[0]
     assert "implement" not in before_reference, before_reference
-    # Byte-identical to what this emitter rendered before F005 — see
-    # ``test_the_live_emitters_render_the_same_commands_as_before``. Naming the
-    # gate in the reference line did not move it.
-    assert rendered.exact_command == f"dontpanic approve {PLAN_ID} implement"
+    # Plan 2026-08-10-001 F001: the command now names the pending gate, not
+    # the stage. F005 left this unmoved on purpose; 010 is the change.
+    assert rendered.exact_command == f"dontpanic approve {PLAN_ID} pre_merge"
 
 
 def test_a_multi_gate_reference_names_every_pending_gate(
@@ -1114,9 +1113,9 @@ def test_a_multi_gate_reference_names_every_pending_gate(
     reference = (rendered.detail or "").split("Reference: ", 1)[-1]
     assert "gates `pre_impl`, `pre_merge`" in reference, reference
     assert "stage `implement`" in reference, reference
-    # Still the stage, still unmoved — two gates do not change the command
-    # either. Plan 2026-08-10-001 owns making it name a real gate.
-    assert rendered.exact_command == f"dontpanic approve {PLAN_ID} implement"
+    # Plan 2026-08-10-001 F001: a two-gate pause has no single runnable
+    # approve command (a comma-joined token is not a gate).
+    assert rendered.exact_command is None
 
 
 def test_a_pause_with_no_unmet_gate_names_none(
@@ -1156,8 +1155,24 @@ def test_the_live_emitters_render_the_same_commands_as_before() -> None:
     before = json.loads(fixture.read_text(encoding="utf-8"))["probes"]
     after = _emitter_command_probe().capture()
     assert before, "the pre-change emitter capture is empty"
-    assert after == before, (
-        "a live emitter's exact_command changed — F005 is prose-only.\n"
+    # Plan 2026-08-10-001 F001 deliberately moves the three gate-pause
+    # commands (they used to name the stage). Every other emitter stays
+    # byte-identical to the F005 capture.
+    expected = dict(before)
+    expected["gate_pause.default_stage"] = {
+        "exact_command": f"dontpanic approve {PLAN_ID} pre_merge",
+        "inbox_event": "gate_hit",
+    }
+    expected["gate_pause.single_gate"] = {
+        "exact_command": f"dontpanic approve {PLAN_ID} pre_merge",
+        "inbox_event": "gate_hit",
+    }
+    expected["gate_pause.two_gates"] = {
+        "exact_command": None,
+        "inbox_event": "gate_hit",
+    }
+    assert after == expected, (
+        "a live emitter's exact_command changed outside 010's gate-pause set.\n"
         f"before: {json.dumps(before, indent=2, sort_keys=True)}\n"
         f"after:  {json.dumps(after, indent=2, sort_keys=True)}"
     )

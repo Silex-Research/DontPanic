@@ -501,7 +501,11 @@ _VOCABULARY: Final[Mapping[str, SubcommandSpec]] = {
         ),
     ),
     "init": SubcommandSpec(positional_max=None),
-    "smoke": SubcommandSpec(positional_max=None),
+    "smoke": SubcommandSpec(
+        positional_max=None,
+        bool_flags=frozenset({"--json"}),
+        value_flags=frozenset({"--mode", "--scenario", "--trials"}),
+    ),
     # Plan 2026-06-04-003 — operator integration actions. Only `integrations
     # smoke <integration>` is ever a VALIDATED exact_command (verb + integration
     # = 2 positionals, no flags); the `attest` verb rides the display-only
@@ -527,7 +531,7 @@ _VOCABULARY: Final[Mapping[str, SubcommandSpec]] = {
         value_flags=frozenset(
             {"--scope", "--plans-root", "--max-parallel", "--format"}
         ),
-        bool_flags=frozenset({"--include-not-ready", "--ready-only"}),
+        bool_flags=frozenset({"--include-not-ready", "--ready-only", "--json"}),
     ),
     # ``plan-review <plan> [--format text|json]`` per cli.py:_plan_review_main
     # (plan 2026-06-01-001 F003). Read-only scope lint surface: one plan

@@ -1,0 +1,29 @@
+{
+  "suite": "regression",
+  "duration_s": 0.3194869579747319,
+  "exit_code": 0,
+  "passed": 2,
+  "total": 2,
+  "judge_evaluated": false,
+  "outcomes": [
+    {
+      "scenario_id": "2026-05-19-901-feat-smoke-synthetic",
+      "suite": "regression",
+      "passed": true,
+      "grader_id": "terminal",
+      "reason": "reached expected terminal",
+      "duration_s": 0.20877062500221655,
+      "tokens": 0
+    },
+    {
+      "scenario_id": "disagree-then-converge",
+      "suite": "regression",
+      "passed": true,
+      "grader_id": "terminal",
+      "reason": "reached expected terminal",
+      "duration_s": 0.08117229101480916,
+      "tokens": 0
+    }
+  ],
+  "text": "regression suite: 2/2 in 0.319s\njudge dimensions not evaluated: rationale, audit summary\n"
+}

@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0",
+  "id": "chaos-timeout-impl-first",
+  "suite": "capability",
+  "source_incident": "implementer timeout does not abort the volley",
+  "source_date": "2026-08-16",
+  "intended_behavior": "A timed-out implementer call should stop the volley before the auditor can sign off.",
+  "expected_current_behavior": "The auditor still runs and can signed_off after an implementer timeout.",
+  "expected_to_fail": true,
+  "expected_to_fail_reason": "Current supervisor lets the auditor continue after implementer timeout (D011).",
+  "plan_fixture": "./plan.md",
+  "features_fixture": "./features.json",
+  "feature_id": "F001",
+  "max_iterations": 1,
+  "replies": [
+    {
+      "agent": "claude",
+      "role": "implementer",
+      "iteration": 0,
+      "summary": "would have implemented",
+      "raw_response": "signed_off"
+    },
+    {
+      "agent": "codex",
+      "role": "auditor",
+      "iteration": 0,
+      "summary": "Overall verdict: signed_off.",
+      "raw_response": "signed_off"
+    }
+  ],
+  "perturbations": [
+    {"kind": "timeout", "role": "implementer", "call_index": 0}
+  ],
+  "expected": {
+    "terminal_state": "signed_off",
+    "internals": {
+      "encodes_current_behavior": true,
+      "note": "Implementer timeout does not abort the volley; the auditor still runs and can sign off. Encodes current supervisor behavior, not a requirement."
+    }
+  }
+}

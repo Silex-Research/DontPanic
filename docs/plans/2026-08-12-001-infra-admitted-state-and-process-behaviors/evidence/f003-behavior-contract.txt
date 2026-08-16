@@ -1,0 +1,26 @@
+command: /Users/bayesian/Code/DontPanic/.venv/bin/python scripts/test_behavior_contract.py
+cwd: /Users/bayesian/Code/agent-conventions
+date: 2026-08-16T00:34:35Z
+
+behavior contract (plan 2026-08-12-001 F003)
+  ✓ na-no-evidence: both validators accepted (agreement)
+  ✓ violated-no-evidence: both validators rejected (agreement)
+  ✓ violated-with-evidence: both validators accepted (agreement)
+  ✓ owner-role-unknown: both validators rejected (agreement)
+  ✓ expected-no-evidence: both validators accepted (agreement)
+  ✓ extra-key: both validators rejected (agreement)
+  ✓ adherence-unknown: both validators rejected (agreement)
+  ✓ owner_role [implementer]: both validators accepted (agreement)
+  ✓ owner_role [auditor]: both validators accepted (agreement)
+  ✓ owner_role [supervisor]: both validators accepted (agreement)
+  ✓ adherence [expected]: both validators accepted (agreement)
+  ✓ adherence [n/a]: both validators accepted (agreement)
+  ✓ adherence [violated]: both validators accepted (agreement)
+  ✓ null parity [evidence_refs]: both reject null for the evidence pointer list
+  ✓ null parity [trigger]: both reject null for the trigger text
+  ✓ evidence_ref parity: behavior $defs/evidence_ref matches features.schema.json
+  ✓ schema description documents hidden-from-worker-prompts
+  ✓ additionalProperties is false
+
+PASS: 7 fixtures × 2 validators agree, 3 owner_roles and 3 adherence values accepted by both, 2 null cases rejected by both, evidence_ref in lockstep, hidden-from-prompts documented
+exit=0

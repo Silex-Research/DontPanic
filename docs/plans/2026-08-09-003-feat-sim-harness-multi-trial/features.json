@@ -15,8 +15,17 @@
         "Scope stops at loading and validation. Executing a scenario is F004"
       ],
       "acceptance": "(1) A scenario file that omits a required key is rejected at load with a message naming the key. (2) A scenario referencing a fixture path that does not exist is rejected at load, not at run time. (3) The ported existing synthetic plan loads and its parsed form carries the same plan id, feature count, and scripted replies as the hardcoded version. (4) A scenario directory copied to a different absolute path still loads. (5) pytest tests/test_scenario_loader.py covers all four and passes.",
-      "passes": false,
-      "depends_on": []
+      "passes": true,
+      "depends_on": [],
+      "verified_by": ["grok"],
+      "verified_at": "2026-08-16T00:45:26Z",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/f001-test-scenario-loader.txt",
+          "note": "test_scenario_loader.py 4 passed"
+        }
+      ]
     },
     {
       "id": "F002",
@@ -31,9 +40,18 @@
         "No supervisor edits. If a scenario cannot be expressed without changing dispatch_volley, record that as a finding rather than patching"
       ],
       "acceptance": "(1) A scenario scripting needs_changes then signed_off drives two iterations and terminates signed off. (2) A scenario scripting a truncated envelope reaches the supervisor's existing malformed-envelope handling rather than raising out of the executor. (3) A scenario scripting a narrative verdict that contradicts the structured status triggers the existing mismatch detection. (4) Both executors are instances of BaseExecutor and report available. (5) git diff shows no file under the orchestrator package modified other than the smoke package and its tests. (6) pytest tests/test_scripted_executors.py covers the first four and passes.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F001"
+      ],
+      "verified_by": ["grok"],
+      "verified_at": "2026-08-16T00:45:26Z",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/f002-test-scripted-executors.txt",
+          "note": "test_scripted_executors.py 5 passed; dispatch_volley unpatched"
+        }
       ]
     },
     {
@@ -46,12 +64,21 @@
         "Perturbations fire deterministically by call index, not randomly, so a failing trial is reproducible from the scenario alone",
         "Record what the supervisor actually did in response, without asserting what it should do \u2014 this feature observes, F004's graders judge",
         "Cover the three perturbations above only; broader fault injection is deferred",
-        "Document in the module docstring that a chaos scenario asserting recovery behavior encodes current behavior, not a requirement"
+        "Document in the module docstring that a chaos scenario asserting recovery behavior encodes current supervisor behavior, not a requirement"
       ],
       "acceptance": "(1) A timeout perturbation on the first implementer call produces a trial record naming the perturbation and the supervisor's resulting terminal state. (2) The same scenario run twice produces the same perturbation sequence. (3) A non-zero exit perturbation does not raise out of the harness. (4) A quota-exhausted perturbation reaches the existing admission path rather than being swallowed by the executor. (5) pytest tests/test_chaos_perturbations.py covers all four and passes.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F002"
+      ],
+      "verified_by": ["grok"],
+      "verified_at": "2026-08-16T00:45:26Z",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/f003-test-chaos-perturbations.txt",
+          "note": "test_chaos_perturbations.py 4 passed"
+        }
       ]
     },
     {
@@ -67,9 +94,18 @@
         "Default N is 1 so existing callers see no behavior change"
       ],
       "acceptance": "(1) A scenario run with N=20 produces 20 trial records. (2) A scenario whose fixture is mutated during trial 3 leaves trial 4's outcome unchanged, proving isolation. (3) A trial that raises is recorded as errored and trials after it still run. (4) Each trial record carries terminal state, iteration count, duration, and token counts. (5) Default invocation runs exactly one trial. (6) pytest tests/test_multi_trial_runner.py covers all five and passes.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F003"
+      ],
+      "verified_by": ["grok"],
+      "verified_at": "2026-08-16T00:45:26Z",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/f004-test-multi-trial-runner.txt",
+          "note": "test_multi_trial_runner.py 5 passed"
+        }
       ]
     },
     {
@@ -85,9 +121,18 @@
         "Run the existing secret scrubbing over the artifact before writing"
       ],
       "acceptance": "(1) A 20-trial run writes one artifact containing 20 trial records and one aggregate block. (2) With 20 of 20 reaching the expected state the success fraction is exactly 1 and the all-succeed probability is exactly 1. (3) With 10 of 20 the artifact reports both the raw counts and the derived probabilities, and the raw counts are present rather than only a percentage. (4) Token and duration totals in the aggregate equal the sum over trial records. (5) Secret scrubbing passes over the artifact with a token-shaped string planted in a scenario id. (6) pytest tests/test_run_artifact.py covers all five and passes.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F004"
+      ],
+      "verified_by": ["grok"],
+      "verified_at": "2026-08-16T00:45:26Z",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/f005-test-run-artifact.txt",
+          "note": "test_run_artifact.py 5 passed"
+        }
       ]
     },
     {
@@ -102,9 +147,18 @@
         "Flag parsing rejects a trial count below one and a scenario path that does not exist, both before any trial starts"
       ],
       "acceptance": "(1) With no flags, the command's terminal state and exit code match a baseline recorded before this feature. (2) A trial count below one is rejected before any trial starts. (3) A scenario path that does not exist is rejected before any trial starts. (4) pytest tests/test_smoke_cli_flags.py covers all three and passes.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F005"
+      ],
+      "verified_by": ["grok"],
+      "verified_at": "2026-08-16T00:45:26Z",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/f006-test-smoke-cli-flags.txt",
+          "note": "test_smoke_cli_flags.py 3 passed"
+        }
       ]
     },
     {
@@ -120,9 +174,23 @@
         "Update the agent commands guidance so the flags are discoverable"
       ],
       "acceptance": "(1) A run where one trial misses its expected terminal state exits non-zero. (2) A run where every trial reaches it exits zero. (3) All three previously shipping exit codes remain reachable with unchanged meanings. (4) The summary line names an artifact path and that path exists on disk. (5) pytest tests/test_smoke_exit_contract.py covers all four and passes.",
-      "passes": false,
+      "passes": true,
       "depends_on": [
         "F006"
+      ],
+      "verified_by": ["grok"],
+      "verified_at": "2026-08-16T00:45:26Z",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/f007-test-smoke-exit-contract.txt",
+          "note": "test_smoke_exit_contract.py 4 passed"
+        },
+        {
+          "type": "test_output",
+          "uri": "evidence/f001-f007-named-suite.txt",
+          "note": "named suite 30 passed in 3.58s"
+        }
       ]
     }
   ]

@@ -830,8 +830,31 @@ def _gather_fields(
             # Don't clobber first-class fields with technical_metadata.
             fields.setdefault(key, val if val is not None else "-")
 
+    # Plan 2026-08-10-001 F001: the gate the operator would clear comes from
+    # pending_gates, never from subtype. The old fallback filled an empty
+    # gate slot with the stage and printed `dontpanic approve <plan> general`.
+    # Multi-gate values are a comma-joined string; a single approve command
+    # containing a comma is not runnable, so the slot stays empty and the
+    # honest-commands validator drops the command.
+    pending_raw = fields.get("pending_gates")
+    pending_list = [
+        item.strip()
+        for item in str(pending_raw).split(",")
+        if item and str(item).strip() not in {"-", "None"}
+    ] if pending_raw not in (None, "", "-") else []
+    if len(pending_list) == 1:
+        fields["gate"] = pending_list[0]
+    elif len(pending_list) > 1:
+        fields["gate"] = ""
+    else:
+        explicit = None
+        if isinstance(technical, Mapping):
+            raw_gate = technical.get("gate")
+            if raw_gate not in (None, "", "-"):
+                explicit = str(raw_gate).strip()
+        fields["gate"] = explicit or ""
+
     # Derived labels used by some templates.
-    fields.setdefault("gate", fields.get("gate") or fields.get("subtype") or "-")
     fields.setdefault("stage", fields.get("stage") or fields.get("subtype") or "-")
     fields.setdefault("final_status", fields.get("final_status") or "-")
     fields.setdefault(
@@ -847,6 +870,40 @@ def _gather_fields(
     fields.setdefault("implementer", fields.get("implementer") or "-")
     fields.setdefault("auditor", fields.get("auditor") or "-")
     return fields
+
+
+#: Tokens treated as gates when scanning a render for the F002 invariant.
+_NAMED_GATE_TOKENS: Final[frozenset[str]] = frozenset(
+    {
+        "pre_impl",
+        "pre_merge",
+        "on_escalation",
+        "tier_promotion",
+        "cost_trigger",
+    }
+)
+
+
+def gates_named_in_event(event: Any) -> frozenset[str]:
+    """Gate tokens the source event actually carries.
+
+    Used by plan 2026-08-10-001 F002 so a render cannot name a gate the
+    event never published. Reads pending_gates and an explicit gate key
+    only — never subtype, which is the stage.
+    """
+    found: set[str] = set()
+    technical = getattr(event, "technical_metadata", None)
+    technical = technical if isinstance(technical, Mapping) else {}
+    for raw in (technical.get("pending_gates"), technical.get("gate")):
+        if raw in (None, "", "-"):
+            continue
+        for item in str(raw).split(","):
+            token = item.strip()
+            if token.startswith("breaker:"):
+                found.add(token)
+            elif token in _NAMED_GATE_TOKENS:
+                found.add(token)
+    return frozenset(found)
 
 
 def _validate_exact_command(command: str) -> str | None:
@@ -2227,6 +2284,7 @@ __all__ = [
     "NonGenerativeScan",
     "RenderedEvent",
     "disposition_for",
+    "gates_named_in_event",
     "normalize_brand_drift",
     "render",
     "scan_non_generative_copy",

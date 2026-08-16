@@ -15,8 +15,19 @@
         "Cap the branch walk at MAX_BRANCHES and set branches_partial=True when the cap trips (D006)"
       ],
       "acceptance": "pytest tests/test_repo_hygiene_observe.py passes: 14+ temp-repo cases covering clean, dirty-tracked, dirty-untracked, ahead-of-remote, no-upstream, merged-into-default, detached HEAD, zero-commit, no-remote, and cap-tripped repos. Critically, the detached-HEAD, zero-commit, and no-remote cases each carry a populated tree section when the tree is dirty and branches=None — dirty work is reported in exactly the repos where branch analysis cannot run. Only a non-repo cwd returns None overall, and no case raises.",
-      "passes": false,
-      "depends_on": []
+      "passes": true,
+      "depends_on": [],
+      "verified_by": ["grok"],
+      "verified_at": "2026-08-16T00:44:24Z",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/F001-repo_hygiene_observe-pytest.txt",
+          "note": "16 passed (14+ temp-repo cases including detached/zero-commit/no-remote tree-populated + branches=None)",
+          "captured_at": "2026-08-16T00:44:24Z",
+          "captured_by": "grok"
+        }
+      ]
     },
     {
       "id": "F002",
@@ -31,8 +42,19 @@
         "Suppress dirty_tree_unbound when the repo root is a registered worktree binding (D003); collapse same-kind branch findings above BRANCH_COLLAPSE_THRESHOLD (D004); carry the remote ref SHA on every merged finding (D005)"
       ],
       "acceptance": "pytest tests/test_repo_hygiene_classify.py passes: classify() is verified pure (monkeypatched subprocess.run and Path.write_text raise if touched); a branch that is both merged and ahead emits exactly one finding and it is the merged one; the default branch, the current branch, and a branch checked out in a second worktree each produce zero cleanup findings even when otherwise qualifying; binding suppression holds; the collapse threshold is exercised at N-1, N, and N+1.",
-      "passes": false,
-      "depends_on": ["F001"]
+      "passes": true,
+      "depends_on": ["F001"],
+      "verified_by": ["grok"],
+      "verified_at": "2026-08-16T00:44:24Z",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/F002-repo_hygiene_classify-pytest.txt",
+          "note": "11 passed (purity, merged-dominates-ahead, protected-branch exclusions, binding suppression, collapse N-1/N/N+1)",
+          "captured_at": "2026-08-16T00:44:24Z",
+          "captured_by": "grok"
+        }
+      ]
     },
     {
       "id": "F003",
@@ -47,8 +69,19 @@
         "Per D010, author every title impact-first — the consequence to the builder ('58 commits exist only on this laptop'), not the mechanism ('branch ahead of remote') — and populate plain_consequence on every item"
       ],
       "acceptance": "pytest tests/test_repo_hygiene_provider.py passes: every emitted item declares a clears_when in registered_predicates(); suppress_resolved() retires each kind once its predicate flips; no item has a non-None exact_command; no item asserts reversible=True without a named re-runnable remedy; ActionItem.__post_init__ accepts every item; aggregate() dedupes repeats; and per D010 every item has a non-None plain_consequence and no title leads with a git mechanism term (ahead, upstream, ref, HEAD, porcelain).",
-      "passes": false,
-      "depends_on": ["F002"]
+      "passes": true,
+      "depends_on": ["F002"],
+      "verified_by": ["grok"],
+      "verified_at": "2026-08-16T00:44:24Z",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/F003-repo_hygiene_provider-pytest.txt",
+          "note": "9 passed (clears_when registry, suppress_resolved, exact_command=None, reversible=False, D010 impact-first)",
+          "captured_at": "2026-08-16T00:44:24Z",
+          "captured_by": "grok"
+        }
+      ]
     },
     {
       "id": "F004",
@@ -63,8 +96,19 @@
         "Emit plan_unparseable as its own advisory naming plans whose frontmatter fails schema validation, rather than silently dropping them"
       ],
       "acceptance": "pytest tests/test_repo_hygiene_plan_status.py passes: a fixture tree containing an all-passing active plan, an all-passing draft plan, an all-passing blocked plan, an all-passing completed plan, a partially-passing active plan, and a schema-invalid plan yields exactly one command-resolvable item (the active one, whose exact_command both passes validate_command_tokens AND is accepted by close_plan in dry-run), two explanation-only status items (draft, blocked), zero for completed and partial, and one plan_unparseable advisory.",
-      "passes": false,
-      "depends_on": ["F002"]
+      "passes": true,
+      "depends_on": ["F002"],
+      "verified_by": ["grok"],
+      "verified_at": "2026-08-16T00:44:24Z",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/F004-repo_hygiene_plan_status-pytest.txt",
+          "note": "2 passed (active close_plan dry-run + token validation; draft/blocked explanation-only; unparseable advisory)",
+          "captured_at": "2026-08-16T00:44:24Z",
+          "captured_by": "grok"
+        }
+      ]
     },
     {
       "id": "F005",
@@ -79,8 +123,19 @@
         "Update dontpanic agent commands JSON guidance so the new source is discoverable by agents"
       ],
       "acceptance": "pytest tests/test_repo_hygiene_cli.py passes and behavioral evidence is captured: `dontpanic next --json` in a fixture repo with all four git conditions plus one status-drifted plan emits the expected items with correct bands and project scoping; a clean repo emits zero hygiene items; `dashboard build --project <name>` renders them scoped; a missing project path produces an uncertainty card rather than a traceback or a bespoke item shape.",
-      "passes": false,
-      "depends_on": ["F003", "F004"]
+      "passes": true,
+      "depends_on": ["F003", "F004"],
+      "verified_by": ["grok"],
+      "verified_at": "2026-08-16T00:44:24Z",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/F005-repo_hygiene_cli-pytest.txt",
+          "note": "6 passed (next --json four git kinds + plan drift; clean repo zero; dashboard project scope; missing path uncertainty card; agent commands hygiene)",
+          "captured_at": "2026-08-16T00:44:24Z",
+          "captured_by": "grok"
+        }
+      ]
     },
     {
       "id": "F006",
@@ -95,8 +150,19 @@
         "Document the read-only contract in the module docstring in the shape git_state.py uses"
       ],
       "acceptance": "pytest tests/test_repo_hygiene_safety.py passes: the runner-level allowlist assertion holds across every F001 fixture (and fails if a transitive helper issues an unlisted subcommand); the .git tree hash is identical before and after observation on all fixtures including the stale-index repo; and a token-shaped branch name is scrubbed from the rendered payload.",
-      "passes": false,
-      "depends_on": ["F005"]
+      "passes": true,
+      "depends_on": ["F005"],
+      "verified_by": ["grok"],
+      "verified_at": "2026-08-16T00:44:24Z",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/F006-repo_hygiene_safety-pytest.txt",
+          "note": "5 passed (allowlist across F001 fixtures, .git hash identity including stale-index, token-shaped branch scrubbed from next payload)",
+          "captured_at": "2026-08-16T00:44:24Z",
+          "captured_by": "grok"
+        }
+      ]
     }
   ]
 }

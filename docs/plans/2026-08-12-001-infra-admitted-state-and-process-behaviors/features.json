@@ -14,7 +14,16 @@
         "Reuse the existing evidence_ref shape from features.schema.json rather than inventing a second pointer grammar"
       ],
       "acceptance": "(1) A claim with status admitted and at least one evidence_ref validates. (2) A claim with status admitted and empty evidence_refs is rejected by both JSON Schema and Pydantic. (3) status outside proposed|admitted|rejected|stale is rejected by both. (4) The JSON Schema and the Pydantic model return the same verdict on the fixture set. (5) additionalProperties is false.",
-      "passes": false,
+      "passes": true,
+      "verified_by": ["grok"],
+      "verified_at": "2026-08-16T00:06:00Z",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/f001-claim-contract.txt",
+          "note": "claim contract 9 fixtures × 2 validators agree"
+        }
+      ],
       "depends_on": [],
       "user_impact": {
         "audience": "agent",
@@ -37,7 +46,16 @@
         "Do not migrate existing decisions.jsonl files in this feature"
       ],
       "acceptance": "(1) A fixture matching the current DontPanic decisions.jsonl convention validates. (2) A line missing an id is rejected by both validators. (3) Existing plan decisions.jsonl files are not edited. (4) JSON Schema and Pydantic agree on the fixture set.",
-      "passes": false,
+      "passes": true,
+      "verified_by": ["grok"],
+      "verified_at": "2026-08-16T00:06:00Z",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/f002-decisions-contract.txt",
+          "note": "decisions contract 8 fixtures × 2 validators agree"
+        }
+      ],
       "depends_on": [],
       "user_impact": {
         "audience": "operator",
@@ -61,7 +79,16 @@
         "Pydantic twin plus fixtures"
       ],
       "acceptance": "(1) A behavior verdict with adherence n/a and no evidence_refs validates. (2) adherence violated requires at least one evidence_ref. (3) owner_role outside the closed enum is rejected by both validators. (4) JSON Schema and Pydantic agree on the fixture set.",
-      "passes": false,
+      "passes": true,
+      "verified_by": ["grok"],
+      "verified_at": "2026-08-16T00:06:00Z",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/f003-behavior-contract.txt",
+          "note": "behavior contract 7 fixtures × 2 validators agree"
+        }
+      ],
       "depends_on": [],
       "user_impact": {
         "audience": "agent",
@@ -112,7 +139,16 @@
         "Keep the existing audit JSON filename and path so unfold is a file read, not a new store"
       ],
       "acceptance": "(1) A fixture auditor envelope with one evidenced finding and one unevidenced sentence produces a next-implementer prompt that contains the admitted claim and the audit JSON path. (2) The unevidenced sentence does not appear in the prompt. (3) The existing audit JSON file is still written and is the unfold target. (4) The prior event_copy and supervisor suites show no new failures against a same-scope baseline.",
-      "passes": false,
+      "passes": true,
+      "verified_by": ["grok"],
+      "verified_at": "2026-08-16T00:05:00Z",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/f005-admitted-handoff.txt",
+          "note": "test_admitted_findings_handoff.py 2 passed"
+        }
+      ],
       "depends_on": [
         "F004"
       ],
@@ -137,7 +173,16 @@
         "A fixture envelope that omitted the named test yields adherence violated with an evidence_ref"
       ],
       "acceptance": "(1) Each of the closed behaviors returns adhered, violated, or n/a from a fixture envelope with no network and no model. (2) A fixture that lists a test in steps and has no matching command in commands_run is violated. (3) Behavior text does not appear in implementer_prompt or auditor_prompt. (4) Existing volley tests show no new failures against a same-scope baseline.",
-      "passes": false,
+      "passes": true,
+      "verified_by": ["grok"],
+      "verified_at": "2026-08-16T00:10:00Z",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "evidence/f005-f006-handoff-behaviors.txt",
+          "note": "test_process_behaviors.py 4 passed"
+        }
+      ],
       "depends_on": [
         "F004"
       ],
@@ -162,7 +207,21 @@
         "Do not rewrite PRODUCT.md positioning"
       ],
       "acceptance": "(1) PLATFORM.md names harness, loop, and graph and maps each to an existing DontPanic object. (2) The non-goals list includes LLM supervisor, Claude-authored control graph, vector context layer, and in-app agent UI. (3) PRODUCT.md and ECOSYSTEM.md caller boundary are unchanged except for a link if needed.",
-      "passes": false,
+      "passes": true,
+      "verified_by": ["grok"],
+      "verified_at": "2026-08-15T23:58:00Z",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "evidence/f007-platform.md",
+          "note": "PLATFORM.md diagnostic layers + non-goals"
+        },
+        {
+          "type": "file",
+          "uri": "docs/brainstorms/2026-08-12-admitted-state-requirements.md",
+          "note": "requirements brief this plan executes"
+        }
+      ],
       "depends_on": [],
       "user_impact": {
         "audience": "operator",

@@ -3,7 +3,7 @@ id: 2026-08-10-001-fix-gate-identity-in-approval-copy
 title: Approval copy names the gate it actually paused on
 type: fix
 tier: cross-cutting
-status: draft
+status: ready_for_audit
 date: "2026-08-10"
 description: >
   When the supervisor pauses for approval it renders a gate name that is not

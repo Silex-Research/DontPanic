@@ -864,6 +864,7 @@ def build(
                 arch_status=arch_status,
                 plan_id=plan_id,
                 project_name=project_name,
+                repo_root=repo_root,
             )
             # Plan 2026-05-24-004 F003 (D003 + D019) — merge event-actions
             # sidecar into provider-derived items BEFORE writing what-now.json
@@ -1089,6 +1090,7 @@ def _gather_action_items(
     arch_status: dict[str, Any] | None,
     plan_id: str | None,
     project_name: str | None = None,
+    repo_root: Path | None = None,
     return_live_state: bool = False,
 ) -> Any:
     """Drive each provider against already-loaded inputs.
@@ -1200,6 +1202,31 @@ def _gather_action_items(
     except Exception:  # noqa: BLE001 — degrade like every other provider input
         upgrade_items = ()
 
+    # Plan 2026-08-09-001 — between-dispatch repo hygiene (dirty tree,
+    # unpushed/merged branches, plan-status drift). Read-only; bindings
+    # suppress dirty_tree_unbound inside a live worktree dispatch (D003).
+    hygiene_items: tuple[operator_console.ActionItem, ...] = ()
+    hygiene_observation = None
+    try:
+        from dontpanic_orchestrate import repo_hygiene as _rh
+        from dontpanic_orchestrate import worktrees as _wt
+
+        try:
+            _bindings = list(_wt.load_registry().bindings.values())
+        except Exception:  # noqa: BLE001 — missing registry is "no bindings"
+            _bindings = []
+        hygiene_cwd = repo_root if repo_root is not None else plans_root
+        hygiene_observation = _rh.observe(hygiene_cwd)
+        hygiene_items = operator_console.provide_repo_hygiene_actions(
+            cwd=hygiene_cwd,
+            observation=hygiene_observation,
+            bindings=_bindings,
+            plans_root=plans_root,
+            project_name=project_name,
+        )
+    except Exception:  # noqa: BLE001 — degrade like every other provider
+        hygiene_items = ()
+
     aggregated = operator_console.aggregate(
         gate_items,
         capability_items,
@@ -1210,6 +1237,7 @@ def _gather_action_items(
         skill_items,
         integration_items,
         upgrade_items,
+        hygiene_items,
     )
     # F002 suppress-at-source: drop any item whose clears_when is already
     # satisfied against live state. Items with clears_when=None are kept
@@ -1237,6 +1265,15 @@ def _gather_action_items(
             for action in _itg.INTEGRATION_CATALOG
         },
     }
+    try:
+        from dontpanic_orchestrate import repo_hygiene as _rh_live
+
+        live_state["hygiene"] = _rh_live.live_state_from(
+            hygiene_observation,
+            plan_findings=(),
+        )
+    except Exception:  # noqa: BLE001 — missing hygiene live state keeps items
+        pass
     # Plan 2026-06-04-005 wiring: route EVERY card through the unified render gate
     # (F001) — suppress-unless-proven-live — instead of 001's render-unless-resolved
     # suppress_resolved. Each card's scope (F002) and per-source freshness (F003)
@@ -1256,6 +1293,7 @@ def _gather_action_items(
         operator_console.SOURCE_SUPERVISOR: _sl.Scope.GLOBAL.value,
         operator_console.SOURCE_GATE: _sl.Scope.PROJECT.value,
         operator_console.SOURCE_ARCHITECTURE: _sl.Scope.PROJECT.value,
+        operator_console.SOURCE_REPO_HYGIENE: _sl.Scope.PROJECT.value,
         operator_console.SOURCE_INTEGRATION: _sl.Scope.GLOBAL.value,
         # F008: upgrade-readiness is install-level state (like capabilities) — global.
         operator_console.SOURCE_UPGRADE: _sl.Scope.GLOBAL.value,

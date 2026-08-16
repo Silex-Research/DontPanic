@@ -45,6 +45,20 @@ python3 scripts/sanitization_check.py
 
 If any of these fail, fix them. There is no allowed-failure lint job.
 
+## Eval suites
+
+Two offline suites live in `scripts/dontpanic_orchestrate/smoke/scenarios/`:
+
+- **regression** — must stay green. `scripts/run-eval-suite.sh regression`
+  failing fails CI. Add a scenario here only after it has been stably passing
+  as a capability scenario.
+- **capability** — may fail. `scripts/run-eval-suite.sh capability` never
+  fails the build. New recorded failures start here (`suite: capability` in
+  that scenario's own `scenario.json`).
+
+Set `suite` in the scenario file. There is no default. See
+`docs/authoring-corpus-scenario.md`.
+
 ## Dependency Maintenance
 
 Dependabot (`.github/dependabot.yml`) manages weekly updates with two distinct

@@ -125,6 +125,16 @@ Allowed enums:
 
 Allowed `category`: functional, infra, schema, test, doc, security, observability, tooling.
 
+Optional `user_impact` on a feature: who feels the change. See
+[`docs/authoring-user-impact.md`](../../../docs/authoring-user-impact.md)
+for the four audience values and what separates a useful summary from a
+restated description. The renderer will not invent this field.
+
+A recorded failure becomes a smoke corpus scenario by adding a directory
+under `scripts/dontpanic_orchestrate/smoke/scenarios/` — see
+[`docs/authoring-corpus-scenario.md`](../../../docs/authoring-corpus-scenario.md).
+Do not write the scenario and its grader in the same sitting.
+
 When flipping `passes: false → true`, the schema requires `verified_by`, `verified_at`, and **non-empty** `evidence_refs` (each entry an object with at least `type` + `uri`). Allowed `evidence_refs[].type`: screenshot, log, test_output, diff, audit_json, commit, url, file.
 
 Feature IDs use `F001`-`F999` per file. Collisions across plans are scoped by `task_id`.

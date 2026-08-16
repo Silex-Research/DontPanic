@@ -364,6 +364,7 @@ def dispatch_event(
                     plan_dir,
                     plan_id=event.plan_id,
                     rendered=rendered,
+                    brief=getattr(event, "decision_brief", None),
                 )
                 out["inbox_annotation"] = True
             except Exception as exc:  # noqa: BLE001 — annotation is best-effort

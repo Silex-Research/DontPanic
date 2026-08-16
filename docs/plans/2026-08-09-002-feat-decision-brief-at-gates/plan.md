@@ -3,7 +3,7 @@ id: 2026-08-09-002-feat-decision-brief-at-gates
 title: Decision brief at gates — ask for approval in product terms, not orchestration terms
 type: feat
 tier: cross-cutting
-status: active
+status: ready_for_audit
 date: "2026-08-09"
 description: >
   When DontPanic pauses for a human decision it asks the question in
@@ -36,7 +36,7 @@ loop_caps:
   max_iterations: 2
   hard_stop: false
 verification:
-  command: python3 -m pytest scripts/dontpanic_orchestrate/tests/test_event_copy_impact_first.py scripts/dontpanic_orchestrate/tests/test_event_copy_undeclared_impact.py scripts/dontpanic_orchestrate/tests/test_decision_brief_delivery.py -q
+  command: python3 -m pytest scripts/dontpanic_orchestrate/tests/test_event_copy_impact_first.py scripts/dontpanic_orchestrate/tests/test_event_copy_undeclared_impact.py scripts/dontpanic_orchestrate/tests/test_decision_brief_delivery.py scripts/dontpanic_orchestrate/tests/test_brief_cli_inbox_parity.py scripts/dontpanic_orchestrate/tests/test_brief_sink_parity.py -q
 privacy_tier: internal
 dependencies:
   - 2026-05-24-004-feat-event-messaging-v1

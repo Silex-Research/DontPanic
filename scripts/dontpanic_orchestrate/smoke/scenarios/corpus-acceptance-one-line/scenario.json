@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0",
+  "id": "corpus-acceptance-one-line",
+  "suite": "capability",
+  "source_incident": "Acceptance criteria collapsed to one run-on sentence and tripped pre-lock size heuristics.",
+  "source_date": "2026-08-09",
+  "intended_behavior": "Lock names the size heuristic and refuses.",
+  "expected_current_behavior": "Current lock reports the heuristic but the scenario still runs.",
+  "plan_fixture": "../2026-05-19-901-feat-smoke-synthetic/plan.md",
+  "features_fixture": "../2026-05-19-901-feat-smoke-synthetic/features.json",
+  "feature_id": "F001",
+  "max_iterations": 1,
+  "replies": [
+    {
+      "agent": "claude",
+      "role": "implementer",
+      "iteration": 0,
+      "summary": "replay of recorded incident corpus-acceptance-one-line",
+      "raw_response": "working"
+    },
+    {
+      "agent": "codex",
+      "role": "auditor",
+      "iteration": 0,
+      "summary": "Overall verdict: signed_off.",
+      "raw_response": "signed_off"
+    }
+  ],
+  "expected": {
+    "terminal_state": "signed_off"
+  }
+}

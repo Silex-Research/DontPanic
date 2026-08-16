@@ -1,0 +1,27 @@
+command: /Users/bayesian/Code/DontPanic/.venv/bin/python scripts/test_claim_contract.py
+cwd: /Users/bayesian/Code/agent-conventions
+date: 2026-08-16T00:34:35Z
+
+claim contract (plan 2026-08-12-001 F001)
+  ✓ admitted-with-evidence: both validators accepted (agreement)
+  ✓ admitted-empty-evidence: both validators rejected (agreement)
+  ✓ status-unknown: both validators rejected (agreement)
+  ✓ proposed-empty-evidence: both validators accepted (agreement)
+  ✓ rejected-with-reason: both validators accepted (agreement)
+  ✓ rejected-missing-reason: both validators rejected (agreement)
+  ✓ stale-missing-reason: both validators rejected (agreement)
+  ✓ extra-key: both validators rejected (agreement)
+  ✓ admitted-missing-admitted-by: both validators rejected (agreement)
+  ✓ status [proposed]: both validators accepted (agreement)
+  ✓ status [admitted]: both validators accepted (agreement)
+  ✓ status [rejected]: both validators accepted (agreement)
+  ✓ status [stale]: both validators accepted (agreement)
+  ✓ null parity [admitted_by]: both reject null for who admitted the claim
+  ✓ null parity [admitted_at]: both reject null for when the claim was admitted
+  ✓ null parity [reason]: both reject null for the rejected/stale reason
+  ✓ null parity [evidence_refs]: both reject null for the evidence pointer list
+  ✓ evidence_ref parity: claim $defs/evidence_ref matches features.schema.json
+  ✓ additionalProperties is false
+
+PASS: 9 fixtures × 2 validators agree, 4 statuses accepted by both, 4 null cases rejected by both, evidence_ref in lockstep with features.schema.json
+exit=0

@@ -90,3 +90,26 @@ adversarial audit, structured proof, and tier-appropriate human judgment.
 - Autonomy must be bounded by plan contracts, loop caps, gates, and evidence.
 - Architecture docs should explain the five layers and stay linked to the
   executable artifacts that prove the system's current behavior.
+
+## Harness, loop, and graph
+
+These are diagnostic names for objects DontPanic already has. They are not
+a rebuild.
+
+| Layer | Means | Already here |
+|---|---|---|
+| **Harness** | The process that starts a run, captures artifacts, and tears down | `supervisor.dispatch_volley`, `smoke/`, audit envelopes |
+| **Loop** | Bounded implementer/auditor rounds with a stop condition | `loop_caps`, iteration breaker, `features.json` passes |
+| **Graph** | Independent work that can fan out | nested orchestration, `dontpanic next` ready-set — not an LLM-authored control graph |
+
+## Research non-goals
+
+Later plans must not absorb these as features. See `ECOSYSTEM.md` for caller
+UIs and `docs/brainstorms/2026-08-12-admitted-state-requirements.md` for the
+review that rejected them.
+
+- **LLM supervisor.** The supervisor stays deterministic Python.
+- **Claude-authored control graph.** Workers do not write the volley topology.
+- **Vector context layer.** Evidence unfolds from files already on disk.
+- **In-app agent UI / Hermes / AG-UI.** Callers live outside DontPanic.
+- **NOOA rewrite.** Do not recast the supervisor as objects to look like a paper.

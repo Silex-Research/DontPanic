@@ -258,3 +258,117 @@ def _integration_evidence_present(
         for r in records
         if isinstance(r, Mapping)
     )
+
+
+def _hygiene(live_state: Mapping[str, Any]) -> Mapping[str, Any]:
+    raw = live_state.get("hygiene") or {}
+    return raw if isinstance(raw, Mapping) else {}
+
+
+def _hygiene_branch_list(
+    live_state: Mapping[str, Any], repo_root: str, key: str
+) -> list[Any] | None:
+    """Return the named branch list for repo_root, or None if unknown."""
+    bucket = _hygiene(live_state).get(key)
+    if not isinstance(bucket, Mapping) or repo_root not in bucket:
+        return None
+    value = bucket.get(repo_root)
+    if value is None:
+        return None
+    return list(value)
+
+
+def _all_named_branches(params: Mapping[str, Any]) -> tuple[str, ...]:
+    names: list[str] = []
+    if params.get("branch"):
+        names.append(str(params["branch"]))
+    for extra in params.get("branches") or ():
+        names.append(str(extra))
+    return tuple(names)
+
+
+@register_predicate("repo_tree_clean")
+def _repo_tree_clean(
+    params: Mapping[str, Any], live_state: Mapping[str, Any]
+) -> bool:
+    """Dirty-tree card clears when the repo working tree is no longer dirty."""
+    repo_root = params["repo_root"]
+    dirty_map = _hygiene(live_state).get("tree_dirty") or {}
+    if not isinstance(dirty_map, Mapping) or repo_root not in dirty_map:
+        return False
+    return not bool(dirty_map[repo_root])
+
+
+@register_predicate("branch_pushed")
+def _branch_pushed(
+    params: Mapping[str, Any], live_state: Mapping[str, Any]
+) -> bool:
+    """Ahead-of-remote card clears when none of the named branches are ahead."""
+    repo_root = params["repo_root"]
+    ahead = _hygiene_branch_list(live_state, repo_root, "ahead_branches")
+    if ahead is None:
+        return False
+    names = _all_named_branches(params)
+    if not names:
+        return False
+    return all(name not in ahead for name in names)
+
+
+@register_predicate("branch_has_upstream")
+def _branch_has_upstream(
+    params: Mapping[str, Any], live_state: Mapping[str, Any]
+) -> bool:
+    """No-upstream card clears when every named branch now has an upstream."""
+    repo_root = params["repo_root"]
+    missing = _hygiene_branch_list(live_state, repo_root, "no_upstream_branches")
+    if missing is None:
+        return False
+    names = _all_named_branches(params)
+    if not names:
+        return False
+    return all(name not in missing for name in names)
+
+
+@register_predicate("branch_absent_locally")
+def _branch_absent_locally(
+    params: Mapping[str, Any], live_state: Mapping[str, Any]
+) -> bool:
+    """Merged-local card clears when the named branch is gone locally."""
+    repo_root = params["repo_root"]
+    local = _hygiene_branch_list(live_state, repo_root, "local_branches")
+    if local is None:
+        return False
+    names = _all_named_branches(params)
+    if not names:
+        return False
+    return all(name not in local for name in names)
+
+
+@register_predicate("plan_status_no_longer_drift")
+def _plan_status_no_longer_drift(
+    params: Mapping[str, Any], live_state: Mapping[str, Any]
+) -> bool:
+    """Plan-status drift clears when the plan is terminal or no longer all-passing."""
+    plan_id = params["plan_id"]
+    info = (_hygiene(live_state).get("plans") or {}).get(plan_id)
+    if not isinstance(info, Mapping):
+        status = (live_state.get("plan_status") or {}).get(plan_id)
+        if status in {"completed", "abandoned"}:
+            return True
+        return False
+    status = info.get("status")
+    if status in {"completed", "abandoned"}:
+        return True
+    return not bool(info.get("all_passing"))
+
+
+@register_predicate("plan_parseable")
+def _plan_parseable(
+    params: Mapping[str, Any], live_state: Mapping[str, Any]
+) -> bool:
+    """Unparseable-plan card clears when a later load succeeds."""
+    plan_id = params["plan_id"]
+    info = (_hygiene(live_state).get("plans") or {}).get(plan_id)
+    if not isinstance(info, Mapping):
+        return False
+    return bool(info.get("parseable"))

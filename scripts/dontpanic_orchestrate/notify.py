@@ -72,6 +72,21 @@ def notify(
     return proc.returncode == 0
 
 
+def brief_message(event: "NotifyEvent") -> str:
+    """Plan 2026-08-09-002 F008 — terminal sink reads the frozen snapshot.
+
+    Returns the three-element brief (notify truncation) when the event
+    carries a DecisionBrief; empty string otherwise. Never re-derives from
+    plan artifacts.
+    """
+    brief = getattr(event, "decision_brief", None)
+    if brief is None:
+        return ""
+    from dontpanic_orchestrate import brief_surfaces
+
+    return brief_surfaces.format_notify_brief(brief)
+
+
 def notify_event(event: "NotifyEvent", rendered: Any | None = None) -> bool:
     """Plan 2026-05-01-002 F002 — project a NotifyEvent onto title/subtitle/
     message/group for the terminal-notifier sink.
@@ -97,7 +112,10 @@ def notify_event(event: "NotifyEvent", rendered: Any | None = None) -> bool:
             rendered = event_copy.render(event)
         except Exception:  # noqa: BLE001 — terminal sink must never raise
             rendered = None
-    if rendered is not None:
+    snapshot = brief_message(event)
+    if snapshot:
+        message = snapshot
+    elif rendered is not None:
         message = (getattr(rendered, "headline", "") or "")[:140]
     else:
         message = event.body[:140] if event.body else ""

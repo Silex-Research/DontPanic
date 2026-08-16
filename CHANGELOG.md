@@ -60,6 +60,28 @@ behavioral surface change with the date, a short summary, and a
 Surfaces affected: <comma-separated list — see docs/RELEASE_IMPACT.md>
 ```
 
+## 2026-08-15 — Approve command names the pending gate (plan 2026-08-10-001)
+
+### Fixed
+
+- The printed `dontpanic approve <plan> <gate>` command now names the gate the
+  supervisor actually paused on, not the stage label (`general`, `upfront`)
+  that used to appear in its place. Paste it and it clears the blocking gate.
+
+Surfaces affected: cli, inbox, notify, readme, root_changelog
+
+## 2026-08-15 — Approval gates ask in product terms (plan 2026-08-09-002)
+
+### Changed
+
+- When a run pauses for your approval, the prompt leads with **what changes**,
+  **who feels it**, and **what approving does** — not the plan id and gate
+  name. Those identifiers are still there, one line down.
+- If a feature never declared who feels the change, the prompt says
+  "User impact not declared for this feature." It does not invent a claim.
+
+Surfaces affected: cli, inbox, notify, dashboard, readme, root_changelog
+
 ## 2026-08-14 — Lock scores the outcome, and slices scale to the work (plan 2026-08-13-001)
 
 ### Added
