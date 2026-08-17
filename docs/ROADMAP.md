@@ -63,11 +63,12 @@ What works today:
   closed; harness now battle-tested at 1676 tests under raw pytest
   (see [`CONFIGURATION.md`](./CONFIGURATION.md) for every operator-facing knob)
 
-What is missing: **the agent-callable access surface** (Phase B —
-manifest + thin MCP) and **the intake pipeline** that turns
-ambiguous requests into valid plans (Phase C). After those, DontPanic
-delivers on the ecosystem-position framing in
-[`ECOSYSTEM.md`](./ECOSYSTEM.md).
+What is missing from that 2026-05 framing is no longer Phase C.
+Phase B (agent-callable access) shipped. Phase C intake is
+**abandoned** — see below. A new operator starts a plan on the
+existing surface: author a plan directory and `dontpanic plan lock`.
+DontPanic delivers on the ecosystem-position framing in
+[`ECOSYSTEM.md`](./ECOSYSTEM.md) without an intake pipeline.
 
 **Next-up substrate work (locked plans, pre-feature):**
 
@@ -165,7 +166,8 @@ those agents can call without a full-runtime integration. See
   - `status` — check active supervisors + gate state
   - `approve_gate` — dry-run by default; `confirm: true` required to mutate
   - `read_evidence` — read evidence under a registered plan
-  There is deliberately no `intake` tool in Phase B. Phase C owns intake.
+  There is deliberately no `intake` tool in Phase B. Phase C intake
+  was later abandoned; callers author a plan dir and `plan lock`.
 - **Discoverability commitments** — README caller examples, PyPI metadata,
   GitHub topic tags
   (`mcp-server`, `ai-orchestration`, `multi-agent`, `local-first`,
@@ -185,9 +187,24 @@ owns those concerns.
 
 ## Phase C — Intake Pipeline (turn messy input into a valid plan)
 
-**Status:** outlined; not locked. Pulled forward from previous Phase
-C since intake is DontPanic's core differentiation: this is what
-"verified software-delivery layer" actually means in practice.
+**Status:** **abandoned 2026-08-17.** Non-goal. Stop carrying Phase C
+as unfinished work.
+
+**Why abandoned:** locking intake would be a new product surface
+(`dontpanic intake prd|issue|feature|parity`, an MCP `intake` tool,
+and an LLM sufficiency / research loop). The code does not almost do
+that. A stranger-shaped walk already starts a plan with README + the
+existing surface: copy `examples/plans/hello-dontpanic` or author
+`docs/plans/<id>/` per [`AUTHORING_PLANS.md`](./AUTHORING_PLANS.md),
+then `dontpanic plan lock`. That does not need Anthony, Slack, or a
+new CLI. Prefer abandon when lock needs a new surface.
+
+**What a new operator does instead:** author a plan directory (or copy
+the sample) and lock it. Messy PRD / issue / feature text stays with
+the operator or their agent — DontPanic will not turn it into a draft
+plan.
+
+The list below is what was proposed, kept as history, not a backlog.
 
 **Audience:** developers, founders, product builders, and the AI
 agents calling DontPanic through Phase B's manifest + MCP surface.
@@ -255,9 +272,11 @@ evidence needed, scope boundary. Per-type criteria are documented in
 
 ## Phase D — Ecosystem Hooks (light)
 
-**Status:** outlined; not locked. Lock after Phase B ships and at
-least one Phase C intake type ships, so we have something for the
-ecosystem to call.
+**Status:** outlined; not locked. Phase B has shipped. Phase C intake
+is abandoned, so Phase D is **not** blocked on an intake type. Lock
+Phase D only when a real caller (OpenClaw / MCP client) needs a
+recipe beyond what README + `plan lock` + `dispatch-from-plan`
+already give.
 
 **Audience:** the operators of OpenClaw / Claude / Codex / Clawdbot-style
 runtimes integrating DontPanic as a callable skill.
@@ -269,7 +288,7 @@ daemon. This phase is mostly documentation + small enabling helpers.
 
 - **OpenClaw caller recipe** — a published skill template / plugin
   example showing how an OpenClaw skill calls
-  `dontpanic intake | dispatch | status | approve` (sketched in
+  `dontpanic plan lock | dispatch-from-plan | status | approve` (sketched in
   [`ECOSYSTEM.md`](./ECOSYSTEM.md), formalized here).
 - **Claude-managed-agent recipe** — same shape, expressed against
   Claude's managed-agent surface.
@@ -332,11 +351,9 @@ Two earlier phases are explicitly off the build plan:
 ## Sequencing Summary
 
 ```
-Phase A [SHIPPED]  →  Phase B (lock next — agent manifest + thin MCP)
+Phase A [SHIPPED]  →  Phase B [SHIPPED]  →  Phase C [ABANDONED 2026-08-17]
                                                        ↓
-                      Phase C (lock after B — intake pipeline + discovery)
-                                                       ↓
-                      Phase D (lock after a Phase C type ships — ecosystem hooks)
+                      Phase D (optional ecosystem recipes; not blocked on C)
                                                        ↓
                       Phase E — demand-driven (governance V2 trigger)
 ```
@@ -347,12 +364,12 @@ slice, ship it, learn from it, lock the next.
 
 ## What Each Stakeholder Gets
 
-| Stakeholder | After Phase A [now] | After Phase B | After Phase C | After Phase D |
+| Stakeholder | After Phase A [now] | After Phase B | After Phase C (abandoned) | After Phase D |
 |---|---|---|---|---|
-| Solo dev / friend | global install, multi-project registry, doctor preflight | their AI tools find DontPanic automatically | submit a brief / PRD / issue, get a plan | richer ecosystem callers |
-| Founder / product builder | (not yet) | (not yet) | submit a PRD, get verified delivery | (richer; managed-agent surfaces) |
-| AI coding agent (Claude Code, Codex CLI, Cursor) | install via pipx | discovers DontPanic via global manifest, calls MCP tools | submits work via `dontpanic.intake` | OpenClaw skill template, MCP client examples |
-| OpenClaw user | (not yet) | (not yet) | (not yet) | OpenClaw skill calls `dontpanic intake / dispatch / status / approve` |
+| Solo dev / friend | global install, multi-project registry, doctor preflight | their AI tools find DontPanic automatically | *abandoned* — author a plan dir and `plan lock` | richer ecosystem callers |
+| Founder / product builder | (not yet) | (not yet) | *abandoned* — no PRD intake surface | (richer; managed-agent surfaces) |
+| AI coding agent (Claude Code, Codex CLI, Cursor) | install via pipx | discovers DontPanic via global manifest, calls MCP tools | *abandoned* — no `dontpanic.intake` tool | OpenClaw skill template, MCP client examples |
+| OpenClaw user | (not yet) | (not yet) | (not yet) | OpenClaw skill calls `dontpanic plan lock / dispatch / status / approve` |
 | Remote operator | (not yet) | (not yet) | (not yet) | dispatches via existing surfaces (Claude, ChatGPT, Clawdbot, OpenClaw) — DontPanic ships no custom remote daemon |
 
 By Phase D, the positioning in [`PRODUCT.md`](./PRODUCT.md) and
