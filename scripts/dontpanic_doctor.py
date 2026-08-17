@@ -25,9 +25,14 @@ doctor also surfaces:
 
 Usage:
   python3 scripts/jarvis_doctor.py              # full check (needs gcloud + firebase auth)
-  python3 scripts/jarvis_doctor.py --skip-auth  # structural checks only (CI / fresh clone)
+  python3 scripts/jarvis_doctor.py --skip-auth  # local-only checks (skips all Firebase/GCP)
   python3 scripts/jarvis_doctor.py --json       # machine-readable output
   python3 scripts/jarvis_doctor.py --include-projects --strict-codes  # F003 wrapper mode
+
+--skip-auth skips all Firebase/GCP related checks: gcloud CLI, firebase CLI,
+gcloud-auth, firebase-auth, target-project, secrets-dir, SA-key-age, and the
+firebase_admin Python dep. This enables a local-only install to pass doctor
+without any Firebase tooling, config, or credentials.
 
 Exit codes (default — backward compat):
   0 — all checks green
@@ -124,14 +129,24 @@ def check_python_version() -> CheckResult:
     return _ok("python>=3.10", f"Python {sys.version_info.major}.{sys.version_info.minor}")
 
 
-def check_clis() -> list[CheckResult]:
+def check_clis(skip_auth: bool = False) -> list[CheckResult]:
+    """Check required CLI tools are present.
+
+    When ``skip_auth=True``, gcloud and firebase CLI checks are skipped
+    because they are only needed for Firebase/GCP workflows. This allows
+    local-only installs to pass doctor without Firebase tooling.
+    """
     results = []
-    for cli, hint in (
-        ("gcloud", "install gcloud SDK: https://cloud.google.com/sdk/docs/install"),
-        ("firebase", "install firebase CLI: npm i -g firebase-tools"),
+    cli_specs = [
         ("jq", "install jq: brew install jq"),
         ("git", "install git"),
-    ):
+    ]
+    if not skip_auth:
+        cli_specs = [
+            ("gcloud", "install gcloud SDK: https://cloud.google.com/sdk/docs/install"),
+            ("firebase", "install firebase CLI: npm i -g firebase-tools"),
+        ] + cli_specs
+    for cli, hint in cli_specs:
         if shutil.which(cli) is None:
             results.append(_bad(f"cli:{cli}", f"{cli} not found in PATH", hint))
         else:
@@ -259,12 +274,19 @@ def check_secrets_dir(project: str | None) -> CheckResult:
     return _ok("secrets-dir", msg)
 
 
-def check_python_deps() -> list[CheckResult]:
+def check_python_deps(skip_auth: bool = False) -> list[CheckResult]:
+    """Check required Python packages are importable.
+
+    When ``skip_auth=True``, firebase_admin is skipped because it is only
+    needed for Firebase/GCP workflows. This allows local-only installs to
+    pass doctor without the firebase-admin package.
+    """
     deps = [
         ("pydantic", "pip install pydantic"),
         ("yaml", "pip install pyyaml"),
-        ("firebase_admin", "pip install firebase-admin"),
     ]
+    if not skip_auth:
+        deps.append(("firebase_admin", "pip install firebase-admin"))
     results = []
     for mod, hint in deps:
         if importlib.util.find_spec(mod) is None:
@@ -3121,18 +3143,23 @@ def run_all_checks(
     (legacy 0/1 exit stays 0); ``True`` (``--architecture-drift-strict``)
     promotes both to FAIL so the strict-codes matrix returns exit 2.
     ``stale_minor`` is always advisory.
+
+    When ``skip_auth=True``, all Firebase/GCP checks are skipped: gcloud CLI,
+    firebase CLI, gcloud-auth, firebase-auth, target-project, secrets-dir,
+    SA-key-age, and the firebase_admin Python dep. This enables a local-only
+    install to pass doctor without any Firebase tooling or config.
     """
     results: list[CheckResult] = []
     results.append(check_python_version())
-    results.extend(check_clis())
+    results.extend(check_clis(skip_auth=skip_auth))
     if not skip_auth:
         results.append(check_gcloud_auth())
         results.append(check_firebase_auth())
-    target_result, project = check_target_project()
-    results.append(target_result)
-    results.append(check_secrets_dir(project))
-    results.append(check_sa_key_age())
-    results.extend(check_python_deps())
+        target_result, project = check_target_project()
+        results.append(target_result)
+        results.append(check_secrets_dir(project))
+        results.append(check_sa_key_age())
+    results.extend(check_python_deps(skip_auth=skip_auth))
     results.append(check_schemas())
     results.append(check_pydantic_models())
     results.append(check_parent_plan_validates())
@@ -3344,7 +3371,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--skip-auth",
         action="store_true",
-        help="omit gcloud-auth and firebase-auth probes (CI / fresh-clone mode)",
+        help="skip all Firebase/GCP checks (local-only install mode)",
     )
     parser.add_argument(
         "--include-projects",

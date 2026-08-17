@@ -45,11 +45,21 @@ def test_python_version_passes_on_current(doctor) -> None:
 
 
 def test_clis_returns_one_result_per_cli(doctor) -> None:
-    results = doctor.check_clis()
+    results = doctor.check_clis(skip_auth=False)
     names = {r.name for r in results}
     assert "cli:gcloud" in names
     assert "cli:firebase" in names
     assert "cli:git" in names
+
+
+def test_clis_skips_gcloud_firebase_with_skip_auth(doctor) -> None:
+    """check_clis(skip_auth=True) must skip gcloud/firebase CLI checks."""
+    results = doctor.check_clis(skip_auth=True)
+    names = {r.name for r in results}
+    assert "cli:gcloud" not in names
+    assert "cli:firebase" not in names
+    assert "cli:git" in names
+    assert "cli:jq" in names
 
 
 def test_target_project_uses_env_var(doctor, monkeypatch) -> None:
@@ -172,9 +182,17 @@ def test_schemas_check_fails_when_dir_missing(doctor, monkeypatch, tmp_path: Pat
 
 
 def test_python_deps_return_per_dep_results(doctor) -> None:
-    results = doctor.check_python_deps()
+    results = doctor.check_python_deps(skip_auth=False)
     names = {r.name for r in results}
     assert names == {"py:pydantic", "py:yaml", "py:firebase_admin"}
+
+
+def test_python_deps_skips_firebase_admin_with_skip_auth(doctor) -> None:
+    """check_python_deps(skip_auth=True) must skip firebase_admin check."""
+    results = doctor.check_python_deps(skip_auth=True)
+    names = {r.name for r in results}
+    assert names == {"py:pydantic", "py:yaml"}
+    assert "py:firebase_admin" not in names
 
 
 # ── runner integration ─────────────────────────────────────────────────────
@@ -237,19 +255,34 @@ def test_main_handles_argv_none(doctor, monkeypatch) -> None:
     assert doctor.main() == 0
 
 
-def test_skip_auth_omits_auth_checks(doctor) -> None:
-    """run_all_checks(skip_auth=True) must not include gcloud-auth /
-    firebase-auth result rows. CI relies on this — gcloud CLI is present
-    but not authenticated, and we don't want green-when-fresh to depend
-    on environmental auth state."""
+def test_skip_auth_omits_firebase_gcp_checks(doctor) -> None:
+    """run_all_checks(skip_auth=True) must skip all Firebase/GCP related checks.
+
+    This includes: gcloud CLI, firebase CLI, gcloud-auth, firebase-auth,
+    target-project, secrets-dir, sa-key-age, and py:firebase_admin.
+
+    CI and local-only installs rely on this — a fresh venv install without
+    Firebase tooling should pass doctor --skip-auth.
+    """
     full = {r.name for r in doctor.run_all_checks(skip_auth=False)}
     skipped = {r.name for r in doctor.run_all_checks(skip_auth=True)}
-    assert "gcloud-auth" in full
-    assert "firebase-auth" in full
-    assert "gcloud-auth" not in skipped
-    assert "firebase-auth" not in skipped
-    # Every other check is still present
-    assert (full - {"gcloud-auth", "firebase-auth"}) == skipped
+
+    firebase_gcp_checks = {
+        "cli:gcloud",
+        "cli:firebase",
+        "gcloud-auth",
+        "firebase-auth",
+        "target-project",
+        "secrets-dir",
+        "sa-key-age",
+        "py:firebase_admin",
+    }
+
+    for check_name in firebase_gcp_checks:
+        assert check_name in full, f"{check_name} should be in full checks"
+        assert check_name not in skipped, f"{check_name} should be skipped with --skip-auth"
+
+    assert (full - firebase_gcp_checks) == skipped
 
 
 def test_skip_auth_propagates_through_main(doctor, monkeypatch) -> None:
