@@ -41,6 +41,11 @@ source of truth for this split; the full agent-by-capability table is in
 comfortable with local agent CLIs. (Team/RBAC governance is not built yet — the
 gates today are *your* gates.)
 
+**Phase C intake is abandoned.** There is no `dontpanic intake` command and
+none is planned. A new operator starts a plan by authoring a plan directory
+(or copying `examples/plans/hello-dontpanic`) and running `dontpanic plan lock`.
+See [`docs/ROADMAP.md`](./docs/ROADMAP.md) for the non-goal.
+
 ### Harness · model · profile (quick map)
 
 DontPanic no longer collapses “which agent” into a single registry string:

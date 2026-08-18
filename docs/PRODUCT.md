@@ -106,42 +106,25 @@ dispatches, audits, and packages evidence.
 dontpanic projects add spindine ~/GitHub/SpinDineSwift
 ```
 
-**2. Give DontPanic a brief**
+**2. Author a plan directory**
+
+Phase C intake (`dontpanic intake prd|issue|…`) is **abandoned**.
+DontPanic does not turn a brief into a draft plan. A new operator
+authors `docs/plans/<id>/` (or copies `examples/plans/hello-dontpanic`)
+and locks it:
 
 ```
-dontpanic intake prd docs/product/creator-hub.md --project creator-hub
+dontpanic plan lock docs/plans/<plan-id>/
 ```
 
-or:
+See [`AUTHORING_PLANS.md`](./AUTHORING_PLANS.md) and the README
+60-second start. Messy PRD / issue text stays with the operator.
 
-```
-dontpanic intake issue prod-incident.md --project real-estate-analytics
-```
+**3. Sufficiency is the plan lock, not an intake loop**
 
-**3. DontPanic checks sufficiency**
-
-If the brief is good enough, DontPanic drafts a plan.
-
-If it is not, DontPanic researches:
-
-- repo structure
-- test commands
-- build system
-- docs and ADRs
-- prior plans
-- product references
-- production logs if allowed
-- screenshots or examples
-- parity references
-- security constraints
-
-Then it returns one of:
-
-- "Ready for plan review."
-- "I need these answers first."
-- "This should be a discovery / root-cause plan, not an implementation
-  plan."
-- "This is too risky without human clarification."
+`dontpanic plan lock` is the existing gate. If the plan is not
+complete enough, lock refuses. There is no research/intake product
+that asks follow-up questions and drafts a plan for you.
 
 **4. Human approves**
 
@@ -251,7 +234,7 @@ DontPanic can start planning when it has enough to define:
 - evidence needed
 - what is out of scope
 
-If it lacks these, it researches or asks.
+If it lacks these, `dontpanic plan lock` refuses. There is no intake loop that researches or asks.
 
 **For a PRD, sufficient means:**
 

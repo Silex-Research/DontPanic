@@ -19,7 +19,7 @@ solved problems in mature systems like
 
 | Caller | How it reaches DontPanic | Why |
 |---|---|---|
-| OpenClaw | A small DontPanic skill / plugin in the OpenClaw workspace shells out to `dontpanic intake | dispatch | status | approve` | OpenClaw owns the chat / channel / session surface; DontPanic owns plan-locked delivery |
+| OpenClaw | A small DontPanic skill / plugin in the OpenClaw workspace shells out to `dontpanic plan lock | dispatch-from-plan | status | approve` | OpenClaw owns the chat / channel / session surface; DontPanic owns plan-locked delivery |
 | Buzz — **strongly recommended** | A thin Buzz agent / YAML workflow shells out to the DontPanic CLI (`buzz-cli` speaks JSON), or connects as an MCP client; the DontPanic notify sink posts event projections into the operator's **private** community (fail-soft when unconfigured) | Buzz owns rooms, agent keypairs, and membership; DontPanic owns plan-locked delivery. Signup + private-community setup are strongly recommended for every operator running multi-agent work — see [Buzz as caller and notify surface](#buzz-as-caller-and-notify-surface-strongly-recommended) |
 | OpenCode | Operator / planning surface: the OpenCode session runs the DontPanic CLI directly, or connects as an MCP client to `dontpanic mcp serve` | OpenCode owns the planning and editing session; DontPanic owns plan-locked delivery. OpenCode operates DontPanic and is never dispatched — see the [Agent Capability Matrix](./AGENT_CAPABILITY_MATRIX.md) |
 | Claude Code | Claude reads `~/.dontpanic/agent-manifest.json` and invokes the CLI directly, or calls the MCP tools when `dontpanic mcp serve` is running | Claude already lives in the dev's terminal; DontPanic adds the verification loop |
@@ -73,7 +73,8 @@ not a background deploy button.
   ships `~/.dontpanic/agent-manifest.json` (global discovery: "how do I
   invoke DontPanic on this machine?") and a thin MCP server exposing
   `list_projects | validate_plan | dispatch | status | approve_gate | read_evidence`.
-  There is deliberately no `intake` tool in Phase B — Phase C owns intake.
+  There is deliberately no `intake` tool. Phase C intake is abandoned;
+  callers author a plan dir and `dontpanic plan lock`.
   This is enough for any of
   the above callers.
 - **Project behavior stays in `<repo>/.dontpanic/dontpanic.json`.** The
