@@ -260,6 +260,8 @@ agent CLI if you want to dispatch real work.
 ```bash
 git clone https://github.com/Silex-Research/DontPanic.git
 cd DontPanic
+python3 -m venv .venv
+source .venv/bin/activate
 python3 -m pip install -e ".[dev]"
 ```
 
@@ -270,6 +272,10 @@ dontpanic --version
 dontpanic --help
 ```
 
+The `dontpanic` command is installed inside the virtual environment. If you open
+a new shell, run `source .venv/bin/activate` again to put it back on PATH.
+(Alternative: `pipx install -e ".[dev]"` installs globally if pipx is available.)
+
 ### 2. Orient a new agent, then configure roles
 
 A new agent (human or AI) starts by reading the generated operating brief: the
@@ -278,7 +284,7 @@ flow.
 
 ```bash
 dontpanic agent brief          # the onboarding brief; `dontpanic agent` alone prints it too
-dontpanic agent whoami         # classify THIS agent (operator vs registered worker)
+dontpanic agent status         # shows operator/worker classification and capability flags
 ```
 
 `dontpanic setup` is preview-only by default. It writes no secrets; it stores
