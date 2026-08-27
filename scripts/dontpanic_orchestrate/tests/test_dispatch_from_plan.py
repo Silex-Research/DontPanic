@@ -70,6 +70,7 @@ def _write_plan(
     *,
     target_env: str = "dev",
     target_project: str = "none",
+    include_second_feature: bool = False,
 ) -> Path:
     """Write a minimal valid plan dir under repo/docs/plans/<plan_id>."""
     plan_dir = repo / "docs" / "plans" / plan_id
@@ -79,23 +80,37 @@ def _write_plan(
             plan_id=plan_id, target_env=target_env, target_project=target_project
         )
     )
+    features = [
+        {
+            "id": "F001",
+            "category": "test",
+            "phase": 0,
+            "description": "Synthetic feature for dispatch-from-plan tests.",
+            "steps": ["dry-run preflight", "confirm dispatch"],
+            "acceptance": "Pre-flight block prints 10 fields; --confirm forwards to dispatch_volley.",
+            "passes": False,
+            "depends_on": [],
+        }
+    ]
+    if include_second_feature:
+        features.append(
+            {
+                "id": "F002",
+                "category": "test",
+                "phase": 0,
+                "description": "Second synthetic feature for explicit selection tests.",
+                "steps": ["select F002", "print F002 in preflight"],
+                "acceptance": "Explicitly selecting F002 prints it in the pre-flight block.",
+                "passes": False,
+                "depends_on": [],
+            }
+        )
     (plan_dir / "features.json").write_text(
         json.dumps(
             {
                 "task_id": plan_id,
                 "schema_version": "1.0",
-                "features": [
-                    {
-                        "id": "F001",
-                        "category": "test",
-                        "phase": 0,
-                        "description": "Synthetic feature for dispatch-from-plan tests.",
-                        "steps": ["dry-run preflight", "confirm dispatch"],
-                        "acceptance": "Pre-flight block prints 10 fields; --confirm forwards to dispatch_volley.",
-                        "passes": False,
-                        "depends_on": [],
-                    }
-                ],
+                "features": features,
             },
             indent=2,
         )
@@ -312,6 +327,46 @@ def test_dry_run_prints_ten_fields_in_order(tmp_path) -> None:
     # OK readiness adds the claude=N% / codex=N% summary line
     assert "claude=" in out and "codex=" in out and "%" in out
     print("  ✓ 10 fields present in declared order; dry-run exit 0")
+
+
+def test_dry_run_requires_feature_for_multi_feature_plan(tmp_path) -> None:
+    """Omitting --feature is refused before preflight when selection is ambiguous."""
+    _write_plan(tmp_path, include_second_feature=True)
+
+    buf_out = io.StringIO()
+    buf_err = io.StringIO()
+    with (
+        mock.patch("dontpanic_orchestrate.cli.Path.cwd", return_value=tmp_path),
+        mock.patch("dontpanic_orchestrate.cli.supervisor.dispatch_volley") as spy,
+        redirect_stdout(buf_out),
+        redirect_stderr(buf_err),
+    ):
+        rc = cli.main(["dispatch-from-plan", _PLAN_ID])
+
+    assert rc == 2
+    combined = buf_out.getvalue() + buf_err.getvalue()
+    assert "F001" in combined
+    assert "F002" in combined
+    assert "--feature" in buf_err.getvalue()
+    assert "pre-flight context" not in buf_out.getvalue()
+    spy.assert_not_called()
+
+
+def test_dry_run_accepts_explicit_feature_for_multi_feature_plan(tmp_path) -> None:
+    """An explicit feature keeps multi-feature dry-runs unambiguous."""
+    _write_plan(tmp_path, include_second_feature=True)
+    _seed_state_ok()
+    _seed_caps_ok()
+
+    buf_out = io.StringIO()
+    with (
+        mock.patch("dontpanic_orchestrate.cli.Path.cwd", return_value=tmp_path),
+        redirect_stdout(buf_out),
+    ):
+        rc = cli.main(["dispatch-from-plan", _PLAN_ID, "--feature", "F002"])
+
+    assert rc == 0
+    assert "feature:        F002" in buf_out.getvalue()
 
 
 def test_dry_run_prints_global_breaker_tripped(tmp_path) -> None:
@@ -569,14 +624,14 @@ def test_confirm_ok_default_flags_propagate_as_none(tmp_path) -> None:
 
     assert rc == 0
     kwargs = spy.call_args.kwargs
-    # --feature defaults to F001 in argparse; the others stay None so
-    # dispatch_volley's plan-derived fallbacks apply.
+    # A one-feature plan resolves to F001; the other omitted flags stay None
+    # so dispatch_volley's plan-derived fallbacks apply.
     assert kwargs["feature_id"] == "F001"
     assert kwargs["implementer_agent"] is None
     assert kwargs["auditor_agent"] is None
     assert kwargs["max_iterations"] is None
     assert kwargs["mode"] is None
-    print("  ✓ omitted flags forward as None; only --feature has a CLI-layer default")
+    print("  ✓ one-feature fallback selects F001; other omitted flags forward as None")
 
 
 # ───────────────────────────  plan resolution / schema errors  ───────────────────────────

@@ -11,7 +11,7 @@ Volley dispatch (F005a — implementer/auditor pair, iterate until signoff or ca
 
 Pre-flight + dispatch (plan 2026-05-01-001 F002):
   python -m dontpanic_orchestrate dispatch-from-plan <plan-id>
-      [--feature F001] [--implementer claude] [--auditor codex]
+      [--feature FEATURE_ID] [--implementer claude] [--auditor codex]
       [--max-iterations N] [--mode interactive|autonomous] [--confirm]
 
   Strict dry-run by default: prints a 10-field pre-flight context block and
@@ -3006,7 +3006,11 @@ def _dispatch_from_plan_main(argv: list[str]) -> int:
     parser.add_argument(
         "plan", help="Plan ID (resolved against ./docs/plans/) or absolute dir path"
     )
-    parser.add_argument("--feature", default="F001", help="Feature ID (default F001)")
+    parser.add_argument(
+        "--feature",
+        default=None,
+        help="Feature ID (required when the plan has more than one feature)",
+    )
     parser.add_argument(
         "--implementer", default=None, help="Implementer agent (default: agents_required[0])"
     )
@@ -3123,6 +3127,25 @@ def _dispatch_from_plan_main(argv: list[str]) -> int:
     plan_dir = loaded.plan_dir
     plan = loaded.plan
 
+    feature_id = args.feature
+    if feature_id is None:
+        feature_ids = [feature.id for feature in loaded.features.features]
+        if not feature_ids:
+            print(
+                f"[dispatch-from-plan] REFUSED: plan {loaded.plan_id} declares no features; "
+                "cannot dispatch.",
+                file=sys.stderr,
+            )
+            return 2
+        if len(feature_ids) > 1:
+            print(
+                f"[dispatch-from-plan] REFUSED: plan {loaded.plan_id} declares multiple "
+                f"features ({', '.join(feature_ids)}); pass --feature <FEATURE_ID>.",
+                file=sys.stderr,
+            )
+            return 2
+        feature_id = feature_ids[0]
+
     # Resolve impl/auditor with the same fallback dispatch_volley uses, so
     # the printed defaults match what dispatch will actually run with.
     # F003: chain is CLI arg > plan.agents_required > per-project config >
@@ -3158,7 +3181,7 @@ def _dispatch_from_plan_main(argv: list[str]) -> int:
 
     _print_preflight_block(
         plan_dir=plan_dir,
-        feature_id=args.feature,
+        feature_id=feature_id,
         tier=str(plan.tier.value if hasattr(plan.tier, "value") else plan.tier),
         target_env=loaded.target_env,
         target_project=loaded.target_project,
@@ -3211,10 +3234,10 @@ def _dispatch_from_plan_main(argv: list[str]) -> int:
 
     sizing_result = None
     try:
-        target_feature = loaded.feature(args.feature)
+        target_feature = loaded.feature(feature_id)
     except KeyError:
         print(
-            f"[dispatch-from-plan] sizing-lint: feature {args.feature!r} not in "
+            f"[dispatch-from-plan] sizing-lint: feature {feature_id!r} not in "
             f"{loaded.plan_id}; skipping size check"
         )
     else:
@@ -3309,7 +3332,7 @@ def _dispatch_from_plan_main(argv: list[str]) -> int:
         override_path = sizing_gate.record_override(
             plan_dir,
             plan_id=loaded.plan_id,
-            feature_id=sizing_result.feature_id or args.feature,
+            feature_id=sizing_result.feature_id or feature_id,
             reason=args.allow_oversize,
             result=sizing_result,
         )
@@ -3328,7 +3351,7 @@ def _dispatch_from_plan_main(argv: list[str]) -> int:
     try:
         result = supervisor.dispatch_volley(
             plan_dir=plan_dir,
-            feature_id=args.feature,
+            feature_id=feature_id,
             implementer_agent=args.implementer,
             auditor_agent=args.auditor,
             max_iterations=args.max_iterations,
