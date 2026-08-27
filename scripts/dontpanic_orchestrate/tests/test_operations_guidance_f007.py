@@ -1045,6 +1045,37 @@ def _make_two_feature_plan(tmp_path: Path) -> Path:
     return plan_dir
 
 
+def test_what_now_refuses_ambiguous_plan_without_feature(tmp_path, capsys):
+    from dontpanic_orchestrate import cli
+
+    plan_dir = _make_two_feature_plan(tmp_path)
+
+    rc = cli._what_now_main([str(plan_dir)])
+
+    captured = capsys.readouterr()
+    assert rc == 2
+    assert captured.out == ""
+    assert "[what-now] REFUSED:" in captured.err
+    assert "F001" in captured.err
+    assert "F002" in captured.err
+    assert "--feature" in captured.err
+
+
+def test_what_now_infers_sole_nondefault_feature(tmp_path, monkeypatch, capsys):
+    from dontpanic_orchestrate import cli
+
+    monkeypatch.setenv("JARVIS_QUOTA_STATE_PATH", str(tmp_path / "no-quota.json"))
+    _reconciled_homes(tmp_path, monkeypatch)
+    _patch_setup(monkeypatch)
+    plan_dir = _make_plan(tmp_path, feature_id="F002")
+
+    rc = cli._what_now_main([str(plan_dir), "--format", "json"])
+
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["feature_id"] == "F002"
+
+
 def test_two_same_kind_blocked_features_yield_two_distinct_action_items(
     tmp_path, monkeypatch
 ):

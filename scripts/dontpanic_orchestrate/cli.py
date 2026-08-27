@@ -945,6 +945,25 @@ def _finalize_main(argv: list[str]) -> int:
     return 0
 
 
+def _resolve_feature_id(
+    loaded, feature_arg: str | None
+) -> tuple[str | None, str | None]:
+    """Return (feature_id, error_message). error_message is None on success."""
+    if feature_arg is not None:
+        return feature_arg, None
+
+    feature_ids = [feature.id for feature in loaded.features.features]
+    if not feature_ids:
+        return None, f"plan {loaded.plan_id} declares no features; cannot dispatch."
+    if len(feature_ids) > 1:
+        return (
+            None,
+            f"plan {loaded.plan_id} declares multiple features "
+            f"({', '.join(feature_ids)}); pass --feature <FEATURE_ID>.",
+        )
+    return feature_ids[0], None
+
+
 def _what_now_main(argv: list[str]) -> int:
     """``dontpanic what-now <plan> [--feature F]`` — Plan 2026-05-30-001 F007.
 
@@ -963,7 +982,11 @@ def _what_now_main(argv: list[str]) -> int:
         ),
     )
     parser.add_argument("plan", help="Plan ID (resolved against ./docs/plans/) or dir path")
-    parser.add_argument("--feature", default="F001", help="Feature ID (default F001)")
+    parser.add_argument(
+        "--feature",
+        default=None,
+        help="Feature ID (required when the plan has more than one feature)",
+    )
     parser.add_argument(
         "--dashboard-url",
         default=None,
@@ -975,11 +998,16 @@ def _what_now_main(argv: list[str]) -> int:
     from dontpanic_orchestrate import operations_guidance
 
     plan_dir = _resolve_plan_dir(args.plan)
-    plan_id = plan_loader.load(plan_dir).plan_id
+    loaded = plan_loader.load(plan_dir)
+    plan_id = loaded.plan_id
+    feature_id, feature_error = _resolve_feature_id(loaded, args.feature)
+    if feature_error is not None:
+        print(f"[what-now] REFUSED: {feature_error}", file=sys.stderr)
+        return 2
     guidance = operations_guidance.collect_state(
         plan_dir,
         plan_id=plan_id,
-        feature_id=args.feature,
+        feature_id=feature_id,
         dashboard_url=args.dashboard_url,
     )
     # Plan 2026-06-02-001 F003 — BOTH the text and JSON surfaces render the
@@ -3127,24 +3155,10 @@ def _dispatch_from_plan_main(argv: list[str]) -> int:
     plan_dir = loaded.plan_dir
     plan = loaded.plan
 
-    feature_id = args.feature
-    if feature_id is None:
-        feature_ids = [feature.id for feature in loaded.features.features]
-        if not feature_ids:
-            print(
-                f"[dispatch-from-plan] REFUSED: plan {loaded.plan_id} declares no features; "
-                "cannot dispatch.",
-                file=sys.stderr,
-            )
-            return 2
-        if len(feature_ids) > 1:
-            print(
-                f"[dispatch-from-plan] REFUSED: plan {loaded.plan_id} declares multiple "
-                f"features ({', '.join(feature_ids)}); pass --feature <FEATURE_ID>.",
-                file=sys.stderr,
-            )
-            return 2
-        feature_id = feature_ids[0]
+    feature_id, feature_error = _resolve_feature_id(loaded, args.feature)
+    if feature_error is not None:
+        print(f"[dispatch-from-plan] REFUSED: {feature_error}", file=sys.stderr)
+        return 2
 
     # Resolve impl/auditor with the same fallback dispatch_volley uses, so
     # the printed defaults match what dispatch will actually run with.
