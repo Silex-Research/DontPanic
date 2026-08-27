@@ -3206,6 +3206,29 @@ def _dispatch_from_plan_main(argv: list[str]) -> int:
             f"({breaker.hits_in_window}/{breaker.threshold})"
         )
 
+    from dontpanic_orchestrate import worktrees as _wt
+
+    cwd = Path.cwd().resolve()
+    try:
+        binding = _wt.get_binding(loaded.plan_id)
+    except Exception:
+        print(
+            "[dispatch-from-plan] warning: worktree registry unreadable; continuing"
+        )
+        binding = None
+
+    worktree_path = binding.get("worktree_path") if binding else None
+    if worktree_path:
+        bound_worktree = worktree_path
+        worktree_match = "yes" if Path(worktree_path).resolve() == cwd else "no"
+    else:
+        bound_worktree = "(none)"
+        worktree_match = "unbound"
+
+    print(f"[dispatch-from-plan] cwd: {cwd}")
+    print(f"[dispatch-from-plan] bound_worktree: {bound_worktree}")
+    print(f"[dispatch-from-plan] worktree_match: {worktree_match}")
+
     # Plan 2026-06-01-001 F009 — actionable config-readiness pre-flight, distinct
     # from the quota-readiness/budget machinery above. Validates the quota-caps
     # config file AND the resolved role values BEFORE any paid work, turning a

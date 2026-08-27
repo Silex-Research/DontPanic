@@ -51,6 +51,8 @@ The safety invariant is load-bearing:
    dontpanic dispatch-from-plan <plan-id> --confirm
    ```
 
+Sit Grok Bot, Hermes, OpenClaw, or a thin CLI watcher on `dontpanic approve` and `dontpanic dispatch-from-plan`. Clipboard paste between Claude and Codex is a fallback, not the product.
+
 ## MCP Shape
 
 MCP-aware hosts can start the local server with:

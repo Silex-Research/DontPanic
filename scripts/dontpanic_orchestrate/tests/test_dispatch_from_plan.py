@@ -393,6 +393,48 @@ def test_dry_run_prints_global_breaker_tripped(tmp_path) -> None:
     print("  ✓ dry-run prints global_breaker TRIPPED and still exits 0")
 
 
+def test_dry_run_prints_unbound_worktree(tmp_path) -> None:
+    _write_plan(tmp_path)
+    _seed_state_ok()
+    _seed_caps_ok()
+
+    buf_out = io.StringIO()
+    with (
+        mock.patch("dontpanic_orchestrate.cli.Path.cwd", return_value=tmp_path),
+        mock.patch("dontpanic_orchestrate.worktrees.get_binding", return_value=None),
+        redirect_stdout(buf_out),
+    ):
+        rc = cli.main(["dispatch-from-plan", _PLAN_ID])
+
+    assert rc == 0
+    out = buf_out.getvalue()
+    assert "[dispatch-from-plan] bound_worktree: (none)" in out
+    assert "[dispatch-from-plan] worktree_match: unbound" in out
+
+
+def test_dry_run_prints_worktree_mismatch_without_refusing(tmp_path) -> None:
+    _write_plan(tmp_path)
+    _seed_state_ok()
+    _seed_caps_ok()
+
+    other_worktree = "/tmp/other-worktree-definitely-not-cwd"
+    buf_out = io.StringIO()
+    with (
+        mock.patch("dontpanic_orchestrate.cli.Path.cwd", return_value=tmp_path),
+        mock.patch(
+            "dontpanic_orchestrate.worktrees.get_binding",
+            return_value={"worktree_path": other_worktree},
+        ),
+        redirect_stdout(buf_out),
+    ):
+        rc = cli.main(["dispatch-from-plan", _PLAN_ID])
+
+    assert rc == 0
+    out = buf_out.getvalue()
+    assert f"[dispatch-from-plan] bound_worktree: {other_worktree}" in out
+    assert "[dispatch-from-plan] worktree_match: no" in out
+
+
 def test_dry_run_never_dispatches_regardless_of_tty(tmp_path) -> None:
     """Acceptance (1): without --confirm the CLI must NOT invoke
     supervisor.dispatch_volley. Spy on the function and assert zero calls."""
