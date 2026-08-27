@@ -32,6 +32,7 @@ FORBIDDEN_COMMAND_PATTERNS = [
     "git config --global ...",
     "git push --force ... main|master  (or -f to those branches)",
     "docker context use ...",
+    "coderabbit / coderabbit-review / any CodeRabbit skill",
 ]
 
 
@@ -246,6 +247,11 @@ Your job:
 {verification_block}
 {target_section}
 {EC5_AUDITOR_RULE}
+CodeRabbit is forbidden for this audit:
+- Do not run `coderabbit`, `coderabbit-review`, or any CodeRabbit skill.
+- Do not open a browser or treat CodeRabbit login as required.
+- Independently audit using the git diff, the supervisor regression you were given, and read-only checks.
+
 Reply with a concise paragraph that:
 - Begins with your own {{Repo, Env: {target_env}, Project: {project_line}}} declaration block.
 - States overall verdict (signed_off | needs_changes | blocked).

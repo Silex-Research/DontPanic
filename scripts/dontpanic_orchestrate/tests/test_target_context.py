@@ -363,6 +363,7 @@ def test_implementer_prompt_lists_forbidden_commands() -> None:
     assert "gcloud config set project" in out, out
     assert "firebase use" in out, out
     assert "kubectl config use-context" in out, out
+    assert "coderabbit" in out.lower(), out
     print("  ✓ implementer prompt enumerates forbidden command patterns")
 
 
@@ -379,6 +380,9 @@ def test_auditor_prompt_includes_target_verification_rule() -> None:
     )
     assert "Env:" in out or "target_env" in out, out
     assert "dev" in out and "<firebase-project-id>" in out, out
+    assert "coderabbit" in out.lower(), out
+    assert "do not open a browser" in out.lower(), out
+    assert "git diff" in out and "read-only checks" in out, out
     print("  ✓ auditor prompt verifies target declarations against plan target")
 
 
