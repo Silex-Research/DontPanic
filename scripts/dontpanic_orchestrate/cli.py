@@ -1019,6 +1019,9 @@ def _what_now_main(argv: list[str]) -> int:
     from dontpanic_orchestrate import action_renderers
 
     action_items = guidance.to_action_items()
+    from dontpanic_orchestrate import remaining_ceremony
+
+    ceremony = remaining_ceremony.inspect(plan_dir, feature_id, loaded=loaded)
     if args.format == "json":
         # F003 fix (codex audit i2 — high/security): the legacy guidance JSON shape
         # (`choices`, etc.) is preserved for back-compat, but EVERY human-facing
@@ -1029,9 +1032,13 @@ def _what_now_main(argv: list[str]) -> int:
         # byte-consistent with the dashboard and the agent brief.
         payload = _scrub_json_payload(guidance.to_dict())
         payload["action_items"] = action_renderers.render_dashboard(action_items)["items"]
+        if ceremony is not None:
+            payload["remaining_ceremony"] = ceremony.to_dict()
         print(json.dumps(payload, indent=2))
     else:
         print(action_renderers.render_cli_what_now(action_items, fmt="text"), end="")
+        if ceremony is not None:
+            print(remaining_ceremony.render(ceremony), end="")
     return 0
 
 
@@ -2954,6 +2961,15 @@ def _compute_readiness(*, implementer: str, auditor: str) -> tuple[str, str | No
     return "ok", summary
 
 
+def _print_remaining_ceremony(plan_dir: Path, feature_id: str, *, loaded=None) -> None:
+    """When the feature ledger is still false, print what still blocks the flip."""
+    from dontpanic_orchestrate import remaining_ceremony
+
+    remaining_ceremony.print_remaining_ceremony(
+        plan_dir, feature_id, loaded=loaded
+    )
+
+
 def _print_preflight_block(
     *,
     plan_dir: Path,
@@ -3336,6 +3352,7 @@ def _dispatch_from_plan_main(argv: list[str]) -> int:
                         f"  {finding['mode']} | {finding['severity']} | "
                         f"{','.join(finding['files'])} | {finding['recommendation']}"
                     )
+        _print_remaining_ceremony(plan_dir, feature_id, loaded=loaded)
         return 0
 
     if readiness != "ok":
@@ -3430,6 +3447,7 @@ def _dispatch_from_plan_main(argv: list[str]) -> int:
     )
     print(f"[dispatch-from-plan] reason: {result.reason}")
     print(f"[dispatch-from-plan] {len(result.audit_paths)} audit JSONs written")
+    _print_remaining_ceremony(plan_dir, feature_id, loaded=loaded)
     return 0 if result.final_status == "signed_off" else 3
 
 

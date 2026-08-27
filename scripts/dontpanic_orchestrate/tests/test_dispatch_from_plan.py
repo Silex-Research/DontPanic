@@ -776,3 +776,38 @@ def test_target_env_and_project_pulled_from_target_section(tmp_path) -> None:
     assert "target_env:     staging" in out, out
     assert "target_project: my-staging-proj" in out, out
     print("  ✓ target_env/target_project pulled from ## Target section")
+
+
+def test_dry_run_prints_remaining_ceremony_for_false_ledger(tmp_path) -> None:
+    """A false ledger after green local tests prints remaining ceremony."""
+    plan_dir = _write_plan(tmp_path)
+    _seed_state_ok()
+    _seed_caps_ok()
+    evidence = plan_dir / "evidence"
+    evidence.mkdir()
+    (evidence / "regression-0-implementer.json").write_text(
+        json.dumps(
+            {
+                "status": "passed",
+                "command": "pytest",
+                "cwd": ".",
+                "exit_code": 0,
+                "iteration": 0,
+                "role": "implementer",
+            }
+        )
+        + "\n"
+    )
+
+    buf_out = io.StringIO()
+    with (
+        mock.patch("dontpanic_orchestrate.cli.Path.cwd", return_value=tmp_path),
+        redirect_stdout(buf_out),
+    ):
+        rc = cli.main(["dispatch-from-plan", _PLAN_ID])
+    assert rc == 0
+    out = buf_out.getvalue()
+    assert "[remaining-ceremony] F001 ledger passes=false" in out, out
+    assert "already passed locally — do not rewrite the feature" in out, out
+    assert "auditor envelope missing" in out, out
+    assert "supervisor receipt missing" in out, out
