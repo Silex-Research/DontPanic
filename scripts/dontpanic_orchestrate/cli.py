@@ -3170,6 +3170,19 @@ def _dispatch_from_plan_main(argv: list[str]) -> int:
         readiness_summary=readiness_summary,
     )
 
+    breaker = cb.evaluate_global()
+    if breaker.tripped:
+        print(
+            "[dispatch-from-plan] global_breaker: TRIPPED "
+            f"({breaker.hits_in_window}/{breaker.threshold} iteration_cap hits in 24h) "
+            "— hard stop, no clearance. --confirm dies at 0 rounds."
+        )
+    else:
+        print(
+            "[dispatch-from-plan] global_breaker: clear "
+            f"({breaker.hits_in_window}/{breaker.threshold})"
+        )
+
     # Plan 2026-06-01-001 F009 — actionable config-readiness pre-flight, distinct
     # from the quota-readiness/budget machinery above. Validates the quota-caps
     # config file AND the resolved role values BEFORE any paid work, turning a

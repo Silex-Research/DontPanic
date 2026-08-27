@@ -314,6 +314,30 @@ def test_dry_run_prints_ten_fields_in_order(tmp_path) -> None:
     print("  ✓ 10 fields present in declared order; dry-run exit 0")
 
 
+def test_dry_run_prints_global_breaker_tripped(tmp_path) -> None:
+    """Dry-run prints TRIPPED / hard stop and still exits 0 (same as blocked quota_readiness)."""
+    from dontpanic_orchestrate import circuit_breakers as cb
+
+    print("\n[test] dry_run_prints_global_breaker_tripped ...")
+    _write_plan(tmp_path)
+    _seed_state_ok()
+    _seed_caps_ok()
+    for i in range(3):
+        cb.record_global_hit(f"p{i}", cb.BreakerKind.ITERATION_CAP)
+
+    buf_out = io.StringIO()
+    with (
+        mock.patch("dontpanic_orchestrate.cli.Path.cwd", return_value=tmp_path),
+        redirect_stdout(buf_out),
+    ):
+        rc = cli.main(["dispatch-from-plan", _PLAN_ID])
+    assert rc == 0
+    out = buf_out.getvalue()
+    assert "TRIPPED" in out, out
+    assert "hard stop" in out, out
+    print("  ✓ dry-run prints global_breaker TRIPPED and still exits 0")
+
+
 def test_dry_run_never_dispatches_regardless_of_tty(tmp_path) -> None:
     """Acceptance (1): without --confirm the CLI must NOT invoke
     supervisor.dispatch_volley. Spy on the function and assert zero calls."""
