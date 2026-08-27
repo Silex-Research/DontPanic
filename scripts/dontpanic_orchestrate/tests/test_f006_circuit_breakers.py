@@ -1484,6 +1484,34 @@ def test_global_breaker_window_pruning() -> None:
     print("  ✓ entries older than the 24h window don't count")
 
 
+def test_global_breaker_lifts_after_oldest_counted_hit() -> None:
+    history = cb._effective_history_path()
+    history.parent.mkdir(parents=True, exist_ok=True)
+    newest = dt.datetime.now(dt.timezone.utc).replace(microsecond=0) - dt.timedelta(minutes=30)
+    oldest = newest - dt.timedelta(hours=23)
+    with history.open("w") as f:
+        for plan_id, timestamp in (("oldest", oldest), ("newest", newest)):
+            f.write(
+                json.dumps(
+                    {
+                        "plan_id": plan_id,
+                        "kind": "iteration_cap",
+                        "at": timestamp.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    }
+                )
+                + "\n"
+            )
+
+    state = cb.evaluate_global()
+
+    assert state.hits_in_window == 2
+    assert not state.tripped
+    assert state.oldest_hit_at == oldest
+    assert state.newest_hit_at == newest
+    assert state.lifts_at == oldest + dt.timedelta(seconds=state.window_seconds)
+    assert state.lifts_at != newest + dt.timedelta(hours=24)
+
+
 # ──────────────────────────────  gate-pause integration  ──────────────────────────────
 
 

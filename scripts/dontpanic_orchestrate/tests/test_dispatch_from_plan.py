@@ -390,6 +390,9 @@ def test_dry_run_prints_global_breaker_tripped(tmp_path) -> None:
     out = buf_out.getvalue()
     assert "TRIPPED" in out, out
     assert "hard stop" in out, out
+    assert "global_breaker last_hit:" in out, out
+    assert "global_breaker lifts_at:" in out, out
+    assert "(oldest hit + 24h)" in out, out
     print("  ✓ dry-run prints global_breaker TRIPPED and still exits 0")
 
 

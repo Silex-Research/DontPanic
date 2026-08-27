@@ -1163,6 +1163,9 @@ class GlobalBreakerState:
     hits_in_window: int
     threshold: int = GLOBAL_THRESHOLD_HITS
     window_seconds: int = GLOBAL_WINDOW_SECONDS
+    oldest_hit_at: dt.datetime | None = None
+    newest_hit_at: dt.datetime | None = None
+    lifts_at: dt.datetime | None = None
 
 
 def _read_history() -> list[dict]:
@@ -1220,6 +1223,8 @@ def evaluate_global(
     cutoff = _now() - dt.timedelta(seconds=window_seconds)
     counted_values = {k.value for k in counted_kinds}
     hits = 0
+    oldest_hit_at: dt.datetime | None = None
+    newest_hit_at: dt.datetime | None = None
     for entry in _read_history():
         try:
             ts = dt.datetime.fromisoformat(entry["at"].replace("Z", "+00:00"))
@@ -1229,11 +1234,20 @@ def evaluate_global(
             continue
         if entry.get("kind") in counted_values:
             hits += 1
+            oldest_hit_at = ts if oldest_hit_at is None else min(oldest_hit_at, ts)
+            newest_hit_at = ts if newest_hit_at is None else max(newest_hit_at, ts)
     return GlobalBreakerState(
         tripped=hits >= threshold,
         hits_in_window=hits,
         threshold=threshold,
         window_seconds=window_seconds,
+        oldest_hit_at=oldest_hit_at,
+        newest_hit_at=newest_hit_at,
+        lifts_at=(
+            oldest_hit_at + dt.timedelta(seconds=window_seconds)
+            if oldest_hit_at is not None
+            else None
+        ),
     )
 
 

@@ -3205,6 +3205,15 @@ def _dispatch_from_plan_main(argv: list[str]) -> int:
             "[dispatch-from-plan] global_breaker: clear "
             f"({breaker.hits_in_window}/{breaker.threshold})"
         )
+    if breaker.hits_in_window > 0:
+        print(
+            "[dispatch-from-plan] global_breaker last_hit: "
+            f"{cb._iso(breaker.newest_hit_at)}"
+        )
+        print(
+            "[dispatch-from-plan] global_breaker lifts_at: "
+            f"{cb._iso(breaker.lifts_at)} (oldest hit + 24h)"
+        )
 
     from dontpanic_orchestrate import worktrees as _wt
 
