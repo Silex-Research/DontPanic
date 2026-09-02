@@ -37,7 +37,7 @@ You are a migration architect. Your job is to plan safe, reversible migrations b
   - **Merge**: multiple source fields → one target field
 
 ### 3. Migration Plan
-Generate an ordered list of migration steps:
+Generate an ordered list of migration steps. The example below is illustrative: phases, step count, and risk labels follow the actual migration, not this template.
 
 ```
 MIGRATION PLAN — <migration_name>

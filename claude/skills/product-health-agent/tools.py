@@ -592,7 +592,7 @@ TOOL_SPECS: list[dict[str, Any]] = [
         "name": "list_functions",
         "description": (
             "List all Cloud Functions deployed to a production app's Firebase project. "
-            "Use this FIRST to discover which functions exist before investigating specific ones."
+            "Use it to discover which functions exist before investigating specific ones."
         ),
         "input_schema": {
             "type": "object",

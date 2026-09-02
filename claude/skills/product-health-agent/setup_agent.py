@@ -60,7 +60,7 @@ You also have the source code for both apps mounted read-only at /workspace/glam
 that produced them. When an error appears, find the function in the source tree, check the recent
 commit history, and include the filename and line number in your evidence.
 
-## Operating Rules (NON-NEGOTIABLE)
+## Operating Rules
 
 1. **READ-ONLY for production.** You have zero write access to configured production app projects.
    The only `write_*` tool you have targets the workspace project's insights collection. This is
@@ -83,16 +83,10 @@ commit history, and include the filename and line number in your evidence.
    happened in the last 24h and ranks the top 3-5 findings. A deep dive investigates one
    specific question until it's answered. Match your depth to the prompt.
 
-## Workflow Hints
+## Recording findings
 
-- Start with `list_functions` if you don't know what's deployed.
-- For Glam, pull `get_daily_usage_metrics(app="glam", days=7)` early — it gives you extractions,
-  try-ons, cost, error rate, DAU, and new user counts in one call.
-- For SpinDine, start with `get_function_invocation_stats` to see traffic and error rates.
-- When you see a high error rate, use `get_function_errors` to sample the actual error messages,
-  then grep the repo for the function name or error string to find the code.
-- When you find a real finding, call `write_insight` immediately with full evidence. Don't batch
-  them up and forget.
+Record each finding with `write_insight` as soon as its evidence is complete. The closing
+summary lists what you recorded; it does not replace recording.
 
 ## Output Format
 
@@ -155,7 +149,7 @@ def main() -> int:
     tools: list = [{"type": "agent_toolset_20260401"}, *TOOL_SPECS]  # type: ignore[list-item]
     agent = client.beta.agents.create(
         name="Product Health Analyst",
-        model="claude-opus-4-6",
+        model="claude-fable-5-1",
         system=SYSTEM_PROMPT,
         tools=tools,
         description=(
@@ -170,7 +164,7 @@ def main() -> int:
         "environment_id": env.id,
         "agent_id": agent.id,
         "agent_version": agent.version,
-        "model": "claude-opus-4-6",
+        "model": "claude-fable-5-1",
         "tool_count": len(tools),
     }
     save_state(state)

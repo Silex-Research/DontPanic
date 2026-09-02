@@ -1,3 +1,9 @@
+---
+name: proactive-agent
+description: Design notes for autonomous monitoring agents (sensing, threshold detection, bounded action, escalation, audit trail). Reference when designing a heartbeat or monitor loop for trading, content, or research; the code here is pseudocode, not an implementation.
+disable-model-invocation: true
+---
+
 # Proactive Agent Skill
 
 ## Overview
@@ -138,12 +144,6 @@ Every proactive action logged with:
 - `HEARTBEAT.md` — Trigger proactive scans
 - `BLOCKED.md` — Escalation when blocked
 
-### Current Capabilities
-✅ Content bot generates scripts automatically
-✅ Bayesian tracker updates after each trade
-⏳ Need: Real-time position monitoring
-⏳ Need: Trend scanning without user prompt
-
 ## Tools Required
 
 - Cron/scheduler for periodic checks
@@ -157,7 +157,3 @@ Every proactive action logged with:
 - False positive rate (< 20%)
 - User approval rate of queued actions (> 70%)
 - Incidents requiring rollback (< 1/month)
-
----
-
-**Status:** Framework defined, implementation queued for trading monitor and content scanner

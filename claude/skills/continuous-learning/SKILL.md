@@ -65,15 +65,9 @@ reinforcement_count: 1
 <When this applies and when it doesn't>
 ```
 
-## Confidence Scoring
+## Confidence
 
-| Event | Confidence Change |
-|-------|-------------------|
-| Initial extraction | 0.5 |
-| User confirms approach works | +0.2 (max 0.95) |
-| Same pattern seen in another session | +0.1 |
-| User contradicts the instinct | -0.3 |
-| 30 days without reinforcement | -0.1 |
+Start new instincts at 0.5. Raise confidence when the user confirms the approach or the same pattern recurs in another session; lower it when the user contradicts it. Time decay (30 days without reinforcement) and the `--prune` cutoffs are arithmetic over the frontmatter fields: run them in a script rather than recomputing by hand, and until a script exists apply the decay only during `--review` and list the files it changed.
 
 ## Rules
 

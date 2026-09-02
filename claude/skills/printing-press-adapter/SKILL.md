@@ -140,9 +140,8 @@ python -m dontpanic_orchestrate.adapters.<service>_adapter --help
    PP-emitted MCP binary and proxies JSON-RPC tool calls + responses.
 5. **Register the adapter.** Add an entry to `~/.dontpanic/adapters.
    json` pointing at the adapter module + per-service config.
-   `state_snapshot` will surface registered adapters in its
-   `evidence_refs` stream once plan 2026-05-09-003 F002 lands; until
-   then, the entry is inert metadata.
+   If `state_snapshot` does not yet surface registered adapters in its
+   `evidence_refs` stream, the entry is inert metadata until it does.
 6. **Commit a redacted example.** Place a placeholder version of
    `~/.dontpanic/adapters/<service>.json` (token fields replaced with
    `<paste-your-token>`) under the plan's `evidence/` directory.
@@ -176,9 +175,8 @@ the prescribed workflow are:
   one worked example per anti-case.
 - **Adapter skeleton**: see `ADAPTER_TEMPLATE.md` for the Python
   template every DontPanic-side adapter follows.
-- **Boundary**: `docs/STATE_PROJECTION.md` (plan 2026-05-09-003 F006)
-  documents the projection contract this skill enforces; this skill
-  links from there once that plan lands.
+- **Boundary**: `docs/STATE_PROJECTION.md` documents the projection
+  contract this skill enforces.
 - **Roadmap entry**: `docs/ROADMAP.md` Phase C names this skill by
   path as the prescribed pattern for any external-API-wrap surface.
 
@@ -215,6 +213,6 @@ At lock time, `dontpanic plan lock` writes
 
 The operator reads this advisory, opens `DECISION_TREE.md`, confirms
 all four filters pass for the target service, and proceeds with the
-five-step workflow above. If any filter fails, the operator either
+six-step workflow above. If any filter fails, the operator either
 hand-rolls the handlers (Q3 fail) or files a v2 expansion plan (Q4
 fail with mutating endpoints).

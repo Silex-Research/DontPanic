@@ -1,6 +1,6 @@
 ---
 name: browser-use
-description: Browser automation for scraping, form submission, screenshots, and web interaction via CDP or Playwright.
+description: Design notes for browser automation (scraping, form submission, screenshots, web interaction) via Playwright or CDP. Reference when planning such a script; the `browser.*` wrapper shown here is a proposed API, not a library you can import.
 disable-model-invocation: true
 ---
 
@@ -145,15 +145,11 @@ async function scrapeOptionsChain(symbol) {
 }
 ```
 
-## Tools Available
+## Tools
 
-### Option 1: Cloudflare Browser (Current Setup)
-- Location: `/skills/cloudflare-browser/SKILL.md`
-- Requires: `CDP_SECRET` env var
-- Best for: Screenshots, basic scraping within Workers
-- Limitation: Limited runtime (30s request timeout)
+Default: **Playwright** (`npm install playwright && npx playwright install chromium`). Use it for anything beyond a single screenshot.
 
-### Option 2: Playwright (Recommended for complex automation)
+Escape hatch: **Cloudflare Browser** (`/skills/cloudflare-browser/SKILL.md`, needs `CDP_SECRET`) only when the automation must run inside a Worker; its 30s request timeout rules out multi-step flows.
 ```javascript
 const { chromium } = require('playwright');
 
@@ -167,25 +163,12 @@ const text = await page.textContent('.result');
 await browser.close();
 ```
 
-### Option 3: Puppeteer (Alternative)
-```javascript
-const puppeteer = require('puppeteer');
-
-const browser = await puppeteer.launch();
-const page = await browser.newPage();
-// ... similar API
-```
-
 ## Implementation
 
 ### Installation
 ```bash
-# For Playwright
 npm install playwright
 npx playwright install chromium
-
-# For Puppeteer
-npm install puppeteer
 ```
 
 ### Basic Script
@@ -247,4 +230,4 @@ async function proactiveCompetitorCheck() {
 
 ---
 
-**Status:** Skill defined, requires Playwright/Puppeteer installation for activation
+**Status:** Design notes only. The `browser.*` wrapper does not exist; write real code against Playwright's API.

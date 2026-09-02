@@ -1,6 +1,6 @@
 ---
 name: security-review
-description: OWASP-informed security review adapted for Swift/iOS, TypeScript/Cloudflare/Firebase, Python, Ruby, SQL/Supabase. Can be invoked manually or triggered proactively when touching auth/security code.
+description: OWASP-informed security review adapted for Swift/iOS, TypeScript/Cloudflare/Firebase, Python, Ruby, SQL/Supabase. Run before merging changes to files matching *auth*, *security*, *permission*, *rule*, *middleware*, or *guard*; new API endpoints or Cloud Functions; Firestore rules, RLS policies, or CORS config; or new dependencies.
 disable-model-invocation: true
 argument-hint: [--scope <path>] [--focus auth|injection|data|infra|all]
 applies_to:
@@ -123,11 +123,3 @@ LOW / INFO:
 
 SCORE: <N>/10 (10 = no issues found)
 ```
-
-## Proactive Trigger
-
-This skill should be invoked automatically when:
-- Editing files matching: `*auth*`, `*security*`, `*permission*`, `*rule*`, `*middleware*`, `*guard*`
-- Adding new API endpoints or Cloud Functions
-- Modifying Firestore rules, RLS policies, or CORS config
-- Adding new dependencies

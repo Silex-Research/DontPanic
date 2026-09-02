@@ -42,6 +42,7 @@ For each iteration:
   - **Rephrase** — say the same thing differently
   - **Add constraint** — add a guardrail or boundary
   - **Add example** — add a few-shot example
+  - **De-prescribe** — replace step-by-step scripts, ALL-CAPS emphasis, numeric caps, and worked examples with the goal and constraints (current Claude models follow prompts closely; over-prescription lowers output quality)
   - **Remove noise** — delete redundant or confusing instructions
   - **Simplify** — reduce complexity without losing intent
 

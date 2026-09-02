@@ -14,18 +14,12 @@ Monitor AI model usage, costs, and optimize agent budget allocation. Provides vi
 | Problem | Impact | Solution |
 |---------|--------|----------|
 | Blind spend | Budget overrun | Real-time cost visibility |
-| Inefficient routing | Paying GPT-4 for simple tasks | Model router optimized per task |
+| Inefficient routing | Paying flagship rates at maximum effort for simple tasks | Effort tuned per task, then model routing |
 | No accountability | Can't attribute costs to outcomes | Per-agent cost tracking |
 
-## Current Model Costs (as of Feb 2024)
+## Model Costs
 
-| Model | Provider | Input | Output | Use Case |
-|-------|----------|-------|--------|----------|
-| **Kimi K2.5** | OpenRouter | $3/M tokens | $3/M tokens | Most tasks, default |
-| **Claude Sonnet 4.5** | Anthropic | $15/M tokens | $75/M tokens | Complex reasoning, content |
-| **Claude Opus 4.5** | Anthropic | $75/M tokens | $150/M tokens | Deep research only |
-| **GPT-4 Turbo** | OpenAI | $30/M tokens | $60/M tokens | Fallback, legacy |
-| **Grok 3** | xAI | $10/M tokens | $20/M tokens | X/Twitter research |
+Prices change often and nothing re-checks this file. Keep the live numbers in `/tracking/model-pricing.json` (the tracker reads that file) and refresh them from each provider's pricing page whenever a route changes. Anthropic first-party rates as of 2026-06-24, input / output per 1M tokens: Claude Fable 5.1 `claude-fable-5-1` $10 / $50; Claude Opus 5 `claude-opus-5` $5 / $25; Claude Sonnet 5 `claude-sonnet-5` $2 / $10; Claude Haiku 4.5 `claude-haiku-4-5` $1 / $5. Cache reads and Batch requests are billed at lower rates; count them separately. Re-verify non-Anthropic rows (Kimi, GPT, Grok) before use; the previous table listed retired models with prices that were wrong even when written.
 
 ## Budget Allocation (Monthly)
 
@@ -75,13 +69,13 @@ cost_optimization:
       "budget": 120,
       "spent": 0,
       "token_count": 0,
-      "primary_model": "claude-sonnet-4-5"
+      "primary_model": "claude-sonnet-5"
     },
     "investment": {
       "budget": 80,
       "spent": 0,
       "token_count": 0,
-      "primary_model": "claude-opus-4-5"
+      "primary_model": "claude-opus-5"
     }
   },
   "by_day": [
@@ -101,7 +95,7 @@ cost_optimization:
     {
       "task_id": "task-123",
       "agent": "creator",
-      "model": "claude-sonnet-4-5",
+      "model": "claude-sonnet-5",
       "input_tokens": 500,
       "output_tokens": 800,
       "cost": 0.015,  // $0.015
@@ -122,12 +116,9 @@ cost_optimization:
 // Track every API call
 class TokenTracker {
   constructor() {
-    this.PRICING = {
-      'kimi-k2.5': { input: 3, output: 3 },        // $3/M tokens
-      'claude-sonnet-4-5': { input: 15, output: 75 }, // $15/$75 per M
-      'claude-opus-4-5': { input: 75, output: 150 },  // $75/$150 per M
-      'grok-3': { input: 10, output: 20 }
-    };
+    // Per-model $/M tokens, loaded from /tracking/model-pricing.json so a price
+    // change is a data edit, not a code edit (see "Model Costs" above).
+    this.PRICING = JSON.parse(fs.readFileSync('/tracking/model-pricing.json', 'utf8'));
   }
 
   trackCall({ agent, model, task, inputTokens, outputTokens, duration }) {
@@ -212,8 +203,11 @@ class TokenTracker {
 ## Cost Optimization Rules
 
 ### 1. Model Router
+
+Before adding a cross-provider cascade, measure one Claude model at lower `effort` on the same tasks: lower effort on a current model often matches older models at their best, and a cascade forfeits prompt-cache reuse because caches are model-scoped. Judge cost per completed task, not per request.
+
 ```javascript
-// Automatically select cheapest capable model
+// Select the cheapest capable route (effort first, then model)
 function routeToModel(task, agent) {
   const complexity = estimateComplexity(task);
   
@@ -229,12 +223,12 @@ function routeToModel(task, agent) {
   
   if (complexity === 'creative') {
     // Final content polish, brand voice
-    return 'claude-sonnet-4-5';
+    return 'claude-sonnet-5';
   }
   
   if (complexity === 'research') {
     // Deep analysis, investment research
-    return 'claude-opus-4-5';
+    return 'claude-opus-5';
   }
   
   return 'kimi-k2.5';  // Default
@@ -355,13 +349,3 @@ if (monthlySpend > 550) {
 }
 ```
 
----
-
-## Next Steps
-
-1. **Implement tracker** in all agent calls
-2. **Set up daily reports** (Telegram @ 6 PM)
-3. **Create optimization rules** (model router)
-4. **Build dashboard** (web or Telegram)
-
-**Priority: High — budget visibility critical for sustainable operations.**

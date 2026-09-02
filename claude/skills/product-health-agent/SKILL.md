@@ -174,10 +174,12 @@ Written to: `{workspace_project}/tenants/{tenant}/product_insights/{app}/finding
 
 ## Cost Envelope
 
-With Opus 4.6 default and daily digests for two apps, expect ~60 sessions/month.
-Each session typically uses 15-40 tool calls. At $5/$25 per 1M tokens, daily digests
-should land around **$0.30–$1.00 per session**, so ~$20–60/month total. Ad-hoc deep
-dives add on top but are human-triggered and proportional to usage.
+With Claude Fable 5.1 (`claude-fable-5-1`, $10/$50 per 1M tokens) and daily digests for
+two apps, expect ~60 sessions/month of 15-40 tool calls each. Re-baseline the per-session
+cost after the first week of runs; the earlier $0.30–$1.00 per session figure was measured
+on Opus 4.6 at $5/$25. Ad-hoc deep dives add on top and are human-triggered. Fable 5.1
+requires 30-day data retention on the org, and a session can end with
+`stop_reason: refusal`; the orchestrator should log that as its own outcome, not as idle.
 
 ## Files
 

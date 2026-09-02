@@ -15,38 +15,7 @@ A Python CLI for fetching comprehensive stock data from Yahoo Finance using yfin
 
 ## Installing uv
 
-The script requires `uv` - an extremely fast Python package manager. Check if it's installed:
-
-```bash
-uv --version
-```
-
-If not installed, install it using one of these methods:
-
-### macOS / Linux
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
-
-### macOS (Homebrew)
-```bash
-brew install uv
-```
-
-### Windows
-```powershell
-powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-```
-
-### pip (any platform)
-```bash
-pip install uv
-```
-
-After installation, restart your terminal or run:
-```bash
-source ~/.bashrc  # or ~/.zshrc on macOS
-```
+`uv --version` should print a version. If it does not, install uv from https://docs.astral.sh/uv/ (Homebrew: `brew install uv`) and restart the shell.
 
 ## Installation
 
@@ -173,7 +142,7 @@ yf ratings AAPL
 ## Troubleshooting
 
 ### "command not found: uv"
-Install uv using the instructions above.
+Install uv (see Requirements) and restart the shell.
 
 ### Rate limiting / connection errors
 Yahoo Finance may rate limit excessive requests. Wait a few minutes and try again.

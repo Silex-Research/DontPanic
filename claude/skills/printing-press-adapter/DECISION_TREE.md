@@ -98,6 +98,6 @@ around v0.
 | Q3 — ≥ 5 endpoints? | continue | skip — just write the handlers |
 | Q4 — Read-only (no mutation)? | **PROCEED** | skip — file v2 expansion plan |
 
-A YES on all four lands the operator at the five-step workflow in
+A YES on all four lands the operator at the six-step workflow in
 `SKILL.md` § Steps, with `ADAPTER_TEMPLATE.md` as the wrapper
 skeleton.

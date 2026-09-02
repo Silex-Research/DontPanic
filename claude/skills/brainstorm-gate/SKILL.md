@@ -32,11 +32,11 @@ Before proposing solutions, confirm you understand:
 - **Why** they want it (the motivation shapes the solution)
 - **Constraints** (performance, compatibility, timeline, existing patterns)
 
-Ask at most 2-3 focused questions. Don't interrogate.
+Ask only the questions whose answers would change the design.
 
 ### 2. Propose Options
 
-Present 2-3 approaches, each with:
+Present each viable approach with:
 - **One-line summary** of the approach
 - **Pros**: why you'd choose this
 - **Cons**: what you'd give up
@@ -49,14 +49,7 @@ Lead with your recommendation and say why.
 Do NOT proceed to implementation until the user explicitly picks an approach
 or says "go ahead." Silence or ambiguity means "wait."
 
-Valid approval signals:
-- "Option 2" / "Go with B" / "The second one"
-- "Sounds good" / "Do it" / "Go ahead"
-- "Your call" (use your recommendation)
-
-NOT approval:
-- "Interesting" / "Hmm" / "What about..." (they're still thinking)
-- No response (they may be away)
+"Your call" means use your recommendation.
 
 ### 4. Record the Decision
 
@@ -67,7 +60,7 @@ This is the contract. If the implementation drifts from this, stop and re-check.
 
 ## Anti-Patterns
 
-- Presenting 5+ options (analysis paralysis — pick the best 2-3)
+- Presenting every conceivable option instead of the viable ones
 - Writing code "just to explore" before approval
 - Asking questions you could answer by reading the codebase
 - Brainstorming trivial decisions (don't ask whether to use `const` vs `let`)

@@ -1,6 +1,6 @@
 ---
 name: agent-browser
-description: Specialized browser automation for agent workflows with structured data extraction, multi-step workflows, error recovery, and state persistence.
+description: Design proposal for agent-oriented browser automation (structured extraction, multi-step workflows, error recovery, persistent sessions). Reference when designing such a pipeline; the `agentBrowser.*` API shown here is not implemented and cannot be imported.
 disable-model-invocation: true
 applies_to:
   surfaces: [web, ux]
@@ -132,7 +132,6 @@ const influencerLeadGen = {
         return {
           username: await profile.text('h1'),
           followers: await profile.text('[role="button"] span'),
-          email: await profile.text('.bio'), // Extract if present
           engagement: calculateEngagement(profile)
         };
       }
@@ -293,4 +292,4 @@ Agent Browser
 
 ---
 
-**Status:** Skill defined, requires Playwright + workflow engine implementation
+**Status:** Design proposal. `agentBrowser.*`, `indexToQMD`, and `saveToQMD` do not exist yet; write real automation against Playwright's API and treat the snippets above as the shape to aim for.

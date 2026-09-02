@@ -12,31 +12,9 @@ Write React components, get real MP4 videos. This skill teaches your AI agent ho
 
 ---
 
-## What you can build with this
+## What this is for
 
-**Personalized video at scale**
-Feed user data as JSON props, render a unique video per user. Think Spotify Wrapped, GitHub Unwrapped, onboarding walkthroughs — one template, thousands of outputs.
-
-**Automated social media clips**
-Pull live data (stats, leaderboards, product metrics) and render daily or weekly video posts without anyone touching a timeline editor.
-
-**Dynamic ads and marketing videos**
-Swap in customer name, product image, pricing. Same template, infinite variations. Render server-side via API or Lambda.
-
-**Animated data visualizations**
-Turn dashboards and KPI reports into shareable video clips with animated charts and transitions.
-
-**TikTok and Reels captions**
-Transcribe audio, display word-by-word highlighted subtitles, export ready for upload.
-
-**Product showcase videos**
-Auto-generate from your database — images, specs, pricing — straight to MP4.
-
-**Educational and explainer content**
-Animated course materials, certificate videos, step-by-step walkthroughs — all driven by code.
-
-**Video generation as a service**
-Expose rendering as an HTTP endpoint. Your app sends JSON, gets back a video file.
+Data-driven video: one React template rendered per user, per data row, or per schedule (personalized clips, social posts, dynamic ads, animated charts, captioned shorts, explainer content, render-as-a-service).
 
 ---
 
@@ -139,12 +117,4 @@ npx remotion render src/index.ts MyComposition out/video.mp4
 npx remotion render src/index.ts MyComposition out.mp4 --props '{"title": "Hello"}'
 ```
 
----
-
-## Contribute
-
-**Source:** [github.com/shreefentsar/remotion-video-toolkit](https://github.com/shreefentsar/remotion-video-toolkit)
-
-Missing something? Found a better approach? Open a PR — new rules, improved examples, bug fixes all welcome.
-
-Built by [Zone 99](https://99.zone)
+Upstream: https://github.com/shreefentsar/remotion-video-toolkit

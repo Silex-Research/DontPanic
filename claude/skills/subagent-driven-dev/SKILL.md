@@ -36,16 +36,16 @@ For each independent task, launch a subagent with:
 
 Launch independent subagents in parallel (multiple Agent tool calls in one message).
 
-### 3. Model Selection
+### 3. Effort and Model Selection
 
-Match model to task complexity:
-- **Mechanical** (rename, move, update imports, config changes): `haiku`
-- **Straightforward** (add endpoint, write tests, implement known pattern): `sonnet`
-- **Complex** (architecture decisions, security-sensitive, novel algorithms): `opus`
+Match effort to task complexity before reaching for a different model. On current Claude models, low effort on the flagship usually beats a smaller model on cost per completed task, and a mixed-model roster forfeits prompt-cache reuse (caches are model-scoped):
+- **Mechanical** (rename, move, update imports, config changes): `low` effort (or the harness's `haiku` alias)
+- **Straightforward** (add endpoint, write tests, implement known pattern): `medium` effort (or `sonnet`)
+- **Complex** (architecture decisions, security-sensitive, novel algorithms): `high` or `xhigh` effort on the flagship (`opus` / `fable`)
 
 ### 4. Two-Stage Review
 
-After all subagents complete:
+Do not block on the slowest subagent: review each result as it arrives and keep preparing integration while the others run. Once every result is in:
 
 **Stage 1 — Spec Compliance** (can use a reviewer subagent):
 - Does each result satisfy the original task description?
@@ -70,22 +70,22 @@ After all subagents complete:
 - Giving subagents vague instructions ("improve the auth system")
 - Dispatching dependent tasks in parallel (task B needs task A's output)
 - Skipping the review stage because "it compiled"
-- Using opus for mechanical tasks (wasteful) or haiku for architecture (risky)
+- Running mechanical tasks at high effort (wasteful) or architecture at low effort (risky)
 
 ## Example Dispatch
 
 ```
 Task: Implement user preferences API
 
-Subagent 1 (sonnet): "Create UserPreferences type in packages/shared/types.ts
+Subagent 1 (medium effort): "Create UserPreferences type in packages/shared/types.ts
   with fields: theme (light|dark), locale (string), notifications (boolean).
   Export it from the package index. Write unit tests."
 
-Subagent 2 (sonnet): "Add GET/PUT /api/preferences endpoints in
+Subagent 2 (medium effort): "Add GET/PUT /api/preferences endpoints in
   packages/functions/src/preferencesApi.ts. Use Firestore collection
   'user_preferences' keyed by userId. Validate input with Zod.
   Write integration tests using the Firebase emulator."
 
-Subagent 3 (haiku): "Add 'preferences' to the nav menu in
+Subagent 3 (low effort): "Add 'preferences' to the nav menu in
   packages/dashboard/src/components/Sidebar.tsx, linking to /preferences."
 ```

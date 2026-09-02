@@ -1,3 +1,9 @@
+---
+name: self-improving-agent
+description: Design notes for a measure, analyze, propose, approve, implement, validate improvement loop for trading, content, and code agents. Reference when designing performance tracking or an experiment-and-approval workflow; the code here is pseudocode, not an implementation.
+disable-model-invocation: true
+---
+
 # Self-Improving Agent Skill
 
 ## Overview
@@ -168,8 +174,6 @@ function proposeAdoption(hypothesis, results) {
 
 ### Trading Strategy Self-Improvement
 
-**Current State:** RSI < 30 + near SMA entry
-
 **Self-Improvement Loop:**
 1. Track every trade with full context (RSI, SMA distance, VIX, time, symbol)
 2. Weekly analysis: Which parameters had highest expectancy?
@@ -179,8 +183,6 @@ function proposeAdoption(hypothesis, results) {
 
 ### Content Performance Self-Improvement
 
-**Current State:** Script templates with trending hooks
-
 **Self-Improvement Loop:**
 1. Track: Hook type, format, audio, CTA, post time
 2. Analyze: Which combinations had highest engagement?
@@ -189,8 +191,6 @@ function proposeAdoption(hypothesis, results) {
 5. If engagement +20% → Request approval to update templates
 
 ### Code Quality Self-Improvement
-
-**Current State:** Fixed implementations
 
 **Self-Improvement Loop:**
 1. Track: Bugs, latency, complexity, user feedback
@@ -229,7 +229,3 @@ Every change:
 - Time to improvement: Days from observation to validated change
 - False positive rate: Changes that didn't help or hurt
 - User adoption rate: % of proposals user approves
-
----
-
-**Status:** Framework defined, awaiting trade/content data for first improvement cycle
