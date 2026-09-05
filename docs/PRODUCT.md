@@ -19,7 +19,14 @@ DontPanic does not immediately let an agent start coding.
 You or your planning agent investigates the request and authors the plan.
 The plan names the outcome, acceptance criteria, scope, environment, required
 proof, and execution limits. DontPanic validates and locks that contract;
-it does not provide a natural-language intake or plan-drafting service.
+it does not provide a general natural-language brief-to-plan service.
+
+There are narrower planning capabilities: `dontpanic config inventory
+--setup-plan --format json` emits a setup/update plan skeleton from incomplete
+configuration. The internal design-review loop can also revise an existing
+feature decomposition when supplied a planner executor; the current `plan lock`
+CLI invokes it with an auditor only. Neither is a general research-and-drafting
+entry point for a new product request.
 
 Only after the human approves the plan does DontPanic dispatch agents.
 
