@@ -1,6 +1,6 @@
 # Contributing to DontPanic
 
-DontPanic is in private alpha. Issue reports, plan critiques, documentation
+DontPanic is in public alpha. Issue reports, plan critiques, documentation
 fixes, and small focused PRs are welcome. Larger changes should start as a plan
 under `docs/plans/`.
 
@@ -11,6 +11,8 @@ under `docs/plans/`.
    ```bash
    git clone https://github.com/Silex-Research/DontPanic.git
    cd DontPanic
+   python3 -m venv .venv
+   source .venv/bin/activate
    python3 -m pip install -e ".[dev]"
    ```
 
@@ -95,7 +97,8 @@ dontpanic resume <plan-id> --all
 ```
 
 Bare `resume <plan-id>` exits 2. Gate clearance does not auto-dispatch; rerun
-`dontpanic dispatch-from-plan <plan-id> --confirm` after review.
+`dontpanic dispatch-from-plan <plan-id> --feature F001 --confirm` after review,
+substituting the intended feature ID.
 
 ## Plan-Driven Changes
 
