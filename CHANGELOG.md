@@ -60,6 +60,24 @@ behavioral surface change with the date, a short summary, and a
 Surfaces affected: <comma-separated list — see docs/RELEASE_IMPACT.md>
 ```
 
+## 2026-09-05 — Optional hands-free administration and a shorter README
+
+### Changed
+
+- The README explains direct operation and autonomous administration of an
+  authorized plan through an optional operator agent. Grok Bot is an example,
+  not a dependency; configured human decisions remain explicit.
+- Added an attributed ML experimentation case study, clarified local
+  orchestration versus provider data flow, and made feature selection and
+  gate-clearance versus re-dispatch semantics explicit in the walkthrough.
+- Moved the four MCP client recipes into the agent quickstart, added the
+  operator continuation workflow, and aligned product and installation docs.
+- Corrected the package license classifier to match the Apache-2.0 license.
+- Replaced the README overview and repository social-preview asset with the
+  updated supervised-delivery graphic, including its optional operator workflow.
+
+Surfaces affected: readme, onboarding, public_metadata, root_changelog
+
 ## 2026-08-15 — Approve command names the pending gate (plan 2026-08-10-001)
 
 ### Fixed

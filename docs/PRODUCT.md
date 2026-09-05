@@ -2,10 +2,11 @@
 
 > The safety layer between “the agent says it’s done” and “you merge it.”
 
-DontPanic turns messy software requests into reviewed, tested, commit-ready
-patches.
+DontPanic turns well-developed software plans into reviewed, tested,
+commit-ready patches. Operate it directly or delegate administration to an
+optional operator agent that keeps an authorized plan moving autonomously.
 
-You give DontPanic a goal:
+You start with a goal:
 
 - "Build this feature."
 - "Catch Android up to the iOS app."
@@ -15,12 +16,26 @@ You give DontPanic a goal:
 
 DontPanic does not immediately let an agent start coding.
 
-First, it figures out whether the request is clear enough. If it is not,
-DontPanic uses its own research and discovery skills to inspect the repo,
-docs, environment, tests, architecture, prior plans, logs, and product
-context. Then it comes back with a proposed plan or follow-up questions.
+You or your planning agent investigates the request and authors the plan.
+The plan names the outcome, acceptance criteria, scope, environment, required
+proof, and execution limits. DontPanic validates and locks that contract;
+it does not provide a general natural-language brief-to-plan service.
+
+There are narrower planning capabilities: `dontpanic config inventory
+--setup-plan --format json` emits a setup/update plan skeleton from incomplete
+configuration. The internal design-review loop can also revise an existing
+feature decomposition when supplied a planner executor; the current `plan lock`
+CLI invokes it with an auditor only. Neither is a general research-and-drafting
+entry point for a new product request.
 
 Only after the human approves the plan does DontPanic dispatch agents.
+
+That approval can authorize continued implementation, correction, review, and
+verification across the plan. An operator such as Grok Bot can manage those
+steps without routine human intervention, returning for reserved decisions or
+blockers it cannot resolve within the authorization. Grok Bot is optional;
+other CLI/MCP callers can serve the same role. See
+[autonomous operation](./AGENT_QUICKSTART.md#autonomous-operation).
 
 One agent implements. Another (different vendor) audits. DontPanic tracks
 findings, evidence, tests, gates, decisions, and signoff.
@@ -40,7 +55,7 @@ The ten-word positioning:
 ## What DontPanic Is
 
 DontPanic is **the verified software-delivery layer** — the tool that
-turns software requests into reviewed, tested, commit-ready patches by
+turns approved plans into reviewed, tested, commit-ready patches by
 running plan-locked, cross-vendor adversarial agent volleys with human
 gates and evidence trails.
 
@@ -71,8 +86,9 @@ It can manage:
 - feature development
 - root-cause investigations
 
-Install DontPanic once. Register projects. Give it work. It plans, verifies,
-dispatches, audits, and packages evidence.
+Install DontPanic once. Register projects. Author and authorize the plan.
+DontPanic dispatches, verifies, audits, and packages evidence. Operate the
+workflow yourself or delegate its administration to an operator agent.
 
 ---
 
@@ -148,7 +164,7 @@ No implementation starts until the human approves the plan.
 
 **DontPanic flow:**
 
-> Request → research if needed → plan → human approval → implementer →
+> You or your agent researches and plans → human authorization → implementer →
 > auditor → tests → evidence → signoff → commit-ready patch.
 
 That is the difference.
@@ -163,8 +179,9 @@ but need structure.
 **Plan-first.** Agents do not start with vibes. Work is locked into a
 plan with acceptance criteria.
 
-**Research-aware.** If the request is vague, DontPanic can inspect the
-project and propose what needs to be known before coding.
+**Operator-driven.** Your planning agent can investigate an unclear request
+before writing the contract. Once authorized, an operator can manage the plan
+through implementation, review, correction, and verification.
 
 **Multi-agent verification.** One model does not grade itself. An
 implementer and auditor work against the same contract.
@@ -214,8 +231,8 @@ It should ask:
 - Is this new functionality or parity with another app?
 - Is there production data involved?
 
-If enough context exists in the repo, DontPanic can research and draft the
-plan. If not, it asks the human.
+The human or planning agent researches and drafts the plan. If information is
+missing, the caller resolves it before `dontpanic plan lock`.
 
 That is the product discipline.
 
@@ -265,7 +282,8 @@ If it lacks these, `dontpanic plan lock` refuses. There is no intake loop that r
 - priority flows
 - QA evidence
 
-If not sufficient, DontPanic should not code. It should produce:
+If the plan is insufficient, DontPanic refuses the lock. You or the planning
+agent can resolve the missing information with:
 
 - clarification questions, or
 - a research plan, or
@@ -275,13 +293,13 @@ If not sufficient, DontPanic should not code. It should produce:
 
 ## Revised Product Summary
 
-DontPanic is a global local tool for turning software requests into
-verified work.
+DontPanic coordinates implementation, independent review, and evidence for
+approved software plans across multiple projects.
 
-It can manage many projects. It can research unclear problems. It can
-draft plans. It can dispatch agents. It can audit their work. It can
-pause for human decisions. It can produce evidence and commit-ready
-patches.
+You or an operator agent supplies the plan and manages progress. DontPanic
+dispatches workers, audits their work, collects evidence, and pauses at
+configured gates. Production reliability depends on the acceptance criteria,
+independent review, actual proof, and release decisions in that workflow.
 
 It does not replace developers.
 

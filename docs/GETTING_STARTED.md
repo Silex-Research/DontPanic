@@ -1,6 +1,6 @@
 # Getting Started With DontPanic
 
-This guide is for private-alpha users installing from source. It assumes you
+This guide is for public-alpha users installing from source. It assumes you
 are comfortable with a terminal and local agent CLIs, but it does not assume a
 Firebase project or any cloud account for the first smoke test.
 
@@ -60,6 +60,13 @@ notifications** — the direct Discord webhook in the second track is zero-confi
 relative to standing up another runtime. Add a broker only when you want
 bidirectional commands from a chat or hosted-agent surface.
 
+For hands-free administration, an optional operator agent can also monitor and
+advance an authorized plan through implementation, review, and verification.
+Grok Bot is one example; any suitable CLI/MCP caller can fill this role. This
+can use a terminal directly and does not require a chat broker. See
+[autonomous operation](./AGENT_QUICKSTART.md#autonomous-operation) for the
+plan prerequisites, authorization boundaries, and continuation loop.
+
 **Picking 3a vs 3b vs 3c:** the axis is *interactive vs. notify-while-away*.
 If you're at the keyboard, your IDE/CLI agent (3c) reads DontPanic via MCP
 during the active session — no notification broker needed. If you want
@@ -72,6 +79,8 @@ hosted-agent dashboards/email. Same architectural pattern, different host.
 ```bash
 git clone https://github.com/Silex-Research/DontPanic.git
 cd DontPanic
+python3 -m venv .venv
+source .venv/bin/activate
 python3 -m pip install -e ".[dev]"
 dontpanic --version
 dontpanic --help
@@ -80,6 +89,10 @@ dontpanic --help
 Required for the first smoke test: Python 3.10+, git, and a POSIX shell.
 Claude, Codex, Firebase, Playwright, Xcode, Android, and backend providers are
 only needed when you enable plans that use them.
+
+Activate the virtual environment again in a new shell. An operator running
+outside the DontPanic checkout needs the installed executable on PATH or its
+absolute path.
 
 ## Configure Roles
 

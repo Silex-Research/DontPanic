@@ -8,6 +8,7 @@ from dontpanic_orchestrate.agent_manifest import SAFETY_RULE_NO_AUTO_DISPATCH
 
 ROOT = Path(__file__).resolve().parents[3]
 README = ROOT / "README.md"
+AGENT_QUICKSTART = ROOT / "docs" / "AGENT_QUICKSTART.md"
 ECOSYSTEM = ROOT / "docs" / "ECOSYSTEM.md"
 DISCOVERABILITY = ROOT / "docs" / "DISCOVERABILITY.md"
 ROADMAP = ROOT / "docs" / "ROADMAP.md"
@@ -28,19 +29,20 @@ def _json_blocks(path: Path) -> list[dict]:
 
 
 def test_safety_rule_present_in_all_agent_facing_docs() -> None:
-    for path in [README, ECOSYSTEM, DISCOVERABILITY]:
+    for path in [README, AGENT_QUICKSTART, ECOSYSTEM, DISCOVERABILITY]:
         assert SAFETY_RULE_NO_AUTO_DISPATCH in _read(path), path
 
 
-def test_readme_has_four_caller_examples() -> None:
-    text = _read(README)
+def test_readme_links_to_guide_with_four_caller_examples() -> None:
+    assert "](./docs/AGENT_QUICKSTART.md)" in _read(README)
+    text = _read(AGENT_QUICKSTART)
     for heading in ["Claude Code", "Cursor", "OpenClaw", "Codex CLI"]:
         assert f"### {heading}" in text
     assert text.count("dontpanic.validate_plan") >= 4
 
 
 def test_mcp_json_snippets_parse_and_use_canonical_command() -> None:
-    blocks = _json_blocks(README) + _json_blocks(DISCOVERABILITY)
+    blocks = _json_blocks(AGENT_QUICKSTART) + _json_blocks(DISCOVERABILITY)
     assert len(blocks) >= 5
     for block in blocks:
         server = block["mcpServers"]["dontpanic"]
