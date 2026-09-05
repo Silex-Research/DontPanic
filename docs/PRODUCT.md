@@ -224,8 +224,8 @@ It should ask:
 - Is this new functionality or parity with another app?
 - Is there production data involved?
 
-If enough context exists in the repo, DontPanic can research and draft the
-plan. If not, it asks the human.
+The human or planning agent researches and drafts the plan. If information is
+missing, the caller resolves it before `dontpanic plan lock`.
 
 That is the product discipline.
 

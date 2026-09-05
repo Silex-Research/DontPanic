@@ -2,6 +2,8 @@
 
 > Autonomous implementation. Independent review. Evidence before signoff.
 
+**Never let the same AI that wrote the code be the only AI that approves it.**
+
 DontPanic turns well-developed plans into reviewed, tested software by coordinating
 AI coding agents. One worker implements, a different vendor's worker audits,
 and the supervisor carries findings through correction and review. Plans,
