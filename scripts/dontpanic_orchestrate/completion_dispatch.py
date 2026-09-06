@@ -50,7 +50,7 @@ import socket
 from collections.abc import Callable, Iterable
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -608,15 +608,190 @@ def _audit_dir(plan_dir: Path) -> Path:
     return plan_dir / POST_IMPL_DIR / _AUDIT_DIR_NAME
 
 
+# ── capture-time redaction (Plan 2026-06-12-001 F001; PR56 r3422558956) ────────
+#
+# Secret-NAMED keys: a JSON field with one of these names is redacted by key,
+# whatever its value looks like (``"password": "synthetic-value"`` is not a
+# credential SHAPE, but it is a credential FIELD).
+_SECRET_KEY_NAMES = (
+    r"(?:password|passwd|pwd|secret|token|api[_-]?key|apikey|authorization|"  # noqa: S105
+    r"access[_-]?key|client[_-]?secret|private[_-]?key|credentials?|session[_-]?id)"
+)
+_SECRET_KEY_RE = re.compile(rf"^{_SECRET_KEY_NAMES}$", re.IGNORECASE)
+# The same rule applied TEXTUALLY, for JSON that lives inside a string (a
+# Codex stream's ``item.text`` carries the verdict JSON as one string value).
+# Keeps ``"key": `` and replaces the whole scalar value.
+_JSON_SECRET_KV_RE = re.compile(
+    # Group 2 = optional backslash, i.e. the quoting level: plain JSON, or JSON
+    # carried INSIDE a JSON string where quotes arrive as \" (a Codex stream's
+    # item.text). Reused via \2 and in the replacement so the surrounding
+    # document stays valid at either level.
+    rf'((\\?)"{_SECRET_KEY_NAMES}\2"\s*:\s*)'
+    r'(?:\2"(?:[^"\\]|\\[^"])*\2"|-?\d[\d.eE+-]*|true|false|null)',
+    re.IGNORECASE,
+)
+# JSON-SAFE header pattern. The shared capabilities pattern is
+# ``(Authorization\s*:\s*)[^\r\n]+`` — greedy to end-of-line, which inside a
+# JSON string swallows the closing quote, bracket and brace and turned a valid
+# auditor verdict into ``dispatch_response_malformed`` (review finding). This
+# variant stops at quotes and backslashes so it can never cross a JSON string
+# boundary; the shared list is reused minus that one greedy pattern.
+_GREEDY_HEADER_PATTERN = r"(Authorization\s*:\s*)[^\r\n]+"
+_BOUNDED_HEADER_RE = re.compile(r"(Authorization\s*:\s*)[^\r\n\"'\\]+", re.IGNORECASE)
+
+
+def _safe_text_patterns() -> tuple[re.Pattern[str], ...]:
+    from dontpanic_orchestrate.capabilities_setup_evidence import _SECRET_PATTERNS
+
+    return (
+        _BOUNDED_HEADER_RE,
+        *(p for p in _SECRET_PATTERNS if p.pattern != _GREEDY_HEADER_PATTERN),
+    )
+
+
+_JSON_DECODER = json.JSONDecoder()
+
+
+def _redact_embedded_json_spans(text: str) -> str:
+    """Find every JSON object/array embedded in ``text`` (prose may surround
+    it), redact each structurally, and splice the compact re-serialization
+    back. Structural handling is what defeats escaped quotes and secret-named
+    containers that a key/value regex cannot see (review finding)."""
+    out: list[str] = []
+    i = 0
+    n = len(text)
+    while i < n:
+        ch = text[i]
+        if ch not in "[{":
+            out.append(ch)
+            i += 1
+            continue
+        try:
+            parsed, end = _JSON_DECODER.raw_decode(text, i)
+        except (json.JSONDecodeError, RecursionError):
+            out.append(ch)
+            i += 1
+            continue
+        if not isinstance(parsed, (dict, list)):
+            out.append(ch)
+            i += 1
+            continue
+        redacted = _redact_value(parsed)
+        out.append(text[i:end] if redacted == parsed else json.dumps(redacted, ensure_ascii=False))
+        i = end
+    return "".join(out)
+
+
+def _redact_text(text: str) -> str:
+    """Embedded JSON structurally, then credential shapes + secret-named
+    ``"key": value`` pairs textually. Every textual pattern is JSON-safe (none
+    consumes a quote), so a document stays parseable."""
+    from dontpanic_orchestrate.capabilities_setup_evidence import _redaction_marker
+
+    text = _redact_embedded_json_spans(text)
+    out = _JSON_SECRET_KV_RE.sub(
+        lambda m: f'{m.group(1)}{m.group(2)}"[redacted-secret]{m.group(2)}"', text
+    )
+    for pattern in _safe_text_patterns():
+        out = pattern.sub(_redaction_marker, out)
+    return out
+
+
+def _redact_value(value: Any, key: str | None = None) -> Any:
+    """Structure-aware redaction over a parsed JSON value.
+
+    Order matters (review finding): a secret-NAMED key is redacted as a whole
+    BEFORE descending, so ``{"credentials": {"value": …}}`` and
+    ``{"token": [ … ]}`` collapse to the marker instead of leaking through a
+    container. A string that itself parses as a JSON object/array (the Codex
+    ``item.text`` shape) is redacted structurally and re-serialized compactly,
+    so escaped quotes inside embedded JSON cannot evade the textual pattern.
+    """
+    if key is not None and _SECRET_KEY_RE.match(key) and value is not None:
+        return "[redacted-secret]"
+    if isinstance(value, dict):
+        return {k: _redact_value(v, k) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_redact_value(v) for v in value]
+    if isinstance(value, str):
+        return _redact_text(value)
+    return value
+
+
+def _redact_json_document(text: str) -> str | None:
+    """Redact ``text`` as one JSON document. Returns the original text when
+    nothing changed (byte-for-byte, so clean captures keep their formatting and
+    the sanitizer stays idempotent), a re-serialized document when something was
+    redacted, or ``None`` when ``text`` is not a JSON document."""
+    try:
+        parsed = json.loads(text)
+    except (json.JSONDecodeError, RecursionError):
+        return None
+    redacted = _redact_value(parsed)
+    if redacted == parsed:
+        return text
+    return json.dumps(redacted, ensure_ascii=False, indent=2)
+
+
+def _redact_structured(text: str) -> str:
+    """Redact with awareness of the three shapes the audit parser accepts:
+    a bare JSON document, a fenced one, or a Codex JSONL stream.
+    Anything else is treated as prose under the JSON-safe text patterns."""
+    whole = _redact_json_document(text)
+    if whole is not None:
+        return whole
+    stripped = text.strip()
+    if stripped.startswith("```"):
+        inner = _strip_code_fence(text)
+        redacted_inner = _redact_json_document(inner)
+        if redacted_inner is not None and inner in text:
+            return text.replace(inner, redacted_inner, 1)
+    lines = text.splitlines(keepends=True)
+    if len(lines) > 1 and all(
+        (not ln.strip()) or _redact_json_document(ln.strip()) is not None for ln in lines
+    ):
+        out: list[str] = []
+        for ln in lines:
+            core = ln.strip()
+            if not core:
+                out.append(ln)
+                continue
+            red = _redact_json_document(core)
+            if red is None or red == core:
+                out.append(ln)
+            else:
+                # One JSON value per line: keep the stream line-delimited.
+                out.append(ln.replace(core, json.dumps(json.loads(red), ensure_ascii=False), 1))
+        return "".join(out)
+    return _redact_text(text)
+
+
 def sanitize_capture(text: str) -> str:
     """Plan 2026-06-12-001 F001 — capture-time sanitizer for audit evidence.
 
-    Pure + idempotent: the operator's home directory becomes ``<home>``,
-    ``user@host`` becomes ``<operator>@<host>``, and remaining bare
-    username tokens become ``<operator>``. Applied by the evidence writer
-    BEFORE the first byte is persisted (committed envelopes are immutable,
-    so the writer is the only correct fix point). Exported so the pre-impl
-    sufficiency writer can adopt the same sanitizer."""
+    Pure + idempotent. Two layers, applied by the evidence writer BEFORE the
+    first byte is persisted (committed envelopes are immutable, so the
+    writer is the only correct fix point):
+
+    1. Operator identity: the home directory becomes ``<home>``,
+       ``user@host`` becomes ``<operator>@<host>``, remaining bare username
+       tokens become ``<operator>``.
+    2. Credentials, structure-aware (PR56 r3422558956 / PR49 r3408996302):
+       when the capture is JSON — bare, fenced, or a Codex JSONL stream —
+       it is parsed, secret-NAMED fields (``password``, ``token``,
+       ``api_key``, ``authorization``, …) are redacted by key, credential
+       SHAPES (bearer headers, prefixed API keys, ``token=`` pairs, JWTs,
+       cloud key ids) are redacted inside string values, and the document
+       is re-serialized, so the parser downstream still sees a valid
+       verdict. Prose gets the same shapes through JSON-safe patterns (none
+       consumes a quote). The key half of ``key=value`` is kept so the
+       operator sees what was elided. Clean input is returned unchanged.
+
+    Residual limitation (deliberate): sensitive PROSE that matches no
+    credential shape or secret key name, and the full local-context
+    transcript itself, are still persisted — the audit trail needs the
+    verdict text. Absolute paths are NOT treated as secrets. Exported so the
+    pre-impl sufficiency writer uses the same sanitizer."""
     home = str(Path.home())
     try:
         user = getpass.getuser()
@@ -627,7 +802,7 @@ def sanitize_capture(text: str) -> str:
     if user:
         out = out.replace(f"{user}@{host}", "<operator>@<host>")
         out = out.replace(user, "<operator>")
-    return out
+    return _redact_structured(out)
 
 
 _ENVELOPE_FILE_RE = re.compile(r"^audit-(.+)-(\d+)\.json$")

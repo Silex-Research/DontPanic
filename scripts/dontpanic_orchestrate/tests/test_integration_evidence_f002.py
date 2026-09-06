@@ -103,12 +103,15 @@ class TestEvidenceWriter:
                 source="smoke", outcome="maybe",
             )
 
-    def test_path_traversal_in_integration_id_is_neutralized(self, evidence_dir):
-        path = itg.write_integration_evidence(
-            evidence_dir, "../escape", "x", source="smoke", outcome="passed",
-        )
-        # the written file stays inside evidence_dir
-        assert evidence_dir.resolve() in path.resolve().parents
+    def test_path_traversal_in_integration_id_is_refused_not_neutralized(self, evidence_dir):
+        # PR49 r3408996308: the writer no longer maps a traversal/alias id onto
+        # a canonical filename — it refuses before any write, so nothing lands
+        # inside OR outside evidence_dir.
+        with pytest.raises(ValueError, match="not a catalog integration"):
+            itg.write_integration_evidence(
+                evidence_dir, "../escape", "x", source="smoke", outcome="passed",
+            )
+        assert list(evidence_dir.rglob("*.jsonl")) == []
 
 
 class TestRenderProofSmoke:

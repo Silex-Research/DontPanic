@@ -506,16 +506,30 @@ _VOCABULARY: Final[Mapping[str, SubcommandSpec]] = {
         bool_flags=frozenset({"--json"}),
         value_flags=frozenset({"--mode", "--scenario", "--trials"}),
     ),
-    # Plan 2026-06-04-003 — operator integration actions. Only `integrations
-    # smoke <integration>` is ever a VALIDATED exact_command (verb + integration
-    # = 2 positionals, no flags); the `attest` verb rides the display-only
-    # operator_command field per the honest-commands rule and is NEVER validated
-    # here, so its flags are intentionally NOT accepted as exact_command tokens
-    # (CodeRabbit #4 — mirror the real validated runtime surface, not the whole
-    # CLI shape).
+    # Plan 2026-06-04-003 — operator integration actions, per
+    # integrations_cli.py:integrations_main. The surface is subcommanded:
+    #   integrations smoke <integration> [--plans-root <path>]
+    #   integrations attest <integration> --action <id> --outcome passed|failed
+    #                                     [--note <text>]
+    # The earlier "any two positionals" spec let `integrations foo bar` and
+    # a flagless `attest` validate as a safe exact_command (PR49
+    # r3408996305). Only the catalog's smoke row is ever RENDERED as
+    # exact_command; attest stays display-only per the honest-commands rule —
+    # but whatever is validated must be a command the CLI actually accepts.
     "integrations": SubcommandSpec(
-        positional_max=2,
-        value_flags=frozenset(),
+        subcommands={
+            "smoke": SubcommandSpec(
+                positional_min=1,
+                positional_max=1,
+                value_flags=frozenset({"--plans-root"}),
+            ),
+            "attest": SubcommandSpec(
+                positional_min=1,
+                positional_max=1,
+                value_flags=frozenset({"--action", "--outcome", "--note"}),
+                required_flags=frozenset({"--action", "--outcome"}),
+            ),
+        },
     ),
     "architecture": _ARCHITECTURE_SPEC,
     "showcase": SubcommandSpec(positional_max=None),

@@ -160,7 +160,15 @@ def read_evidence(evidence_dir: Path, integration_id: str) -> list[dict[str, Any
     Malformed lines are skipped rather than raised — evidence is advisory
     input to status derivation, and a torn append must not take down the
     whole provider. Missing file = empty history.
+
+    Only records whose stored ``integration_id`` is the canonical id being
+    read are returned (PR49 r3408996308): a filename-collision alias such as
+    ``../static-dashboard`` resolves to ``static-dashboard.jsonl``, and a
+    legacy or hand-written line carrying that alias must never satisfy the
+    real card. The writer refuses such ids outright; this is the read-side
+    belt to that brace.
     """
+    canonical = _safe_integration_id(integration_id)
     path = evidence_file(evidence_dir, integration_id)
     if not path.is_file():
         return []
@@ -181,7 +189,7 @@ def read_evidence(evidence_dir: Path, integration_id: str) -> list[dict[str, Any
             rec = json.loads(line)
         except json.JSONDecodeError:
             continue
-        if isinstance(rec, dict):
+        if isinstance(rec, dict) and rec.get("integration_id") == canonical:
             records.append(rec)
     return records
 
@@ -253,6 +261,42 @@ class IntegrationStatus:
     failure_flag: bool
     failure_detail: str | None
     has_evidence: bool
+
+
+def _catalog_action_pairs() -> frozenset[tuple[str, str]]:
+    """Every ``(integration_id, action_id)`` the evidence writer accepts
+    (PR49 r3408996308): the catalog's own rows, plus the trigger attestation
+    (:data:`TRIGGER_ACTION_FIREBASE`) for rows that declare a
+    ``trigger_condition`` — the gated Firebase bands (F003) record the
+    trigger as evidence before the credentialed action itself runs."""
+    pairs = {(a.integration_id, a.action_id) for a in INTEGRATION_CATALOG}
+    pairs |= {
+        (a.integration_id, TRIGGER_ACTION_FIREBASE)
+        for a in INTEGRATION_CATALOG
+        if a.trigger_condition
+    }
+    return frozenset(pairs)
+
+
+def assert_catalog_action(integration_id: str, action_id: str) -> None:
+    """Refuse a non-catalog ``(integration_id, action_id)`` before any disk
+    write. Matches the RAW id exactly: ``../static-dashboard`` sanitizes to the
+    same filename as ``static-dashboard`` but is not a catalog integration,
+    and must not be allowed to advance or clear the real card."""
+    ids = _catalog_integration_ids()
+    if integration_id not in ids:
+        raise ValueError(
+            f"integration_id={integration_id!r} is not a catalog integration; "
+            f"known: {', '.join(ids)}"
+        )
+    if (integration_id, action_id) not in _catalog_action_pairs():
+        actions = sorted(
+            act for (iid, act) in _catalog_action_pairs() if iid == integration_id
+        )
+        raise ValueError(
+            f"action_id={action_id!r} is not a catalog action of {integration_id!r}; "
+            f"known: {', '.join(actions)}"
+        )
 
 
 def _catalog_integration_ids() -> list[str]:
@@ -361,7 +405,12 @@ def write_integration_evidence(
 
     Sanitizes ``details`` through the shipped secret patterns before writing;
     dir 0700 / file 0600 to match the rest of the DontPanic state surface.
+
+    Validates ``(integration_id, action_id)`` against the catalog FIRST
+    (PR49 r3408996308): an unknown or alias id raises ``ValueError`` and
+    nothing is written.
     """
+    assert_catalog_action(integration_id, action_id)
     if outcome not in _VALID_EVIDENCE_OUTCOMES:
         raise ValueError(
             f"outcome={outcome!r} must be one of {_VALID_EVIDENCE_OUTCOMES}"
@@ -378,9 +427,9 @@ def write_integration_evidence(
     except OSError:
         pass
 
-    # Canonicalize the id at the boundary so the stored record matches the
-    # on-disk filename and downstream lookups keyed on the canonical id resolve
-    # (CodeRabbit #6 — no raw-id-in-record vs sanitized-filename asymmetry).
+    # The id is catalog-validated above, so the filename form equals the raw
+    # id for every accepted call; keep the canonicalization so the on-disk
+    # name and stored record can never diverge (CodeRabbit #6).
     safe_id = _safe_integration_id(integration_id)
     record: dict[str, Any] = {
         "schema_version": EVIDENCE_SCHEMA_VERSION,

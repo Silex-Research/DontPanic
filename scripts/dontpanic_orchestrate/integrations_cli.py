@@ -82,14 +82,20 @@ def _smoke(args: argparse.Namespace) -> int:
 
 def _attest(args: argparse.Namespace) -> int:
     details = {"note": args.note} if args.note else None
-    path = itg.write_integration_evidence(
-        _evidence_dir(),
-        args.integration,
-        args.action_id,
-        source="attestation",
-        outcome=args.outcome,
-        details=details,
-    )
+    try:
+        path = itg.write_integration_evidence(
+            _evidence_dir(),
+            args.integration,
+            args.action_id,
+            source="attestation",
+            outcome=args.outcome,
+            details=details,
+        )
+    except ValueError as exc:
+        # Non-catalog (integration, action) — refused before any write
+        # (PR49 r3408996308). Usage error, same code as an unknown smoke.
+        print(f"[integrations attest] REFUSED: {exc}", file=sys.stderr)
+        return 2
     print(
         f"[integrations attest] recorded {args.integration}/{args.action_id} "
         f"outcome={args.outcome}"
