@@ -641,12 +641,14 @@ def _validate_spec(
                 continue
             if tok in spec.value_flags:
                 seen_flags.add(tok)
-                if i + 1 >= len(tokens):
+                if (
+                    i + 1 >= len(tokens)
+                    or tokens[i + 1] in spec.bool_flags | spec.value_flags
+                ):
                     errors.append(f"{prog} flag {tok!r} requires a value")
                     i += 1
                     continue
-                # Consume the value token. Even another flag-shaped token is
-                # accepted as the value — argparse does the same.
+                # A defined option starts the next argument, not this value.
                 i += 2
                 continue
             errors.append(

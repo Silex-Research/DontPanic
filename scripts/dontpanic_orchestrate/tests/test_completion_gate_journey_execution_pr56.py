@@ -213,17 +213,13 @@ def test_both_family_journey_with_agent_only_evidence_is_not_satisfied(tmp_path:
     result = cg.audit_plan(plan_dir, dispatch=_agree_dispatch, implementer_agent="claude")
 
     assert _journey_outcome(result) is not OutcomeClass.satisfied
-    # Pending is advisory, so the gate does not block; the journey's honesty
-    # result still names the uncovered family for whoever reads the detail.
-    from dontpanic_orchestrate import experience_readiness_honesty as h
+    # The public audit result preserves the missing-family explanation without
+    # turning an advisory pending outcome into a blocking finding.
+    assert result.experience_gate is not None
+    assert not result.experience_gate.blocks
+    pending = [f for f in result.experience_gate.findings if not f.blocks]
+    assert any("missing required families: mcp:tools/list:human" in f.note for f in pending)
 
-    honesty = h.check_degraded_honesty(
-        [h.RequiredDataSource("mcp:tools/list", frozenset({h.Fam.human, h.Fam.agent}))],
-        {},
-        cg._typed_evidence_refs(plan_dir),
-    )
-    assert honesty.missing_families == ["mcp:tools/list:human"]
-    assert honesty.execution_evidence is True
 
 
 @pytest.mark.parametrize("key", ["payments", "mcp:tools/list"])

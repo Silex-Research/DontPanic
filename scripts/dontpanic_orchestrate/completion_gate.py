@@ -61,7 +61,7 @@ import os
 import re
 import sys
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -800,6 +800,13 @@ def _experience_gate_decision(
         product_metadata=parse_product_metadata(plan_data.get("delivery_class")),
         journeys=outcomes,
     )
+    # Keep the typed verdict on advisory findings too: audit callers need the
+    # missing-family explanation even when pending correctly does not block.
+    result.findings = [
+        replace(gf, note=f"{gf.note}; {details[gf.journey]}")
+        if gf.journey in details else gf
+        for gf in result.findings
+    ]
     reasons = []
     for gf in result.findings:
         if not gf.blocks:

@@ -59,6 +59,7 @@ def test_real_cli_shapes_validate(tokens: list[str]) -> None:
         ["integrations", "attest", "linear-credentials", "--action", "linear-creds"],
         ["integrations", "attest", "linear-credentials", "--outcome", "passed"],
         ["integrations", "smoke", "static-dashboard", "--action", "x"],  # attest-only flag
+        ["integrations", "attest", "x", "--action", "y", "--outcome", "--note"],
         ["integrations"],  # bare verb
     ],
 )
