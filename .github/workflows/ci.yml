@@ -83,7 +83,7 @@ jobs:
           PYTHONPATH=scripts bash scripts/run-eval-suite.sh regression
       - name: Upload regression eval report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: eval-regression
           path: eval-regression.json
@@ -122,7 +122,7 @@ jobs:
           PYTHONPATH=scripts bash scripts/run-eval-suite.sh capability
       - name: Upload capability eval report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: eval-capability
           path: eval-capability.json
