@@ -6,14 +6,12 @@ these subprocess CLI tests cover:
 - exit 0 and nonzero commands
 - spawn failure
 - timeout
-- cancellation (KeyboardInterrupt via signal)
 - inherited-secret redaction
 - bounded output
-- wrong feature/iteration/revision
-- concurrent publication (atomic writes)
-- tampered hash detection
-- empty runner collection
-- capture skip
+- wrong feature/iteration (validation refusal)
+- concurrent publication (atomic writes via temp + os.replace)
+- capture skip on adapter failure
+- capture refusal without objective contract
 - complete reader round trip
 """
 
@@ -403,11 +401,11 @@ class TestEvidenceCaptureValidation:
 
     def test_config_must_be_project_scoped(self, tmp_path, capsys, monkeypatch):
         """Config file must be within project root."""
-        plan_dir = _make_plan(tmp_path, "2026-09-test-cap-config")
+        plan_dir = _make_plan_with_contract(tmp_path, "2026-09-test-cap-config", ["j1"])
         monkeypatch.chdir(tmp_path)
 
         result = evidence_capture_main([
-            str(plan_dir), "--journey", "any", "--source", "web",
+            str(plan_dir), "--journey", "j1", "--source", "web",
             "--config", "/etc/passwd",
         ])
 
@@ -415,17 +413,60 @@ class TestEvidenceCaptureValidation:
         err = capsys.readouterr().err
         assert "project-scoped" in err or "config file" in err.lower()
 
+    def test_refuses_without_objective_contract(self, tmp_path, capsys, monkeypatch):
+        """Capture REFUSES when objective contract is missing."""
+        plan_dir = _make_plan(tmp_path, "2026-09-test-cap-no-contract")
+        monkeypatch.chdir(tmp_path)
+
+        result = evidence_capture_main([
+            str(plan_dir), "--journey", "any-journey", "--source", "harness",
+            "--confirm",
+        ])
+
+        assert result == 2
+        err = capsys.readouterr().err
+        assert "objective_contract" in err or "objective contract" in err.lower()
+
+    def test_refuses_with_empty_journeys(self, tmp_path, capsys, monkeypatch):
+        """Capture REFUSES when objective contract has no user_journeys."""
+        plan_dir = _make_plan(tmp_path, "2026-09-test-cap-empty-journeys")
+
+        contract = {"user_journeys": [], "required_evidence": []}
+        contract_path = plan_dir / "objective_contract.json"
+        contract_path.write_text(json.dumps(contract))
+
+        plan_md = plan_dir / "plan.md"
+        text = plan_md.read_text()
+        text = text.replace(
+            "---\n\n# ",
+            "links:\n  objective_contract: objective_contract.json\n---\n\n# ",
+        )
+        plan_md.write_text(text)
+
+        monkeypatch.chdir(tmp_path)
+
+        result = evidence_capture_main([
+            str(plan_dir), "--journey", "any", "--source", "harness",
+            "--confirm",
+        ])
+
+        assert result == 2
+        err = capsys.readouterr().err
+        assert "no user_journeys" in err or "declared journeys" in err
+
 
 class TestEvidenceCaptureExecution:
     """Tests for `evidence capture` execution."""
 
     def test_harness_empty_sources_skipped(self, tmp_path, capsys, monkeypatch):
         """Capture with empty sources produces skip record."""
-        plan_dir = _make_plan(tmp_path, "2026-09-test-cap-empty")
+        plan_dir = _make_plan_with_contract(
+            tmp_path, "2026-09-test-cap-empty", ["test-journey"]
+        )
         monkeypatch.chdir(tmp_path)
 
         result = evidence_capture_main([
-            str(plan_dir), "--journey", "any-journey", "--source", "harness",
+            str(plan_dir), "--journey", "test-journey", "--source", "harness",
             "--confirm",
         ])
 
@@ -442,8 +483,10 @@ class TestEvidenceCaptureExecution:
         assert manifest_data["status"] == "skipped"
 
     def test_capture_manifest_written(self, tmp_path, capsys, monkeypatch):
-        """Successful capture writes versioned manifest."""
-        plan_dir = _make_plan(tmp_path, "2026-09-test-cap-manifest")
+        """Successful capture writes versioned manifest atomically."""
+        plan_dir = _make_plan_with_contract(
+            tmp_path, "2026-09-test-cap-manifest", ["test-journey"]
+        )
         monkeypatch.chdir(tmp_path)
 
         evidence_capture_main([
@@ -460,16 +503,18 @@ class TestEvidenceCaptureExecution:
         assert manifest.source == "harness"
         assert manifest.capture_id.startswith("cap-")
 
+        tmp_files = list(cap_dir.rglob(".*.tmp"))
+        assert len(tmp_files) == 0, "temp files should not survive atomic write"
+
 
 class TestConcurrentPublication:
-    """Tests for concurrent/atomic publication."""
+    """Tests for concurrent/atomic publication (temp + os.replace)."""
 
-    def test_invocation_records_unique_ids(self, tmp_path, monkeypatch):
-        """Multiple invocations produce unique record IDs."""
+    def test_invocation_records_unique_ids_and_atomic(self, tmp_path, monkeypatch):
+        """Multiple invocations produce unique IDs via atomic writes."""
         plan_dir = _make_plan(tmp_path, "2026-09-test-concurrent")
         monkeypatch.chdir(tmp_path)
 
-        ids = set()
         for _ in range(3):
             evidence_run_main([
                 str(plan_dir), "--feature", "F001", "--iteration", "0",
@@ -477,11 +522,19 @@ class TestConcurrentPublication:
             ])
 
         inv_dir = plan_dir / "evidence" / "invocations"
-        for record_path in inv_dir.glob("*.json"):
+        records = list(inv_dir.glob("*.json"))
+        assert len(records) == 3
+
+        ids = set()
+        for record_path in records:
             record_data = json.loads(record_path.read_text())
             ids.add(record_data["invocation_id"])
+            assert record_data["status"] in ("started", "completed")
 
-        assert len(ids) == 3
+        assert len(ids) == 3, "all invocations must have unique IDs"
+
+        tmp_files = list(inv_dir.glob(".*.tmp"))
+        assert len(tmp_files) == 0, "temp files should not survive atomic os.replace"
 
 
 class TestCommandValidation:
@@ -559,7 +612,9 @@ class TestReaderRoundTrip:
 
     def test_capture_manifest_round_trip(self, tmp_path, monkeypatch):
         """CaptureManifest can be written, read, and validated."""
-        plan_dir = _make_plan(tmp_path, "2026-09-test-cap-roundtrip")
+        plan_dir = _make_plan_with_contract(
+            tmp_path, "2026-09-test-cap-roundtrip", ["test"]
+        )
         monkeypatch.chdir(tmp_path)
 
         evidence_capture_main([
