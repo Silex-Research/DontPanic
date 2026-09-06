@@ -1258,9 +1258,8 @@ def _plan_review_main(argv: list[str]) -> int:
         print(plan_review_report.render_text(scope_report), end="")
 
     # Plan 2026-06-05-004 F005 — advisory conventions-disposition check (warn-only,
-    # never blocks). Opt-in: fires only for plans that DECLARE a surface
-    # (loaded.surfaces), so a plan that merely mentions a surface in prose is not
-    # flagged. Text mode only for v0 (does not change the json schema / exit code).
+    # never blocks). Declared surfaces and current skill-applicability matches
+    # feed the same ledger bridge. Text-only v0 preserves JSON/exit contracts.
     if args.format != "json":
         _print_disposition_advisory(plan_dir, loaded)
 
@@ -1282,18 +1281,24 @@ def _plan_review_main(argv: list[str]) -> int:
 def _print_disposition_advisory(plan_dir: Path, loaded) -> None:
     """Plan 2026-06-05-004 F005 — print advisory conventions-disposition warnings.
 
-    Opt-in + warn-only: silent unless the plan declares one or more surfaces. Never
-    changes the verdict / exit code.
+    Warn-only. Recompute current skill matches without writing a sidecar so
+    goal-only matches participate and stale lock-time reports cannot mislead.
+    Never changes the verdict / exit code.
     """
     declared = list(getattr(loaded, "surfaces", None) or [])
-    if not declared:
-        return
-    from dontpanic_orchestrate.conventions_ledger import load_ledger  # noqa: PLC0415
-    from dontpanic_orchestrate.plan_review.disposition_check import (  # noqa: PLC0415
-        check_plan_dispositions,
-    )
+    from dontpanic_orchestrate.conventions_gate import evaluate_plan_dispositions
 
-    findings = check_plan_dispositions(declared=declared, ledger=load_ledger(plan_dir))
+    matched_skills = []
+    try:
+        skills_dir = _resolve_skills_dir(plan_dir)
+        if skills_dir is not None:
+            report = skill_applicability.match(loaded, skills_dir)
+            matched_skills = [match.skill_name for match in report.matches]
+    except Exception as exc:  # advisory matcher must not block plan review
+        print(f"[warn] skill applicability unavailable: {type(exc).__name__}")
+    findings = evaluate_plan_dispositions(
+        plan_dir=plan_dir, declared=declared, matched_skills=matched_skills,
+    )
     if not findings:
         return
     print("\nconventions disposition (advisory — warn only):")
@@ -2702,7 +2707,14 @@ def _doctor_main(argv: list[str]) -> int:
             "manifest (F008), and reports the minimum probe set with pass/warn/fail."
         ),
     )
+    parser.add_argument(
+        "--runtime-evidence", action="store_true",
+        help="Include optional local capture-adapter readiness probes (no capture).",
+    )
     args = parser.parse_args(argv)
+    if args.runtime_evidence and args.channel is not None:
+        parser.error("--runtime-evidence cannot be combined with --channel")
+
 
     # F007: --channel short-circuits the full battery and diagnoses one operator
     # surface (structural-safe under --skip-auth; the minimum probe set has no
@@ -2735,7 +2747,7 @@ def _doctor_main(argv: list[str]) -> int:
     # the canonical jd.main() driver. This keeps the profile-aware
     # render_text/render_json + report wiring in one place rather than
     # forking the logic between cli.py and dontpanic_doctor.py.
-    if args.profile is not None or args.report:
+    if args.profile is not None or args.report or args.runtime_evidence:
         return jd.main(argv)
 
     # Plan 2026-05-30-001 F005: the agent / project onboarding surfaces are
@@ -6334,6 +6346,10 @@ def _run_cli(argv: list[str] | None = None) -> int:
         from dontpanic_orchestrate.triage_apply import cli_main as _triage_apply_cli
 
         return _triage_apply_cli(raw[1:])
+    if raw and raw[0] == "evidence":
+        from dontpanic_orchestrate.evidence_cli import evidence_main as _evidence_main
+
+        return _evidence_main(raw[1:])
     if raw and raw[0] == "orchestrate":
         return _orchestrate_main(raw[1:])
     if raw and raw[0] == "roles":

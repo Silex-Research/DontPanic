@@ -1,0 +1,190 @@
+{
+  "task_id": "2026-09-06-001-infra-delivery-integration-review",
+  "schema_version": "1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "doc",
+      "phase": 0,
+      "description": "Review the eight parked operator changes and reproduce concrete defects.",
+      "steps": [
+        "Inspect current producer and public consumer",
+        "Record reproducible evidence and limitations"
+      ],
+      "acceptance": "Review lists all eight commits and reproducible breaker and test-evidence probes.",
+      "passes": true,
+      "depends_on": [],
+      "verified_by": [
+        "codex"
+      ],
+      "verified_at": "2026-09-06T15:20:59.537047+00:00",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "../../reviews/2026-09-06-five-step/operator-review.md"
+        }
+      ]
+    },
+    {
+      "id": "F002",
+      "category": "test",
+      "phase": 0,
+      "description": "Audit all forty features across the six August plans without silent closure.",
+      "steps": [
+        "Inspect current producer and public consumer",
+        "Record reproducible evidence and limitations"
+      ],
+      "acceptance": "Audit inventories all forty acceptance clauses, evidence references, current test results and explicit closure gaps.",
+      "passes": true,
+      "depends_on": [],
+      "verified_by": [
+        "codex"
+      ],
+      "verified_at": "2026-09-06T15:20:59.537183+00:00",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "../../reviews/2026-09-06-five-step/august-audit.md"
+        }
+      ]
+    },
+    {
+      "id": "F003",
+      "category": "tooling",
+      "phase": 0,
+      "description": "Surface applicable skill dispositions through the public plan-review command.",
+      "steps": [
+        "Inspect current producer and public consumer",
+        "Record reproducible evidence and limitations"
+      ],
+      "acceptance": "Goal-only skill matching warns through cli.main, a valid disposition removes the warning, and plan files remain byte-identical.",
+      "passes": true,
+      "depends_on": [],
+      "verified_by": [
+        "codex"
+      ],
+      "verified_at": "2026-09-06T15:20:59.537185+00:00",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "../../reviews/2026-09-06-five-step/integration-tests.log"
+        }
+      ]
+    },
+    {
+      "id": "F004",
+      "category": "tooling",
+      "phase": 0,
+      "description": "Expose shipped adapter readiness probes through opt-in doctor execution.",
+      "steps": [
+        "Inspect current producer and public consumer",
+        "Record reproducible evidence and limitations"
+      ],
+      "acceptance": "Public doctor opt-in shows adapter probes; plain doctor does not run them; skip-auth does not invoke Firebase; warnings do not block core use; incompatible modes refuse.",
+      "passes": true,
+      "depends_on": [],
+      "verified_by": [
+        "codex"
+      ],
+      "verified_at": "2026-09-06T15:20:59.537187+00:00",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "../../reviews/2026-09-06-five-step/integration-tests.log"
+        }
+      ]
+    },
+    {
+      "id": "F005",
+      "category": "doc",
+      "phase": 0,
+      "description": "Specify trustworthy command-execution evidence and upstream capture orchestration.",
+      "steps": [
+        "Inspect current producer and public consumer",
+        "Record reproducible evidence and limitations"
+      ],
+      "acceptance": "Design distinguishes claimed versus observed execution, defines explicit public entry points, bounded execution and capture-only provenance; records unresolved interface approval.",
+      "passes": true,
+      "depends_on": [],
+      "verified_by": [
+        "codex"
+      ],
+      "verified_at": "2026-09-06T15:20:59.537189+00:00",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "../../brainstorms/2026-09-06-command-evidence-capture.md"
+        }
+      ]
+    },
+    {
+      "id": "F006",
+      "category": "doc",
+      "phase": 0,
+      "description": "Reassess demand gates against known operator and community evidence.",
+      "steps": [
+        "Inspect current producer and public consumer",
+        "Record reproducible evidence and limitations"
+      ],
+      "acceptance": "Every active demand-gated body has an adopt, probe, or park disposition and a measurable activation trigger.",
+      "passes": true,
+      "depends_on": [],
+      "verified_by": [
+        "codex"
+      ],
+      "verified_at": "2026-09-06T15:20:59.537191+00:00",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "../../reviews/2026-09-06-five-step/demand-gates.md"
+        }
+      ]
+    },
+    {
+      "id": "F007",
+      "category": "doc",
+      "phase": 0,
+      "description": "Design safe opt-in planner-driven revision of an existing plan.",
+      "steps": [
+        "Inspect current producer and public consumer",
+        "Record reproducible evidence and limitations"
+      ],
+      "acceptance": "Design includes typed output validation, preview/persistence, approval invalidation, history, recovery, cost bounds and public-entry acceptance tests.",
+      "passes": true,
+      "depends_on": [],
+      "verified_by": [
+        "codex"
+      ],
+      "verified_at": "2026-09-06T15:20:59.537192+00:00",
+      "evidence_refs": [
+        {
+          "type": "file",
+          "uri": "../../brainstorms/2026-09-06-planner-revision.md"
+        }
+      ]
+    },
+    {
+      "id": "F008",
+      "category": "doc",
+      "phase": 0,
+      "description": "Prove operator preferences do not grant worker dispatch authority.",
+      "steps": [
+        "Inspect current producer and public consumer",
+        "Record reproducible evidence and limitations"
+      ],
+      "acceptance": "Dry-run and confirm paths refuse a preference-only operator as executor before supervisor dispatch.",
+      "passes": true,
+      "depends_on": [],
+      "verified_by": [
+        "codex"
+      ],
+      "verified_at": "2026-09-06T15:20:59.537194+00:00",
+      "evidence_refs": [
+        {
+          "type": "test_output",
+          "uri": "../../reviews/2026-09-06-five-step/integration-tests.log"
+        }
+      ]
+    }
+  ]
+}

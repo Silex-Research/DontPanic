@@ -525,6 +525,9 @@ def test_known_subcommands_matches_documented_top_level_ladder() -> None:
         # Plan 2026-06-01-001 F003: the read-only `dontpanic plan-review <plan>`
         # scope-lint surface validates here so its rendered copy is honest.
         "plan-review",
+        # PR#74 D002: opt-in evidence run/capture CLI (explicit operator-invoked
+        # command execution recording and capture; does NOT grant agent dispatch).
+        "evidence",
     }
     assert known_subcommands() == expected
 

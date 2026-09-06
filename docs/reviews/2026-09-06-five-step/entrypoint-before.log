@@ -1,0 +1,77 @@
+FF...                                                                    [100%]
+=================================== FAILURES ===================================
+__________ test_plan_review_includes_goal_only_skill_and_is_read_only __________
+
+tmp_path = PosixPath('/private/var/folders/c_/y76l8_4968d16hjgynvcl3qm0000gn/T/pytest-of-bayesian/pytest-46/test_plan_review_includes_goal0')
+capsys = <_pytest.capture.CaptureFixture object at 0x10a5cb450>
+
+    def test_plan_review_includes_goal_only_skill_and_is_read_only(tmp_path, capsys):
+        plan = _make_plan(tmp_path, "2026-09-06-990-feat-skill-proof", [_CLEAN_FEATURE])
+        md = plan / "plan.md"
+        md.write_text(md.read_text().replace("type: feat", "goal_type: infra\ntype: feat"))
+        skill = tmp_path / "claude/skills/local-proof/SKILL.md"
+        skill.parent.mkdir(parents=True)
+        skill.write_text("---\nname: local-proof\napplies_to:\n  goal_types: [infra]\n---\n")
+        before = _snapshot(plan)
+        assert cli.main(["plan-review", str(plan)]) == 0
+>       assert "skill:local-proof" in capsys.readouterr().out
+E       AssertionError: assert 'skill:local-proof' in 'plan-review: 2026-09-06-990-feat-skill-proof\n  1 feature(s), 0 flagged, 0 flag(s) (0 block-severity)\n  verdict: OK\n\nNo scope flags — every feature is single-surface and in-budget.\n'
+E        +  where 'plan-review: 2026-09-06-990-feat-skill-proof\n  1 feature(s), 0 flagged, 0 flag(s) (0 block-severity)\n  verdict: OK\n\nNo scope flags — every feature is single-surface and in-budget.\n' = CaptureResult(out='plan-review: 2026-09-06-990-feat-skill-proof\n  1 feature(s), 0 flagged, 0 flag(s) (0 block-severity)\n  verdict: OK\n\nNo scope flags — every feature is single-surface and in-budget.\n', err='').out
+E        +    where CaptureResult(out='plan-review: 2026-09-06-990-feat-skill-proof\n  1 feature(s), 0 flagged, 0 flag(s) (0 block-severity)\n  verdict: OK\n\nNo scope flags — every feature is single-surface and in-budget.\n', err='') = readouterr()
+E        +      where readouterr = <_pytest.capture.CaptureFixture object at 0x10a5cb450>.readouterr
+
+scripts/dontpanic_orchestrate/tests/test_integration_entrypoints_sep2026.py:22: AssertionError
+_________ test_doctor_opt_in_registers_adapters_without_blocking_core __________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x108b66510>
+capsys = <_pytest.capture.CaptureFixture object at 0x10a217ad0>
+
+    def test_doctor_opt_in_registers_adapters_without_blocking_core(monkeypatch, capsys):
+        _isolate_doctor(monkeypatch)
+>       assert cli.main(["doctor", "--skip-auth", "--runtime-evidence", "--json"]) == 0
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+scripts/dontpanic_orchestrate/tests/test_integration_entrypoints_sep2026.py:52: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+scripts/dontpanic_orchestrate/cli.py:6269: in main
+    rc = _run_cli(argv)
+         ^^^^^^^^^^^^^^
+scripts/dontpanic_orchestrate/cli.py:6372: in _run_cli
+    return _doctor_main(raw[1:])
+           ^^^^^^^^^^^^^^^^^^^^^
+scripts/dontpanic_orchestrate/cli.py:2705: in _doctor_main
+    args = parser.parse_args(argv)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.11/3.11.16/Frameworks/Python.framework/Versions/3.11/lib/python3.11/argparse.py:1877: in parse_args
+    self.error(msg % ' '.join(argv))
+/opt/homebrew/Cellar/python@3.11/3.11.16/Frameworks/Python.framework/Versions/3.11/lib/python3.11/argparse.py:2640: in error
+    self.exit(2, _('%(prog)s: error: %(message)s\n') % args)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = ArgumentParser(prog='dontpanic doctor', usage=None, description='Run the full doctor battery (structural + auth + per-...if any FAIL.', formatter_class=<class 'argparse.RawDescriptionHelpFormatter'>, conflict_handler='error', add_help=True)
+status = 2
+message = 'dontpanic doctor: error: unrecognized arguments: --runtime-evidence\n'
+
+    def exit(self, status=0, message=None):
+        if message:
+            self._print_message(message, _sys.stderr)
+>       _sys.exit(status)
+E       SystemExit: 2
+
+/opt/homebrew/Cellar/python@3.11/3.11.16/Frameworks/Python.framework/Versions/3.11/lib/python3.11/argparse.py:2627: SystemExit
+----------------------------- Captured stderr call -----------------------------
+usage: dontpanic doctor [-h] [--json] [--skip-auth] [--validate-plans]
+                        [--validate-plans-strict]
+                        [--architecture-drift-strict]
+                        [--plans-root PLANS_ROOT]
+                        [--architecture-json ARCHITECTURE_JSON]
+                        [--profile {core,discord,firebase-dashboard,openclaw,ci}]
+                        [--profile-strict] [--report]
+                        [--report-path REPORT_PATH] [--agent]
+                        [--project NAME_OR_PATH] [--upgrade]
+                        [--check-upstream] [--acknowledge] [--channel SURFACE]
+dontpanic doctor: error: unrecognized arguments: --runtime-evidence
+=========================== short test summary info ============================
+FAILED scripts/dontpanic_orchestrate/tests/test_integration_entrypoints_sep2026.py::test_plan_review_includes_goal_only_skill_and_is_read_only
+FAILED scripts/dontpanic_orchestrate/tests/test_integration_entrypoints_sep2026.py::test_doctor_opt_in_registers_adapters_without_blocking_core
+2 failed, 3 passed in 0.91s

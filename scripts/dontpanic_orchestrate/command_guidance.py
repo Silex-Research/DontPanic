@@ -140,6 +140,11 @@ _CLASS_BY_COMMAND: dict[str, CommandClass] = {
     "dashboard": CommandClass.HUMAN_HANDOFF,
     "dispatch-from-plan": CommandClass.DISPATCH_PAID_WORK,
     "doctor": CommandClass.DIAGNOSTIC_INSPECTION,
+    # PR#74 D002: `evidence run --confirm` executes operator-provided argv
+    # (side-effecting command execution, not mere config mutation). Classified
+    # as LIFECYCLE_MUTATION: more cautious than CONFIG_MUTATION but NOT
+    # DISPATCH_PAID_WORK — evidence does NOT grant agent dispatch authority.
+    "evidence": CommandClass.LIFECYCLE_MUTATION,
     "finalize": CommandClass.LIFECYCLE_MUTATION,
     "init": CommandClass.CONFIG_MUTATION,
     "manifest": CommandClass.CONFIG_MUTATION,
@@ -263,6 +268,41 @@ _EXAMPLES_BY_COMMAND: dict[str, tuple[CommandExample, ...]] = {
         ),
     ),
     "doctor": (_example("doctor", "--agent", description="Run agent setup checks."),),
+    # PR#74 D002: evidence run/capture are explicit opt-in CLI producers.
+    # `--confirm` executes operator-provided argv (lifecycle mutation).
+    # Does NOT grant agent dispatch authority — operator must invoke.
+    "evidence": (
+        _example(
+            "evidence",
+            "run",
+            "<plan>",
+            "--feature",
+            "F001",
+            "--iteration",
+            "0",
+            "--",
+            "echo",
+            "test",
+            description=(
+                "Dry-run: validate inputs without execution. "
+                "With --confirm: execute operator-provided command and record evidence. "
+                "Does NOT grant agent dispatch authority."
+            ),
+        ),
+        _example(
+            "evidence",
+            "capture",
+            "<plan>",
+            "--journey",
+            "<journey>",
+            "--source",
+            "harness",
+            description=(
+                "Dry-run: resolve source/target without capture. "
+                "With --confirm: capture runtime evidence for a journey."
+            ),
+        ),
+    ),
     "finalize": (
         _example(
             "finalize",
