@@ -6,15 +6,23 @@ under `docs/plans/`.
 
 ## Quick Setup
 
-1. Clone and install:
+1. Clone and install from the lockfile:
 
    ```bash
    git clone https://github.com/Silex-Research/DontPanic.git
    cd DontPanic
    python3 -m venv .venv
    source .venv/bin/activate
-   python3 -m pip install -e ".[dev]"
+   python3 -m pip install --upgrade uv
+   uv sync --locked --extra dev          # add --extra firebase for backend evidence work
+   source .venv/bin/activate
    ```
+
+   `uv.lock` governs development and CI installs: `--locked` refuses to run
+   if the lock is stale against `pyproject.toml`. After changing a dependency
+   in `pyproject.toml`, run `uv lock` and commit the updated lock in the same
+   PR. Plain `pip install -e ".[dev]"` still works for a quick look, but it
+   resolves fresh and is not what CI tests.
 
 2. Configure local roles:
 
@@ -36,7 +44,7 @@ project-specific deployment paths.
 
 ## Local CI Equivalent
 
-Run these before opening a PR:
+Run these from the repository root before opening a PR (fixtures resolve paths relative to it):
 
 ```bash
 PYTHONPATH=scripts pytest scripts/dontpanic_orchestrate/tests/ -q

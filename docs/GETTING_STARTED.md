@@ -86,6 +86,9 @@ dontpanic --version
 dontpanic --help
 ```
 
+Contributors: install from the lockfile instead (`uv sync --locked --extra dev`,
+see CONTRIBUTING.md) so your environment matches what CI tests.
+
 Required for the first smoke test: Python 3.10+, git, and a POSIX shell.
 Claude, Codex, Firebase, Playwright, Xcode, Android, and backend providers are
 only needed when you enable plans that use them.

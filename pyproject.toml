@@ -51,7 +51,12 @@ dependencies = [
 dynamic = ["version"]
 
 [project.optional-dependencies]
-firebase = ["firebase-admin>=6.0"]
+# cryptography is transitive via firebase-admin. The floor makes pip/pipx
+# installs (which never read uv.lock) receive the patched line too:
+# GHSA-jwv3-5hgf-82ww, GHSA-537c-gmf6-5ccf, GHSA-r6ph-v2qm-q3c2,
+# GHSA-m959-cc7f-wv43, GHSA-79v4-65xg-pq4g are all fixed at <= 49.0.0;
+# 50.0.1 is the current patched release (2026-09-05).
+firebase = ["firebase-admin>=6.0", "cryptography>=50.0.1"]
 dev = [
     "pytest>=8.0",
     "ruff>=0.6",

@@ -26,12 +26,19 @@ jobs:
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
         with:
           python-version: "3.11"
-          cache: "pip"
 
-      - name: Install dependencies
+      - name: Install dependencies from uv.lock
+        # The lockfile governs CI and dev installs (2026-09-05): pip never read
+        # uv.lock, so a green CI run said nothing about the pinned versions and
+        # a lock-only security bump (cryptography) was unverified. `--locked`
+        # fails when uv.lock is stale against pyproject.toml (--frozen would
+        # silently install a stale lock), so CI tests exactly what is
+        # committed AND proves the lock matches the declared dependencies.
         run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev,firebase]" jsonschema google-cloud-storage
+          python -m pip install --upgrade pip uv
+          uv sync --locked --extra dev --extra firebase
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+          .venv/bin/python -c "import cryptography, firebase_admin; print('cryptography', cryptography.__version__)"
 
       - name: Git identity for synthetic-repo tests
         # Several tests create temporary git repositories and commit fixtures.
@@ -104,11 +111,11 @@ jobs:
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
         with:
           python-version: "3.11"
-          cache: "pip"
-      - name: Install dependencies
+      - name: Install dependencies from uv.lock
         run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev]" jsonschema
+          python -m pip install --upgrade pip uv
+          uv sync --locked --extra dev
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
       - name: Eval — capability suite
         run: |
           chmod +x scripts/run-eval-suite.sh
