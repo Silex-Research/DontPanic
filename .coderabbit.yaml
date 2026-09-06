@@ -1,0 +1,10 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# CodeRabbit is advisory here. A green "CodeRabbit" commit status on a PR whose
+# only bot comment says "Review limit reached" was being read as review
+# evidence (PR #72, 2026-09-05). Turning the legacy commit status off removes
+# that surface: review evidence is the human/seat approval required by branch
+# protection, never a bot status. See CONTRIBUTING.md "Review evidence".
+reviews:
+  commit_status: false
+  fail_commit_status: false
+  review_status: true

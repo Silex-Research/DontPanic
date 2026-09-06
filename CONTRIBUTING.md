@@ -72,6 +72,22 @@ framings:
 - `pip` dependencies are now declared in `pyproject.toml`. A green dependency
   PR still needs normal review; it is not automatic supply-chain signoff.
 
+## Review evidence
+
+Merging to `main` requires one approving review from a code owner and the two
+required CI contexts (`Python — tests + schema + security`, `Shell —
+bootstrap.sh syntax + arg validation`) green on the PR's **current head**.
+
+What does not count as review evidence:
+
+- A CodeRabbit comment that says "Review limit reached" or otherwise reports a
+  skipped review. Treat that PR as **not reviewed** by the bot, whatever colour
+  any bot status shows. The repo's `.coderabbit.yaml` disables the legacy
+  commit status so this cannot appear as a green check.
+- A green check on an older commit. Dependabot force-pushes; a run on the
+  previous head says nothing about the new one.
+- A green dependency PR on its own (see Dependency Maintenance above).
+
 ## Gate Management
 
 Plans can declare `human_gates: [pre_impl, pre_merge, ...]`. Before dispatch,
