@@ -295,11 +295,18 @@ def _filter_env_for_subprocess() -> dict[str, str]:
 
 
 def _write_invocation_record(plan_dir: Path, record: InvocationRecord) -> Path:
-    """Write an invocation record to the plan's evidence directory."""
+    """Write an invocation record atomically to the plan's evidence directory.
+
+    Uses temp file + os.replace for atomic final publication. Concurrent
+    invocations cannot produce partial or corrupted records.
+    """
     out_dir = plan_dir / INVOCATION_RECORD_DIR
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / f"{record.invocation_id}.json"
-    out_path.write_text(json.dumps(record.model_dump(), indent=2) + "\n")
+    tmp_path = out_dir / f".{record.invocation_id}.json.tmp"
+    content = json.dumps(record.model_dump(), indent=2) + "\n"
+    tmp_path.write_text(content)
+    os.replace(tmp_path, out_path)
     return out_path
 
 
@@ -528,38 +535,46 @@ def evidence_run_main(argv: list[str] | None = None) -> int:
     return 1
 
 
-def _load_journeys_from_plan(plan_dir: Path) -> list[str]:
-    """Load journey names from plan's objective contract if present."""
+def _load_journeys_from_plan(plan_dir: Path) -> tuple[list[str] | None, str | None]:
+    """Load journey names from plan's objective contract.
+
+    Returns (journeys, error). If error is set, contract is missing or invalid
+    and capture must refuse. If journeys is empty list (not None), contract
+    exists but has no journeys.
+    """
     plan_md = plan_dir / "plan.md"
     if not plan_md.is_file():
-        return []
+        return None, "plan.md not found"
 
     text = plan_md.read_text()
     if not text.startswith("---"):
-        return []
+        return None, "plan.md missing frontmatter"
 
     import yaml
 
     parts = text.split("---", 2)
     if len(parts) < 3:
-        return []
+        return None, "plan.md malformed frontmatter"
 
     fm = yaml.safe_load(parts[1])
     links = fm.get("links", {})
     contract_ref = links.get("objective_contract")
     if not contract_ref:
-        return []
+        return None, "plan missing links.objective_contract — capture requires an objective contract"
 
     contract_path = plan_dir / contract_ref
     if not contract_path.is_file():
-        return []
+        return None, f"objective contract not found: {contract_ref}"
 
     try:
         contract = json.loads(contract_path.read_text())
         journeys = contract.get("user_journeys", [])
-        return [j.get("name") for j in journeys if j.get("name")]
-    except (json.JSONDecodeError, KeyError):
-        return []
+        journey_names = [j.get("name") for j in journeys if j.get("name")]
+        if not journey_names:
+            return None, "objective contract has no user_journeys — capture requires declared journeys"
+        return journey_names, None
+    except (json.JSONDecodeError, KeyError) as exc:
+        return None, f"objective contract invalid: {exc}"
 
 
 def evidence_capture_main(argv: list[str] | None = None) -> int:
@@ -607,9 +622,13 @@ def evidence_capture_main(argv: list[str] | None = None) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
 
-    journeys = _load_journeys_from_plan(plan_dir)
+    journeys, contract_error = _load_journeys_from_plan(plan_dir)
 
-    if journeys and args.journey not in journeys:
+    if contract_error:
+        print(f"error: {contract_error}", file=sys.stderr)
+        return 2
+
+    if args.journey not in journeys:
         print(
             f"error: journey {args.journey!r} not found in plan contract; "
             f"available: {', '.join(journeys)}",
@@ -726,7 +745,9 @@ def evidence_capture_main(argv: list[str] | None = None) -> int:
     )
 
     manifest_path = capture_dir / "manifest.json"
-    manifest_path.write_text(json.dumps(manifest.model_dump(), indent=2, default=str) + "\n")
+    tmp_manifest_path = capture_dir / ".manifest.json.tmp"
+    tmp_manifest_path.write_text(json.dumps(manifest.model_dump(), indent=2, default=str) + "\n")
+    os.replace(tmp_manifest_path, manifest_path)
 
     print(f"\nCapture ID: {capture_id}")
     print(f"Manifest: {manifest_path}")
