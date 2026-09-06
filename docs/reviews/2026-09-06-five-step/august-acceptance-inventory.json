@@ -1,0 +1,642 @@
+[
+  {
+    "plan": "2026-08-09-001-feat-repo-hygiene-actions",
+    "feature": "F001",
+    "acceptance": "pytest tests/test_repo_hygiene_observe.py passes: 14+ temp-repo cases covering clean, dirty-tracked, dirty-untracked, ahead-of-remote, no-upstream, merged-into-default, detached HEAD, zero-commit, no-remote, and cap-tripped repos. Critically, the detached-HEAD, zero-commit, and no-remote cases each carry a populated tree section when the tree is dirty and branches=None \u2014 dirty work is reported in exactly the repos where branch analysis cannot run. Only a non-repo cwd returns None overall, and no case raises.",
+    "recorded_passes": true,
+    "references": [
+      {
+        "uri": "evidence/F001-repo_hygiene_observe-pytest.txt",
+        "type": "test_output",
+        "local_file_present": true
+      }
+    ]
+  },
+  {
+    "plan": "2026-08-09-001-feat-repo-hygiene-actions",
+    "feature": "F002",
+    "acceptance": "pytest tests/test_repo_hygiene_classify.py passes: classify() is verified pure (monkeypatched subprocess.run and Path.write_text raise if touched); a branch that is both merged and ahead emits exactly one finding and it is the merged one; the default branch, the current branch, and a branch checked out in a second worktree each produce zero cleanup findings even when otherwise qualifying; binding suppression holds; the collapse threshold is exercised at N-1, N, and N+1.",
+    "recorded_passes": true,
+    "references": [
+      {
+        "uri": "evidence/F002-repo_hygiene_classify-pytest.txt",
+        "type": "test_output",
+        "local_file_present": true
+      }
+    ]
+  },
+  {
+    "plan": "2026-08-09-001-feat-repo-hygiene-actions",
+    "feature": "F003",
+    "acceptance": "pytest tests/test_repo_hygiene_provider.py passes: every emitted item declares a clears_when in registered_predicates(); suppress_resolved() retires each kind once its predicate flips; no item has a non-None exact_command; no item asserts reversible=True without a named re-runnable remedy; ActionItem.__post_init__ accepts every item; aggregate() dedupes repeats; and per D010 every item has a non-None plain_consequence and no title leads with a git mechanism term (ahead, upstream, ref, HEAD, porcelain).",
+    "recorded_passes": true,
+    "references": [
+      {
+        "uri": "evidence/F003-repo_hygiene_provider-pytest.txt",
+        "type": "test_output",
+        "local_file_present": true
+      }
+    ]
+  },
+  {
+    "plan": "2026-08-09-001-feat-repo-hygiene-actions",
+    "feature": "F004",
+    "acceptance": "pytest tests/test_repo_hygiene_plan_status.py passes: a fixture tree containing an all-passing active plan, an all-passing draft plan, an all-passing blocked plan, an all-passing completed plan, a partially-passing active plan, and a schema-invalid plan yields exactly one command-resolvable item (the active one, whose exact_command both passes validate_command_tokens AND is accepted by close_plan in dry-run), two explanation-only status items (draft, blocked), zero for completed and partial, and one plan_unparseable advisory.",
+    "recorded_passes": true,
+    "references": [
+      {
+        "uri": "evidence/F004-repo_hygiene_plan_status-pytest.txt",
+        "type": "test_output",
+        "local_file_present": true
+      }
+    ]
+  },
+  {
+    "plan": "2026-08-09-001-feat-repo-hygiene-actions",
+    "feature": "F005",
+    "acceptance": "pytest tests/test_repo_hygiene_cli.py passes and behavioral evidence is captured: `dontpanic next --json` in a fixture repo with all four git conditions plus one status-drifted plan emits the expected items with correct bands and project scoping; a clean repo emits zero hygiene items; `dashboard build --project <name>` renders them scoped; a missing project path produces an uncertainty card rather than a traceback or a bespoke item shape.",
+    "recorded_passes": true,
+    "references": [
+      {
+        "uri": "evidence/F005-repo_hygiene_cli-pytest.txt",
+        "type": "test_output",
+        "local_file_present": true
+      }
+    ]
+  },
+  {
+    "plan": "2026-08-09-001-feat-repo-hygiene-actions",
+    "feature": "F006",
+    "acceptance": "pytest tests/test_repo_hygiene_safety.py passes: the runner-level allowlist assertion holds across every F001 fixture (and fails if a transitive helper issues an unlisted subcommand); the .git tree hash is identical before and after observation on all fixtures including the stale-index repo; and a token-shaped branch name is scrubbed from the rendered payload.",
+    "recorded_passes": true,
+    "references": [
+      {
+        "uri": "evidence/F006-repo_hygiene_safety-pytest.txt",
+        "type": "test_output",
+        "local_file_present": true
+      }
+    ]
+  },
+  {
+    "plan": "2026-08-09-002-feat-decision-brief-at-gates",
+    "feature": "F001",
+    "acceptance": "(1) A fixture declaring audience 'none' with neither summary nor surfaces is accepted. (2) A fixture declaring audience 'none' that also carries a summary is rejected. (3) An end-user fixture missing its summary is rejected. (4) An end-user fixture whose summary is under 10 characters is rejected. (5) An end-user fixture with an empty surfaces array is rejected. (6) The JSON Schema and the Pydantic model return the same verdict on all five fixtures.",
+    "recorded_passes": true,
+    "references": [
+      {
+        "uri": "evidence/closeout-memo.md",
+        "type": "file",
+        "local_file_present": true
+      },
+      {
+        "uri": "evidence/f001-user-impact-contract-test.txt",
+        "type": "test_output",
+        "local_file_present": true
+      },
+      {
+        "uri": "audit/codex-auditor-F001-i0.json",
+        "type": "audit_json",
+        "local_file_present": true
+      }
+    ]
+  },
+  {
+    "plan": "2026-08-09-002-feat-decision-brief-at-gates",
+    "feature": "F002",
+    "acceptance": "(1) No plan directory's validation outcome changes: the same plan set validated against the pre-change and post-change schema yields an identical per-plan exit code. (2) git status shows no existing plan file modified by this feature. (3) The subtree-pulled schema in DontPanic is byte-identical to the one committed in agent-conventions.",
+    "recorded_passes": true,
+    "references": [
+      {
+        "uri": "evidence/closeout-memo.md",
+        "type": "file",
+        "local_file_present": true
+      },
+      {
+        "uri": "evidence/f002-validation-outcome-parity.txt",
+        "type": "test_output",
+        "local_file_present": true
+      },
+      {
+        "uri": "evidence/f002-all-plan-validation-1.16.0.txt",
+        "type": "test_output",
+        "local_file_present": true
+      },
+      {
+        "uri": "2693583",
+        "type": "commit",
+        "local_file_present": null
+      },
+      {
+        "uri": "audit/codex-auditor-F002-i0.json",
+        "type": "audit_json",
+        "local_file_present": true
+      }
+    ]
+  },
+  {
+    "plan": "2026-08-09-002-feat-decision-brief-at-gates",
+    "feature": "F003",
+    "acceptance": "(1) A pause emitted through the real supervisor path produces a NotifyEvent carrying a populated brief with no caller passing metadata arguments to render. (2) The attached dataclass is frozen and equality-comparable. (3) Status is declared when the recorded digest matches the current description. (4) Status is possibly-stale when the digests differ. (5) Status is undeclared when F001's impact block is absent. (6) pytest tests/test_decision_brief_delivery.py covers all five and passes.",
+    "recorded_passes": true,
+    "references": [
+      {
+        "uri": "evidence/closeout-memo.md",
+        "type": "file",
+        "local_file_present": true
+      },
+      {
+        "uri": "evidence/f003-regression-attribution.txt",
+        "type": "test_output",
+        "local_file_present": true
+      },
+      {
+        "uri": "54d54e2",
+        "type": "commit",
+        "local_file_present": null
+      },
+      {
+        "uri": "audit/codex-auditor-F003-i0.json",
+        "type": "audit_json",
+        "local_file_present": true
+      }
+    ]
+  },
+  {
+    "plan": "2026-08-09-002-feat-decision-brief-at-gates",
+    "feature": "F004",
+    "acceptance": "(1) RenderedEvent exposes the three new fields with None defaults and every existing template row still constructs. (2) Round-tripping a brief through render and into ActionItem preserves the decision-consequence element exactly, for each of three distinct briefs, so the mapping is proven rather than a single fixture matching. (3) For every renderable kind, plain_consequence differs from the rendered detail string \u2014 a regression asserting the current aliasing is gone across the whole table, not one example. (4) The reversible flag on an event-derived ActionItem tracks the brief across both True and False, rather than the hardcoded False it carries today. (5) pytest tests/test_event_copy_brief_fields.py covers all four and passes.",
+    "recorded_passes": true,
+    "references": [
+      {
+        "uri": "evidence/closeout-memo.md",
+        "type": "file",
+        "local_file_present": true
+      },
+      {
+        "uri": "evidence/f004-verification.txt",
+        "type": "test_output",
+        "local_file_present": true
+      },
+      {
+        "uri": "8285970",
+        "type": "commit",
+        "local_file_present": null
+      },
+      {
+        "uri": "audit/codex-auditor-F004-i2.json",
+        "type": "audit_json",
+        "local_file_present": true
+      }
+    ]
+  },
+  {
+    "plan": "2026-08-09-002-feat-decision-brief-at-gates",
+    "feature": "F005",
+    "acceptance": "(1) All 27 INBOX kinds still resolve to exactly one disposition and the existing totality test stays green. (2) Every kind that rendered before still renders. (3) Every renderable NEEDS_ACTION variant carries a brief. (4) Events with no feature in scope, and plan-level events, receive a distinct fallback rather than a feature-shaped one. (5) Rendered headlines for renderable NEEDS_ACTION kinds contain the impact line and do not open with the plan identifier. (6) A field-level diff against the pre-change render shows no previously-present fact absent. (7) Every exact command is byte-identical before and after. (8) pytest tests/test_event_copy_impact_first.py covers all seven and passes.",
+    "recorded_passes": true,
+    "references": [
+      {
+        "uri": "evidence/closeout-memo.md",
+        "type": "file",
+        "local_file_present": true
+      }
+    ]
+  },
+  {
+    "plan": "2026-08-09-002-feat-decision-brief-at-gates",
+    "feature": "F006",
+    "acceptance": "(1) A gate on a feature with no impact block renders the exact undeclared sentence and no synthesized prose. (2) A stale declaration renders marked as stale rather than current. (3) The source-level non-generative assertion holds across every approval template. (4) plan lock on a fixture whose plan declares a user-facing surface and omits the impact block prints an advisory naming each such feature and exits 0. (5) plan lock on the same fixture with the impact block declared prints no advisory and exits 0. (6) pytest tests/test_event_copy_undeclared_impact.py covers all five and passes.",
+    "recorded_passes": true,
+    "references": [
+      {
+        "uri": "evidence/closeout-memo.md",
+        "type": "file",
+        "local_file_present": true
+      }
+    ]
+  },
+  {
+    "plan": "2026-08-09-002-feat-decision-brief-at-gates",
+    "feature": "F007",
+    "acceptance": "(1) The approve prompt for a synthetic gate shows the same three brief elements as the INBOX entry for that gate. (2) Both read the single snapshot rather than recomputing, asserted by mutating the snapshot and observing both outputs change. (3) A summary exceeding the cap keeps its impact line and truncates supporting detail. (4) Secret scrubbing passes over both payloads with a token-shaped string planted in the summary. (5) pytest tests/test_brief_cli_inbox_parity.py covers all four and passes.",
+    "recorded_passes": true,
+    "references": [
+      {
+        "uri": "evidence/f007-f008-pytest.txt",
+        "type": "test_output",
+        "local_file_present": true
+      }
+    ]
+  },
+  {
+    "plan": "2026-08-09-002-feat-decision-brief-at-gates",
+    "feature": "F008",
+    "acceptance": "(1) The Discord payload, the terminal notification, and the dashboard card carry the same three brief elements for one synthetic gate, modulo declared truncation. (2) The dashboard rendering is unabridged while both notification sinks are capped. (3) Truncation preserves the impact line in every capped sink. (4) Secret scrubbing passes over all three payloads with a token-shaped string planted in the summary. (5) pytest tests/test_brief_sink_parity.py covers all four and passes.",
+    "recorded_passes": true,
+    "references": [
+      {
+        "uri": "evidence/f007-f008-pytest.txt",
+        "type": "test_output",
+        "local_file_present": true
+      }
+    ]
+  },
+  {
+    "plan": "2026-08-09-002-feat-decision-brief-at-gates",
+    "feature": "F009",
+    "acceptance": "(1) evidence/ holds a before and an after rendering of the fixture gate. (2) The fixture header records what it was modelled on. (3) A reader given only the after rendering can state what changes, who feels it, and what approving does, without opening plan.md. (4) The authoring guidance exists and the plan-artifacts skill references it. (5) git status shows no file modified outside DontPanic and agent-conventions.",
+    "recorded_passes": true,
+    "references": [
+      {
+        "uri": "evidence/f009-before-render.txt",
+        "type": "file",
+        "local_file_present": true
+      },
+      {
+        "uri": "evidence/f009-after-render.txt",
+        "type": "file",
+        "local_file_present": true
+      },
+      {
+        "uri": "scripts/dontpanic_orchestrate/tests/fixtures/decision_brief_sticky_first/README.md",
+        "type": "file",
+        "local_file_present": true
+      },
+      {
+        "uri": "docs/authoring-user-impact.md",
+        "type": "file",
+        "local_file_present": true
+      }
+    ]
+  },
+  {
+    "plan": "2026-08-09-002-feat-decision-brief-at-gates",
+    "feature": "F010",
+    "acceptance": "(1) README states in operator language that approval prompts lead with outcome and audience when declared. (2) CHANGELOG.md has a dated or Unreleased entry for this plan's operator-visible change. (3) Neither file claims intake exists or restyles the product. (4) A reader of README alone can tell this is different from 'paused at gate pre_merge'.",
+    "recorded_passes": true,
+    "references": [
+      {
+        "uri": "README.md",
+        "type": "file",
+        "local_file_present": true
+      },
+      {
+        "uri": "CHANGELOG.md",
+        "type": "file",
+        "local_file_present": true
+      }
+    ]
+  },
+  {
+    "plan": "2026-08-09-003-feat-sim-harness-multi-trial",
+    "feature": "F001",
+    "acceptance": "(1) A scenario file that omits a required key is rejected at load with a message naming the key. (2) A scenario referencing a fixture path that does not exist is rejected at load, not at run time. (3) The ported existing synthetic plan loads and its parsed form carries the same plan id, feature count, and scripted replies as the hardcoded version. (4) A scenario directory copied to a different absolute path still loads. (5) pytest tests/test_scenario_loader.py covers all four and passes.",
+    "recorded_passes": true,
+    "references": [
+      {
+        "uri": "evidence/f001-test-scenario-loader.txt",
+        "type": "test_output",
+        "local_file_present": true
+      }
+    ]
+  },
+  {
+    "plan": "2026-08-09-003-feat-sim-harness-multi-trial",
+    "feature": "F002",
+    "acceptance": "(1) A scenario scripting needs_changes then signed_off drives two iterations and terminates signed off. (2) A scenario scripting a truncated envelope reaches the supervisor's existing malformed-envelope handling rather than raising out of the executor. (3) A scenario scripting a narrative verdict that contradicts the structured status triggers the existing mismatch detection. (4) Both executors are instances of BaseExecutor and report available. (5) git diff shows no file under the orchestrator package modified other than the smoke package and its tests. (6) pytest tests/test_scripted_executors.py covers the first four and passes.",
+    "recorded_passes": true,
+    "references": [
+      {
+        "uri": "evidence/f002-test-scripted-executors.txt",
+        "type": "test_output",
+        "local_file_present": true
+      }
+    ]
+  },
+  {
+    "plan": "2026-08-09-003-feat-sim-harness-multi-trial",
+    "feature": "F003",
+    "acceptance": "(1) A timeout perturbation on the first implementer call produces a trial record naming the perturbation and the supervisor's resulting terminal state. (2) The same scenario run twice produces the same perturbation sequence. (3) A non-zero exit perturbation does not raise out of the harness. (4) A quota-exhausted perturbation reaches the existing admission path rather than being swallowed by the executor. (5) pytest tests/test_chaos_perturbations.py covers all four and passes.",
+    "recorded_passes": true,
+    "references": [
+      {
+        "uri": "evidence/f003-test-chaos-perturbations.txt",
+        "type": "test_output",
+        "local_file_present": true
+      }
+    ]
+  },
+  {
+    "plan": "2026-08-09-003-feat-sim-harness-multi-trial",
+    "feature": "F004",
+    "acceptance": "(1) A scenario run with N=20 produces 20 trial records. (2) A scenario whose fixture is mutated during trial 3 leaves trial 4's outcome unchanged, proving isolation. (3) A trial that raises is recorded as errored and trials after it still run. (4) Each trial record carries terminal state, iteration count, duration, and token counts. (5) Default invocation runs exactly one trial. (6) pytest tests/test_multi_trial_runner.py covers all five and passes.",
+    "recorded_passes": true,
+    "references": [
+      {
+        "uri": "evidence/f004-test-multi-trial-runner.txt",
+        "type": "test_output",
+        "local_file_present": true
+      }
+    ]
+  },
+  {
+    "plan": "2026-08-09-003-feat-sim-harness-multi-trial",
+    "feature": "F005",
+    "acceptance": "(1) A 20-trial run writes one artifact containing 20 trial records and one aggregate block. (2) With 20 of 20 reaching the expected state the success fraction is exactly 1 and the all-succeed probability is exactly 1. (3) With 10 of 20 the artifact reports both the raw counts and the derived probabilities, and the raw counts are present rather than only a percentage. (4) Token and duration totals in the aggregate equal the sum over trial records. (5) Secret scrubbing passes over the artifact with a token-shaped string planted in a scenario id. (6) pytest tests/test_run_artifact.py covers all five and passes.",
+    "recorded_passes": true,
+    "references": [
+      {
+        "uri": "evidence/f005-test-run-artifact.txt",
+        "type": "test_output",
+        "local_file_present": true
+      }
+    ]
+  },
+  {
+    "plan": "2026-08-09-003-feat-sim-harness-multi-trial",
+    "feature": "F006",
+    "acceptance": "(1) With no flags, the command's terminal state and exit code match a baseline recorded before this feature. (2) A trial count below one is rejected before any trial starts. (3) A scenario path that does not exist is rejected before any trial starts. (4) pytest tests/test_smoke_cli_flags.py covers all three and passes.",
+    "recorded_passes": true,
+    "references": [
+      {
+        "uri": "evidence/f006-test-smoke-cli-flags.txt",
+        "type": "test_output",
+        "local_file_present": true
+      }
+    ]
+  },
+  {
+    "plan": "2026-08-09-003-feat-sim-harness-multi-trial",
+    "feature": "F007",
+    "acceptance": "(1) A run where one trial misses its expected terminal state exits non-zero. (2) A run where every trial reaches it exits zero. (3) All three previously shipping exit codes remain reachable with unchanged meanings. (4) The summary line names an artifact path and that path exists on disk. (5) pytest tests/test_smoke_exit_contract.py covers all four and passes.",
+    "recorded_passes": true,
+    "references": [
+      {
+        "uri": "evidence/f007-test-smoke-exit-contract.txt",
+        "type": "test_output",
+        "local_file_present": true
+      },
+      {
+        "uri": "evidence/f001-f007-named-suite.txt",
+        "type": "test_output",
+        "local_file_present": true
+      }
+    ]
+  },
+  {
+    "plan": "2026-08-09-004-feat-agent-graders-task-corpus",
+    "feature": "F001",
+    "acceptance": "(1) A grader that attempts to write to the artifacts it was given fails a purity test that monkeypatches the write paths. (2) A grader returning a result omitting a required field is rejected at construction. (3) A grader with no opinion returns not-applicable and the aggregate distinguishes that from a pass. (4) Every result names the component its evidence came from. (5) pytest tests/test_grader_interface.py covers all four and passes.",
+    "recorded_passes": true,
+    "references": [
+      {
+        "uri": "evidence/f001-grader-interface.txt",
+        "type": "test_output",
+        "local_file_present": true
+      }
+    ]
+  },
+  {
+    "plan": "2026-08-09-004-feat-agent-graders-task-corpus",
+    "feature": "F002",
+    "acceptance": "(1) A trial producing an artifact missing a required frontmatter key is failed with that key named. (2) A trial flipping a feature to passing with an empty evidence list is failed. (3) A clean trial passes both. (4) pytest tests/test_conformance_graders.py covers all three and passes.",
+    "recorded_passes": true,
+    "references": [
+      {
+        "uri": "evidence/f002-conformance-graders.txt",
+        "type": "test_output",
+        "local_file_present": true
+      }
+    ]
+  },
+  {
+    "plan": "2026-08-09-004-feat-agent-graders-task-corpus",
+    "feature": "F003",
+    "acceptance": "(1) A trial whose gate state records a cleared gate absent from the event log is failed. (2) The reverse case, an event with no corresponding gate-state entry, is also failed. (3) A trial writing outside every declared repository is failed with the path named. (4) A clean trial passes both. (5) pytest tests/test_consistency_graders.py covers all four and passes.",
+    "recorded_passes": true,
+    "references": [
+      {
+        "uri": "evidence/f003-consistency-graders.txt",
+        "type": "test_output",
+        "local_file_present": true
+      }
+    ]
+  },
+  {
+    "plan": "2026-08-09-004-feat-agent-graders-task-corpus",
+    "feature": "F004",
+    "acceptance": "(1) The recorded non-active close case is passed by the token check and failed by the operational check, and the report shows both. (2) A close command rendered against an active all-passing plan passes both checks. (3) A command whose handler exposes no safe dry-run is reported not-applicable rather than passing. (4) A monkeypatched execution path proves no command is executed for real during grading. (5) pytest tests/test_operational_validity_grader.py covers all four and passes.",
+    "recorded_passes": true,
+    "references": [
+      {
+        "uri": "evidence/f004-operational-validity.txt",
+        "type": "test_output",
+        "local_file_present": true
+      }
+    ]
+  },
+  {
+    "plan": "2026-08-09-004-feat-agent-graders-task-corpus",
+    "feature": "F005",
+    "acceptance": "(1) A default run performs no model call, asserted by a monkeypatched executor that raises if invoked. (2) A report produced without the judge names the dimensions it did not evaluate. (3) Every judged result carries the rubric version. (4) On a decision entry whose rationale restates the decision, the judge's verdict and reason are recorded, whatever they are, rather than being discarded. (5) Where the existing verdict-mismatch detector and the judge disagree, the deterministic result is the one reported as authoritative. (6) pytest tests/test_judge_grader.py covers all five and passes.",
+    "recorded_passes": true,
+    "references": [
+      {
+        "uri": "evidence/f005-f006-judge.txt",
+        "type": "test_output",
+        "local_file_present": true
+      },
+      {
+        "uri": "evidence/judge-rubric-v0.md",
+        "type": "file",
+        "local_file_present": true
+      }
+    ]
+  },
+  {
+    "plan": "2026-08-09-004-feat-agent-graders-task-corpus",
+    "feature": "F006",
+    "acceptance": "(1) The calibration report states the agreement rate and the labeled-set size adjacent to each other. (2) Every divergent case is listed with both verdicts and both reasons. (3) Every label names its assigner and date. (4) The report contains an explicit statement of what the sample size does and does not support. (5) Re-running the judge over the same subset with the same rubric version reproduces the same agreement rate.",
+    "recorded_passes": true,
+    "references": [
+      {
+        "uri": "evidence/f005-f006-judge.txt",
+        "type": "test_output",
+        "local_file_present": true
+      },
+      {
+        "uri": "evidence/judge-calibration-report.md",
+        "type": "file",
+        "local_file_present": true
+      }
+    ]
+  },
+  {
+    "plan": "2026-08-09-004-feat-agent-graders-task-corpus",
+    "feature": "F007",
+    "acceptance": "(1) Every corpus scenario names a source incident with a date. (2) Every corpus scenario states intended behavior in a field distinct from expected current behavior. (3) At least one scenario fails against the current implementation, is marked as expected-to-fail with a reason, and does not count as a harness error. (4) The corpus report states the share contributed by the largest single source. (5) Running the whole corpus produces a per-scenario result table with no scenario erroring out.",
+    "recorded_passes": true,
+    "references": [
+      {
+        "uri": "evidence/f007-f008-corpus.txt",
+        "type": "test_output",
+        "local_file_present": true
+      }
+    ]
+  },
+  {
+    "plan": "2026-08-09-004-feat-agent-graders-task-corpus",
+    "feature": "F008",
+    "acceptance": "(1) The guidance exists and names the three artifacts a failure must carry to be promotable. (2) The guidance states the same-sitting anti-pattern explicitly. (3) The plan-artifacts skill references it. (4) A reader following only the guidance can add a scenario without editing any file under the orchestrator package, demonstrated by adding one. (5) The added scenario runs in the corpus.",
+    "recorded_passes": true,
+    "references": [
+      {
+        "uri": "evidence/f007-f008-corpus.txt",
+        "type": "test_output",
+        "local_file_present": true
+      },
+      {
+        "uri": "docs/authoring-corpus-scenario.md",
+        "type": "file",
+        "local_file_present": true
+      }
+    ]
+  },
+  {
+    "plan": "2026-08-09-005-feat-eval-ci-capability-regression",
+    "feature": "F001",
+    "acceptance": "(1) A scenario file with no suite field is rejected at load with the field named. (2) A scenario declaring an unrecognized suite name is rejected. (3) Every scenario in the existing corpus carries an explicit membership after backfill. (4) Changing a scenario's suite is visible as a one-line diff in that scenario's own file. (5) pytest tests/test_suite_membership.py covers all four and passes.",
+    "recorded_passes": true,
+    "references": [
+      {
+        "uri": "evidence/f001-f005-suites.txt",
+        "type": "test_output",
+        "local_file_present": true
+      }
+    ]
+  },
+  {
+    "plan": "2026-08-09-005-feat-eval-ci-capability-regression",
+    "feature": "F002",
+    "acceptance": "(1) A regression run with all scenarios passing exits zero. (2) A regression run with one failing scenario exits non-zero and names that scenario, its grader, and the reason. (3) A guard raises if any model call is attempted during a regression run. (4) The run output states the suite duration. (5) A regression run is unaffected by the contents of the capability suite. (6) pytest tests/test_regression_runner.py covers all five and passes.",
+    "recorded_passes": true,
+    "references": [
+      {
+        "uri": "evidence/f001-f005-suites.txt",
+        "type": "test_output",
+        "local_file_present": true
+      }
+    ]
+  },
+  {
+    "plan": "2026-08-09-005-feat-eval-ci-capability-regression",
+    "feature": "F003",
+    "acceptance": "(1) A capability run where every scenario fails exits zero. (2) The report states passes and total as counts, not only a percentage. (3) The report lists per-scenario outcomes. (4) A capability run with the judge disabled names the dimensions it did not evaluate. (5) A capability failure never changes a regression run's exit code. (6) pytest tests/test_capability_runner.py covers all five and passes.",
+    "recorded_passes": true,
+    "references": [
+      {
+        "uri": "evidence/f001-f005-suites.txt",
+        "type": "test_output",
+        "local_file_present": true
+      }
+    ]
+  },
+  {
+    "plan": "2026-08-09-005-feat-eval-ci-capability-regression",
+    "feature": "F004",
+    "acceptance": "(1) A scenario passing in N consecutive recorded runs is reported eligible; one that failed in any of them is not. (2) Eligibility alone does not change any scenario's membership. (3) Promoting writes a decision entry naming the scenario, the justifying run identifiers, and the actor. (4) A promoted scenario appears in the next regression run and can fail it. (5) No code path demotes a scenario automatically, asserted by a source-level check. (6) pytest tests/test_suite_promotion.py covers all five and passes.",
+    "recorded_passes": true,
+    "references": [
+      {
+        "uri": "evidence/f001-f005-suites.txt",
+        "type": "test_output",
+        "local_file_present": true
+      }
+    ]
+  },
+  {
+    "plan": "2026-08-09-005-feat-eval-ci-capability-regression",
+    "feature": "F005",
+    "acceptance": "(1) A scenario failing in both the previous and current run is classified still-failing, not newly-failing. (2) A scenario passing previously and failing now is classified newly-failing. (3) A still-passing scenario whose duration moved beyond the threshold is flagged. (4) With no previous run available the report states that no comparison was possible rather than classifying everything as new. (5) One report covers both suites. (6) pytest tests/test_drift_report.py covers all five and passes.",
+    "recorded_passes": true,
+    "references": [
+      {
+        "uri": "evidence/f001-f005-suites.txt",
+        "type": "test_output",
+        "local_file_present": true
+      }
+    ]
+  },
+  {
+    "plan": "2026-08-09-005-feat-eval-ci-capability-regression",
+    "feature": "F006",
+    "acceptance": "(1) A commit introducing a regression-suite failure fails the build, demonstrated on a scratch branch. (2) A commit introducing a capability-suite failure does not fail the build, demonstrated the same way. (3) Both jobs publish their reports as retrievable artifacts. (4) The gating job performs no model call. (5) CONTRIBUTING states which suite gates and how to add to each. (6) The two demonstration runs are captured under the plan's evidence directory.",
+    "recorded_passes": true,
+    "references": [
+      {
+        "uri": "evidence/f006-regression-local.txt",
+        "type": "test_output",
+        "local_file_present": true
+      },
+      {
+        "uri": ".github/workflows/ci.yml",
+        "type": "file",
+        "local_file_present": true
+      },
+      {
+        "uri": "CONTRIBUTING.md",
+        "type": "file",
+        "local_file_present": true
+      },
+      {
+        "uri": "evidence/f006-capability-local.txt",
+        "type": "file",
+        "local_file_present": true
+      }
+    ]
+  },
+  {
+    "plan": "2026-08-10-001-fix-gate-identity-in-approval-copy",
+    "feature": "F001",
+    "acceptance": "(1) Driving the real _emit_gate_paused_discord with pending_gates=['pre_merge'], stage='general' renders gate `pre_merge` and stage `general` as distinct values, and no rendered slot contains the string 'gate `general`'. (2) The same holds for pending_gates=['breaker:iteration_cap'], stage='upfront': no rendered slot contains 'upfront' as a gate. (3) The two call sites that pass a non-gate stage (supervisor.py:1316 'general' and supervisor.py:2021 'upfront') are both covered by a test, and the test names them so a future re-homing of the call is caught. (4) _gather_fields no longer falls back to subtype for the gate slot, and a gate-shaped event with no pending_gates metadata renders with the gate omitted rather than substituted. (5) A multi-gate pause with pending_gates of length 2 renders a documented, runnable-or-absent command \u2014 specifically it must not print a single approve command containing a comma. (6) The stage='pre_merge' site still renders exactly as it does today, proving the change did not regress the two already-correct call sites. (7) The full existing event_copy and messaging suites pass with no new failures against a same-scope baseline.",
+    "recorded_passes": true,
+    "references": [
+      {
+        "uri": "evidence/f001-f002-pytest.txt",
+        "type": "test_output",
+        "local_file_present": true
+      }
+    ]
+  },
+  {
+    "plan": "2026-08-10-001-fix-gate-identity-in-approval-copy",
+    "feature": "F002",
+    "acceptance": "(1) A test asserts the rendered exact_command for a gate pause on pre_merge is exactly 'dontpanic approve <plan_id> pre_merge'. (2) An invariant test iterates every renderable kind and fails if any rendered slot names a gate absent from the source event. (3) The invariant is proven non-vacuous: a deliberate mutation reintroducing the subtype-to-gate alias makes it fail, and that failure is captured as evidence. (4) The parametrized kind set is derived from the disposition table rather than hardcoded, and is asserted non-empty. (5) pytest passes for the new module and the full suite shows no new failures against a same-scope baseline.",
+    "recorded_passes": true,
+    "references": [
+      {
+        "uri": "evidence/f001-f002-pytest.txt",
+        "type": "test_output",
+        "local_file_present": true
+      }
+    ]
+  },
+  {
+    "plan": "2026-08-10-001-fix-gate-identity-in-approval-copy",
+    "feature": "F003",
+    "acceptance": "(1) README states that the approve command names the gate that is actually pending. (2) CHANGELOG.md has an Unreleased or dated entry for this fix. (3) No second 'what is DontPanic' section is invented. (4) A reader can tell this is different from `dontpanic approve <plan> general`, the non-gate token the command used to print.",
+    "recorded_passes": true,
+    "references": [
+      {
+        "uri": "README.md",
+        "type": "file",
+        "local_file_present": true
+      },
+      {
+        "uri": "CHANGELOG.md",
+        "type": "file",
+        "local_file_present": true
+      }
+    ]
+  }
+]

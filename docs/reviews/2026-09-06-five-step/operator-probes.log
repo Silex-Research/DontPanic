@@ -1,0 +1,2 @@
+{"case": "4 hits; threshold 3; 24h window", "reported_lifts_at": "2026-09-07 08:00:00+00:00", "threshold_expiry_boundary": "2026-09-07 09:00:00+00:00", "hits": 4}
+{"case": "existing test_output explicitly contains failure", "reported_status": "passed"}
