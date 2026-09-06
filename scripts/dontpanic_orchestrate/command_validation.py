@@ -556,6 +556,28 @@ _VOCABULARY: Final[Mapping[str, SubcommandSpec]] = {
         positional_max=1,
         value_flags=frozenset({"--format"}),
     ),
+    # ``evidence run`` and ``evidence capture`` per PR#74 command-evidence-capture.
+    # Explicit opt-in CLI producers for command recording and runtime capture.
+    "evidence": SubcommandSpec(
+        subcommands={
+            "run": SubcommandSpec(
+                positional_min=1,
+                positional_max=None,
+                value_flags=frozenset(
+                    {"--feature", "-f", "--iteration", "-i", "--cwd", "--timeout-seconds"}
+                ),
+                bool_flags=frozenset({"--confirm"}),
+                required_flags=frozenset({"--feature", "--iteration"}),
+            ),
+            "capture": SubcommandSpec(
+                positional_min=1,
+                positional_max=1,
+                value_flags=frozenset({"--journey", "-j", "--source", "-s", "--config", "-c"}),
+                bool_flags=frozenset({"--confirm"}),
+                required_flags=frozenset({"--journey", "--source"}),
+            ),
+        },
+    ),
 }
 
 

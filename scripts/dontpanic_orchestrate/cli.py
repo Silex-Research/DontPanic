@@ -6346,6 +6346,10 @@ def _run_cli(argv: list[str] | None = None) -> int:
         from dontpanic_orchestrate.triage_apply import cli_main as _triage_apply_cli
 
         return _triage_apply_cli(raw[1:])
+    if raw and raw[0] == "evidence":
+        from dontpanic_orchestrate.evidence_cli import evidence_main as _evidence_main
+
+        return _evidence_main(raw[1:])
     if raw and raw[0] == "orchestrate":
         return _orchestrate_main(raw[1:])
     if raw and raw[0] == "roles":
