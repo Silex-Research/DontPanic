@@ -61,7 +61,7 @@ import os
 import re
 import sys
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -97,6 +97,8 @@ from dontpanic_orchestrate.experience_readiness_gate import (
     parse_product_metadata,
 )
 from dontpanic_orchestrate.experience_readiness_honesty import (
+    EXECUTION_CLASSES,
+    EXECUTION_DATA_SOURCE,
     RequiredDataSource,
     check_degraded_honesty,
 )
@@ -656,7 +658,13 @@ def _journey_outcome_class(
     required_families = frozenset(
         er.surface_family(sc) for sc, _ in requirements
     )
-    sources = sorted({r.data_source for r in refs if r.data_source})
+    # The reserved journey-execution key is journey-level proof, not a
+    # dependency source; deriving a RequiredDataSource from it would demand
+    # per-family availability coverage of the proof itself (PR56 follow-up).
+    sources = sorted({
+        r.data_source for r in refs
+        if r.data_source and r.data_source != EXECUTION_DATA_SOURCE
+    })
     allowed_modes = {
         ds: {r.degraded_mode for r in refs if r.data_source == ds and r.degraded_mode}
         for ds in sources
@@ -689,6 +697,18 @@ def _journey_outcome_class(
         f"typing={typing_verdict.value} honesty={honesty.verdict.value} "
         f"real_execution={honesty.satisfied}"
     )
+    # Name the specific gap so the operator fixes THAT, not "add evidence"
+    # (docs/authoring-typed-evidence.md, "Reading a blocking reason").
+    if not honesty.execution_evidence:
+        classes = ", ".join(sorted(ec.value for ec in EXECUTION_CLASSES))
+        detail += (
+            "; no real journey-execution ref (add an EvidenceRef with "
+            f'data_source="{EXECUTION_DATA_SOURCE}", data_provenance=real, '
+            f"availability=available, evidence_class in {{{classes}}}, uri under "
+            f"/{journey.name}/ — a dependency transcript is not execution proof)"
+        )
+    if honesty.missing_families:
+        detail += "; missing required families: " + ", ".join(honesty.missing_families)
     return outcome, detail
 
 
@@ -780,6 +800,13 @@ def _experience_gate_decision(
         product_metadata=parse_product_metadata(plan_data.get("delivery_class")),
         journeys=outcomes,
     )
+    # Keep the typed verdict on advisory findings too: audit callers need the
+    # missing-family explanation even when pending correctly does not block.
+    result.findings = [
+        replace(gf, note=f"{gf.note}; {details[gf.journey]}")
+        if gf.journey in details else gf
+        for gf in result.findings
+    ]
     reasons = []
     for gf in result.findings:
         if not gf.blocks:

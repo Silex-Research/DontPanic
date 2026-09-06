@@ -55,6 +55,7 @@ Runs after all features pass feature-level audit, before plan-level signoff.
 - **Output:** completion findings — missing journeys, unwired UI, parity gaps not surfaced as features, integration breaks.
 - **Cost:** high — requires MCP integrations for runtime evidence.
 - **Gate:** findings classify into inline fix / child plan / follow-up plan / operator-deferred (see §3.3).
+- **Authoring:** how to record the typed refs this pass reads, including the reserved `journey_execution` execution proof, is in [`authoring-typed-evidence.md`](authoring-typed-evidence.md).
 
 ### 3.3 Gap Triage
 

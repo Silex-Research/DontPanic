@@ -306,3 +306,85 @@ def test_plan_journey_required_data_sources_declares_both_families_obligation3()
     assert journey, "plan journey must declare at least one required data_source"
     assert all(rds.required_families == BOTH for rds in journey), (
         "every plan-journey data_source must require BOTH human and agent families")
+
+
+# --- PR56 follow-ups (CodeRabbit r3422558988 / r3422558994) -------------------
+# Two permissiveness defects in the satisfaction discriminator, reproduced
+# against the pure checker (docs/reviews/2026-09-05-community-bot-followups.md).
+
+def test_execution_data_source_is_a_named_constant():
+    # The journey-execution key is reserved vocabulary the gate must also know.
+    assert h.EXECUTION_DATA_SOURCE == "journey_execution"
+
+
+def test_dependency_ref_with_execution_class_is_not_journey_execution():
+    """r3422558988: an available, real dependency ref (data_source=payments,
+    evidence_class=tool_call_transcript) is an availability claim about a
+    dependency, NOT proof the journey ran. Alone it must not satisfy."""
+    sources = [RDS("payments", AGENT)]
+    dependency_only = [
+        ref("payments", Fam.agent, Avail.available, evidence_class=EC.tool_call_transcript),
+    ]
+    res = h.check_degraded_honesty(sources, {}, dependency_only)
+    assert res.verdict is Verdict.honest  # nothing dishonest about it
+    assert res.satisfied is False         # but it is not a success
+    assert res.execution_evidence is False and res.missing_families == []
+
+    # The same set PLUS a journey-execution ref is satisfied.
+    res2 = h.check_degraded_honesty(sources, {}, [*dependency_only, exec_ref(Fam.agent)])
+    assert res2.satisfied is True
+
+
+def test_execution_ref_under_a_dependency_key_does_not_count():
+    # Even a screenshot keyed to a dependency source is not journey execution.
+    sources = [RDS("payments", AGENT)]
+    refs = [
+        ref("payments", Fam.agent, Avail.available, evidence_class=EC.tool_call_transcript),
+        ref("payments", Fam.human, Avail.available, evidence_class=EC.screenshot),
+    ]
+    assert h.check_degraded_honesty(sources, {}, refs).satisfied is False
+
+
+def test_required_human_family_absent_while_source_up_is_pending_not_satisfied():
+    """r3422558994: RDS(payments, BOTH) with one typed agent ref + a real
+    execution ref returned honest/satisfied while the required human family
+    was absent. D015: certification requires EVERY required family typed."""
+    sources = [RDS("payments", BOTH)]
+    refs = [
+        ref("payments", Fam.agent, Avail.available, evidence_class=EC.tool_call_transcript),
+        exec_ref(Fam.agent),
+    ]
+    res = h.check_degraded_honesty(sources, {}, refs)
+    assert res.verdict is Verdict.human_not_yet_typed_pending
+    assert res.satisfied is False
+    assert res.sources[0].missing_families == {Fam.human}
+    assert res.missing_families == ["payments:human"]
+    assert res.execution_evidence is True
+
+
+def test_required_agent_family_absent_while_source_up_blocks_satisfaction():
+    # Mirror case: human typed, agent required but absent, source up. Not
+    # masking (nothing is down), so not dishonest — but not a success either.
+    sources = [RDS("payments", BOTH)]
+    refs = [
+        ref("payments", Fam.human, Avail.available, evidence_class=EC.screenshot),
+        exec_ref(Fam.human),
+    ]
+    res = h.check_degraded_honesty(sources, {}, refs)
+    assert res.verdict is not Verdict.degraded_dishonest
+    assert res.satisfied is False
+    assert res.sources[0].missing_families == {Fam.agent}
+
+
+def test_both_required_families_typed_and_up_with_execution_is_satisfied():
+    # Positive control for the two omission tests above.
+    sources = [RDS("payments", BOTH)]
+    refs = [
+        ref("payments", Fam.agent, Avail.available, evidence_class=EC.tool_call_transcript),
+        ref("payments", Fam.human, Avail.available, evidence_class=EC.screenshot),
+        exec_ref(Fam.agent),
+    ]
+    res = h.check_degraded_honesty(sources, {}, refs)
+    assert res.verdict is Verdict.honest
+    assert res.satisfied is True
+    assert res.sources[0].missing_families == set()
