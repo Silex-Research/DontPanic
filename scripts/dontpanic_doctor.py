@@ -3099,6 +3099,36 @@ def render_acknowledge_confirmation(result: AcknowledgeResult) -> str:
 # ── runner ─────────────────────────────────────────────────────────────────
 
 
+def check_runtime_evidence(*, skip_auth: bool = False) -> list[CheckResult]:
+    """Opt-in adapter readiness; optional platforms never block core use.
+
+    Re-register explicitly because imports can be cached after a registry reset.
+    No collector is instantiated, and no manifest is read or written.
+    """
+    from dontpanic_orchestrate.config import doctor_registry as registry
+    from dontpanic_orchestrate.runtime_evidence import android, backend, harness, ios
+
+    registry._register_baseline_checks()
+    android._register_android_doctor_checks()
+    ios._register_ios_doctor_checks()
+    harness._register_harness_doctor_checks()
+    backend._register_backend_doctor_checks()
+    results = []
+    excluded = frozenset({"backend_firebase"}) if skip_auth else frozenset()
+    for probe in registry.run_all_checks(excluded=excluded):
+        name = "runtime-evidence:" + probe.name
+        if probe.status == "pass":
+            results.append(_ok(name, probe.detail))
+        else:
+            results.append(
+                _warn(
+                    name, probe.detail,
+                    "Configure this adapter only if your project needs it; no capture was performed.",
+                )
+            )
+    return results
+
+
 def run_all_checks(
     skip_auth: bool = False,
     include_projects: bool = False,
@@ -3545,7 +3575,17 @@ def main(argv: list[str] | None = None) -> int:
             "report; alone it prints a concise confirmation."
         ),
     )
+    parser.add_argument(
+        "--runtime-evidence", action="store_true",
+        help="Include optional local capture-adapter readiness probes (no capture).",
+    )
     args = parser.parse_args(argv)
+    if args.runtime_evidence and (
+        args.agent or args.project is not None or args.upgrade or args.acknowledge
+    ):
+        parser.error(
+            "--runtime-evidence cannot be combined with --agent, --project, --upgrade, or --acknowledge"
+        )
 
     # Plan 2026-06-21-001 F007 — acknowledge mode. The SOLE marker-write surface
     # (D015): advance + dismiss + COMMIT, then re-render from the committed marker
@@ -3601,6 +3641,8 @@ def main(argv: list[str] | None = None) -> int:
         # upgrade probe into a fetch too, not only the --upgrade report.
         check_upstream=args.check_upstream,
     )
+    if args.runtime_evidence:
+        results.extend(check_runtime_evidence(skip_auth=args.skip_auth))
     # Plan 2026-05-19-002 F001 — profile-aware path activates ONLY when
     # --profile is supplied. With no --profile, the legacy
     # render_text/render_json + 0/1/2 exit code matrix is preserved
@@ -3662,6 +3704,7 @@ def main(argv: list[str] | None = None) -> int:
             and r.name != "skill-rubrics"
             and r.name != "upgrade-readiness"
             and r.name != "buzz-config"
+            and not r.name.startswith("runtime-evidence:")
         ]
         return compute_strict_exit(strict_inputs)
     return 0 if all(r.ok for r in results) else 1

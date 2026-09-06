@@ -39,14 +39,17 @@ def register_doctor_check(check_id: str, check: DoctorCheck) -> None:
     _REGISTRY[check_id] = check
 
 
-def run_all_checks() -> list[DoctorResult]:
+def run_all_checks(*, excluded: frozenset[str] = frozenset()) -> list[DoctorResult]:
     """Run every registered check in registration order.
 
+    ``excluded`` skips callbacks before execution (for example --skip-auth).
     Each check is wrapped in a try/except so one adapter's bad probe
     can't block the rest of the report. Failures surface as ``fail``
     with the exception in ``detail``."""
     out: list[DoctorResult] = []
     for check_id, check in _REGISTRY.items():
+        if check_id in excluded:
+            continue
         try:
             out.append(check())
         except Exception as exc:  # noqa: BLE001 — defensive: doctor is best-effort

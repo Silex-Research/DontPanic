@@ -141,6 +141,9 @@ no projects are registered.
 dontpanic doctor --skip-auth
 ```
 
+For optional local capture-adapter checks, run `dontpanic doctor --runtime-evidence --skip-auth`.
+These checks do not capture evidence or block core use; see [integration readiness](./INTEGRATION_READINESS.md).
+
 Use the full doctor only after authenticating the optional provider CLIs your
 project actually needs:
 

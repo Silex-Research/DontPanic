@@ -482,6 +482,7 @@ _VOCABULARY: Final[Mapping[str, SubcommandSpec]] = {
             {
                 "--json",
                 "--skip-auth",
+                "--runtime-evidence",
                 "--validate-plans",
                 "--validate-plans-strict",
                 "--architecture-drift-strict",
