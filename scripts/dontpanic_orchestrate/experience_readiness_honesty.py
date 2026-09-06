@@ -23,10 +23,13 @@ It answers three orthogonal questions for a journey's evidence set:
      compared on structured fields, not description text.
 
   3. satisfaction discriminator (D005/D011): a journey's evidence set is
-     `satisfied` only if it ALSO contains a real (non-seeded), available
-     journey-EXECUTION EvidenceRef whose evidence_class is in the closed
-     execution set. A set of only unavailable/typed-skip tuples is honest about
-     being down but NOT a success.
+     `satisfied` only if EVERY required family is typed (D015) AND it ALSO
+     contains a real (non-seeded), available journey-EXECUTION EvidenceRef —
+     keyed data_source=EXECUTION_DATA_SOURCE ("journey_execution"), distinct
+     from every dependency source — whose evidence_class is in the closed
+     execution set. A dependency transcript is an availability claim, not
+     execution proof. A set of only unavailable/typed-skip tuples is honest
+     about being down but NOT a success.
 
 Reduction is deterministic (D012); grouping is by (objective=UserJourney.name,
 data_source) (D016).
@@ -35,10 +38,10 @@ data_source) (D016).
 from __future__ import annotations
 
 import sys
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Iterable, Mapping, Sequence
 
 # Resolve the merged 2a-core models dir the same way the F002/F003 modules do.
 for _c in (
@@ -62,6 +65,16 @@ EXECUTION_CLASSES: frozenset = frozenset({
     EC.screenshot, EC.recording, EC.journey_walk, EC.terminal_transcript,
     EC.tool_call_transcript, EC.cli_transcript, EC.contract_check,
 })
+
+# D005/D011 (PR56 follow-up, r3422558988) — the reserved data_source key for a
+# journey-EXECUTION EvidenceRef. Execution proof is journey-level ("the flow
+# ran"), NOT an availability claim about a dependency, so it carries its own key
+# distinct from every required dependency source. Without this discriminator an
+# available+real dependency transcript (data_source=payments,
+# evidence_class=tool_call_transcript) would satisfy a journey on its own.
+# Consumers deriving required dependency sources from refs (completion_gate)
+# must exclude this key.
+EXECUTION_DATA_SOURCE = "journey_execution"
 
 
 class HonestyVerdict(Enum):
@@ -105,6 +118,7 @@ class SourceResult:
     families: dict  # Fam -> FamilyReduction
     dishonest_reasons: set = field(default_factory=set)  # of DishonestReason
     disagreement: bool = False
+    missing_families: set = field(default_factory=set)  # required Fam with NO typed ref
 
 
 @dataclass
@@ -113,6 +127,9 @@ class HonestyResult:
     satisfied: bool
     sources: list  # of SourceResult
     disagreements: list  # of data_source keys with cross_surface_disagreement
+    # Why `satisfied` is False, for operator-facing reasons (PR56 follow-up):
+    execution_evidence: bool = True  # a real EXECUTION_DATA_SOURCE ref is present
+    missing_families: list = field(default_factory=list)  # "<source>:<family>"
 
 
 def _as(enum_cls, value):
@@ -162,6 +179,10 @@ def _mode_allowed(refs: Sequence, allowed: Iterable[str] | None) -> bool:
 
 
 def _is_real_execution(ref) -> bool:
+    """A real, available journey-execution ref: keyed EXECUTION_DATA_SOURCE,
+    execution-proving class, real provenance, available (D005/D011)."""
+    if getattr(ref, "data_source", None) != EXECUTION_DATA_SOURCE:
+        return False
     ec = getattr(ref, "evidence_class", None)
     if ec is None:
         return False
@@ -185,6 +206,7 @@ def check_degraded_honesty(
     source_results: list[SourceResult] = []
     any_dishonest = False
     any_human_pending = False
+    any_required_missing = False
     disagreements: list[str] = []
 
     for rds in required_sources:
@@ -203,21 +225,27 @@ def check_degraded_honesty(
         )
 
         reasons: set = set()
+        missing: set = set()
         for fam in rds.required_families:
             red = reductions[fam]
+            if not red.typed:
+                # D015: honest certification requires EVERY required family typed.
+                # An untyped required family blocks satisfaction whatever the
+                # source state (PR56 r3422558994 — previously only checked while
+                # the source was down).
+                missing.add(fam)
+                any_required_missing = True
+                if fam is Fam.human:
+                    any_human_pending = True  # deferred, not penalized (D013/D015)
+                elif source_down:
+                    reasons.add(DishonestReason.agent_omitted)  # agent masking by omission
+                continue
             if red.conflict:
                 reasons.add(DishonestReason.conflict)
             if not _mode_allowed(fam_refs[fam], allowed_modes.get(ds)):
                 reasons.add(DishonestReason.mode_not_allowed)
-            if source_down:
-                if not red.typed:
-                    # required family carries NO honest signal while the source is down
-                    if fam is Fam.human:
-                        any_human_pending = True  # deferred, not penalized (D013/D015)
-                    else:
-                        reasons.add(DishonestReason.agent_omitted)  # agent masking by omission
-                elif red.availability is Avail.available:
-                    reasons.add(DishonestReason.mask)  # typed but masks the outage
+            if source_down and red.availability is Avail.available:
+                reasons.add(DishonestReason.mask)  # typed but masks the outage
 
         # cross_surface_disagreement (D006): both families typed but reduced state differs
         disagreement = False
@@ -233,6 +261,7 @@ def check_degraded_honesty(
         source_results.append(SourceResult(
             data_source=ds, source_down=source_down, families=reductions,
             dishonest_reasons=reasons, disagreement=disagreement,
+            missing_families=missing,
         ))
 
     # tri-state precedence (D015): dishonest > pending > honest
@@ -243,11 +272,22 @@ def check_degraded_honesty(
     else:
         verdict = HonestyVerdict.honest
 
+    # D005/D011/D015: satisfied only when honest, EVERY required family is
+    # typed, AND a real journey-execution ref (reserved key) is present.
+    execution_evidence = any(_is_real_execution(r) for r in refs)
     satisfied = (verdict is HonestyVerdict.honest
-                 and any(_is_real_execution(r) for r in refs))
+                 and not any_required_missing
+                 and execution_evidence)
+    missing_families = [
+        f"{sr.data_source}:{fam.value}"
+        for sr in source_results
+        for fam in sorted(sr.missing_families, key=lambda f: f.value)
+    ]
 
     return HonestyResult(verdict=verdict, satisfied=satisfied,
-                         sources=source_results, disagreements=disagreements)
+                         sources=source_results, disagreements=disagreements,
+                         execution_evidence=execution_evidence,
+                         missing_families=missing_families)
 
 
 def check_objectives(

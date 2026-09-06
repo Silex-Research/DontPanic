@@ -783,3 +783,12 @@ dispatch.
 Do not dispatch a plan just because it validates. Validation means the files
 match the schema. It does not mean the plan is strategically correct, complete,
 or approved by the human operator.
+
+## Typed Evidence for Consumer Journeys
+
+A plan whose contract sets `user_journeys[].consumer` is closed by typed
+`evidence_refs`, not by artifacts on disk. Each journey needs its surfaces
+typed, every required consumer family covered, and one real execution proof
+keyed `data_source: journey_execution`. See
+[`authoring-typed-evidence.md`](authoring-typed-evidence.md) for the rules and
+a worked example.
