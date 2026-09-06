@@ -156,6 +156,9 @@ dontpanic agent brief
 dontpanic doctor --skip-auth
 ```
 
+Contributors: use the [locked development setup](CONTRIBUTING.md#quick-setup)
+to match the dependencies tested by CI.
+
 In a new shell, activate this virtual environment again. When an operator runs
 from another repo, put the installed `dontpanic` executable on its PATH or use
 its absolute path. Agent CLIs manage their own authentication; DontPanic config
