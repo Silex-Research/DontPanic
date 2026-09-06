@@ -1,8 +1,18 @@
-# Command execution evidence and runtime capture — proposed design
+# Command execution evidence and runtime capture — implemented design
 
-Status: proposal, not shipped commands. The interface choice was sent to the user
-on 2026-09-06 and remains pending. This document does not authorize paid dispatch,
-live capture, cloud writes, or fabricated execution proof.
+Status: **IMPLEMENTED** in PR#74 (branch `review/five-step-delivery`).
+The explicit opt-in CLI path (Option 1) was selected and shipped.
+
+Shipped commands (2026-09-06):
+- `dontpanic evidence run` — command recorder
+- `dontpanic evidence capture` — capture producer
+
+Implementation:
+- `scripts/dontpanic_orchestrate/evidence_cli.py` — CLI module
+- `scripts/dontpanic_orchestrate/tests/test_evidence_cli_sep2026.py` — acceptance tests
+
+This document does not authorize paid dispatch, live capture, cloud writes,
+or fabricated execution proof.
 
 ## Options
 1. **Recommended: explicit opt-in CLI producers.** Caller selects plan, feature,
