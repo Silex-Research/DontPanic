@@ -1,15 +1,23 @@
 # Command execution evidence and runtime capture — implemented design
 
-Status: **IMPLEMENTED** in PR#74 (branch `review/five-step-delivery`).
+Status: **SHIPPED per D002 ADOPT** (PR#74 branch `review/five-step-delivery`).
 The explicit opt-in CLI path (Option 1) was selected and shipped.
 
+Decision record: `docs/plans/2026-09-06-001-infra-delivery-integration-review/decisions.jsonl`
+- D001: PROBE command-evidence design (original)
+- D002: ADOPT opt-in evidence CLI (Thanos BUILD lock confirmation)
+
 Shipped commands (2026-09-06):
-- `dontpanic evidence run` — command recorder
+- `dontpanic evidence run` — command recorder (LIFECYCLE_MUTATION with --confirm)
 - `dontpanic evidence capture` — capture producer
 
 Implementation:
 - `scripts/dontpanic_orchestrate/evidence_cli.py` — CLI module
 - `scripts/dontpanic_orchestrate/tests/test_evidence_cli_sep2026.py` — acceptance tests
+
+Public-entry honesty: evidence does NOT grant agent dispatch authority —
+operator must explicitly invoke. Classification is LIFECYCLE_MUTATION
+(not CONFIG_MUTATION) because --confirm executes operator-provided argv.
 
 This document does not authorize paid dispatch, live capture, cloud writes,
 or fabricated execution proof.
