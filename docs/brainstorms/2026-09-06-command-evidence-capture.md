@@ -32,9 +32,8 @@ or fabricated execution proof.
    integration remains explicitly incomplete.
 
 ## Command recorder contract
-Proposed form: `dontpanic evidence run PLAN --feature F --iteration N --cwd ROOT
---timeout-seconds N --confirm -- COMMAND ARG...`. Dry-run without confirm.
-This is a proposed API, not a runnable example for the current release.
+Shipped form (per D002 ADOPT): `dontpanic evidence run PLAN --feature F --iteration N
+--cwd ROOT --timeout-seconds N --confirm -- COMMAND ARG...`. Dry-run without confirm.
 
 - Resolve plan/feature and declared target before side effects; refuse unknown
   feature, undeclared target, path traversal, and malformed limits.
@@ -58,7 +57,7 @@ This is a proposed API, not a runnable example for the current release.
   tamper-proof attestations against that operator.
 
 ## Capture producer contract
-Proposed form: `dontpanic evidence capture PLAN --journey NAME --source NAME
+Shipped form (per D002 ADOPT): `dontpanic evidence capture PLAN --journey NAME --source NAME
 --config FILE --confirm`. Dry-run resolves the requested source and target.
 
 - Validate that the journey exists; project-scoped configuration only. No URLs,
@@ -77,9 +76,20 @@ Proposed form: `dontpanic evidence capture PLAN --journey NAME --source NAME
   manifest → reader path, then add each remaining adapter behind the same tests.
   Do not claim all platforms integrated after a fake-driver-only unit test.
 
-## Public-entry acceptance
-Subprocess CLI tests cover dry-run/no writes; exit 0 and nonzero commands;
-spawn failure; timeout; cancellation; inherited-secret redaction; bounded output;
-wrong feature/iteration/revision; concurrent publication; tampered hash; empty
-runner collection; capture skip; and a complete reader round trip. One authorized
-real target walk is required in addition to injected-driver integration tests.
+## Public-entry acceptance (shipped tests per D002 ADOPT)
+Subprocess CLI tests in `test_evidence_cli_sep2026.py` cover:
+- dry-run/no writes
+- exit 0 and nonzero commands
+- spawn failure
+- timeout
+- inherited-secret redaction
+- bounded output
+- wrong feature/iteration (validation refusal)
+- concurrent publication (atomic writes via temp + os.replace)
+- capture skip on adapter failure
+- capture refusal without objective contract
+- complete reader round trip
+
+Future work (not claimed this tip): cancellation signal handling, tampered-hash
+detection, wrong-revision refusal. One authorized real target walk is required
+in addition to injected-driver integration tests.
