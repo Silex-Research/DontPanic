@@ -1163,6 +1163,7 @@ class GlobalBreakerState:
     hits_in_window: int
     threshold: int = GLOBAL_THRESHOLD_HITS
     window_seconds: int = GLOBAL_WINDOW_SECONDS
+    release_at: dt.datetime | None = None
 
 
 def _read_history() -> list[dict]:
@@ -1214,12 +1215,20 @@ def evaluate_global(
     window_seconds: int = GLOBAL_WINDOW_SECONDS,
     counted_kinds: Iterable[BreakerKind] = (BreakerKind.ITERATION_CAP,),
 ) -> GlobalBreakerState:
-    """True iff iteration_cap hits in the last window_seconds reach threshold."""
+    """True iff iteration_cap hits in the last window_seconds reach threshold.
+
+    When tripped, ``release_at`` is the timestamp when the breaker will
+    automatically clear (the moment the threshold-crossing hit falls out of
+    the window). This is the (hits - threshold + 1)th oldest hit's timestamp
+    plus window_seconds — NOT the oldest hit's expiry, which was the previous
+    incorrect calculation. See plan 2026-09-09-001 F001.
+    """
     if threshold is None:
         threshold = _effective_global_threshold()
-    cutoff = _now() - dt.timedelta(seconds=window_seconds)
+    now = _now()
+    cutoff = now - dt.timedelta(seconds=window_seconds)
     counted_values = {k.value for k in counted_kinds}
-    hits = 0
+    hit_timestamps: list[dt.datetime] = []
     for entry in _read_history():
         try:
             ts = dt.datetime.fromisoformat(entry["at"].replace("Z", "+00:00"))
@@ -1228,12 +1237,21 @@ def evaluate_global(
         if ts < cutoff:
             continue
         if entry.get("kind") in counted_values:
-            hits += 1
+            hit_timestamps.append(ts)
+    hits = len(hit_timestamps)
+    tripped = hits >= threshold
+    release_at: dt.datetime | None = None
+    if tripped and hit_timestamps:
+        hit_timestamps.sort()
+        threshold_crossing_idx = hits - threshold
+        threshold_crossing_hit = hit_timestamps[threshold_crossing_idx]
+        release_at = threshold_crossing_hit + dt.timedelta(seconds=window_seconds)
     return GlobalBreakerState(
-        tripped=hits >= threshold,
+        tripped=tripped,
         hits_in_window=hits,
         threshold=threshold,
         window_seconds=window_seconds,
+        release_at=release_at,
     )
 
 

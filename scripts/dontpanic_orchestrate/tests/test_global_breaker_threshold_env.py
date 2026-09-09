@@ -73,3 +73,85 @@ def test_explicit_kwarg_wins_over_env(history, monkeypatch):
     state = cb.evaluate_global(threshold=2)
     assert state.threshold == 2
     assert state.tripped is True
+
+
+def _write_hits_at_times(path, timestamps: list[dt.datetime]) -> None:
+    """Write hits at specific timestamps for release_at testing."""
+    lines = [
+        json.dumps(
+            {
+                "plan_id": f"plan-{i}",
+                "kind": "iteration_cap",
+                "at": ts.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            }
+        )
+        for i, ts in enumerate(timestamps)
+    ]
+    path.write_text("\n".join(lines) + "\n")
+
+
+def test_release_at_is_threshold_crossing_expiry_not_oldest(history):
+    """Plan 2026-09-09-001 F001: release_at must be the threshold-crossing
+    hit's expiry, not the oldest hit's expiry.
+
+    Scenario from operator-review.md: 4 hits at 08:00, 09:00, 10:00, 11:00
+    with threshold 3 and a 24-hour window.
+
+    At 08:00+24h, 3 hits remain (09:00, 10:00, 11:00) → still tripped.
+    At 09:00+24h, 2 hits remain (10:00, 11:00) → no longer tripped.
+
+    So release_at = 09:00 + 24h, NOT 08:00 + 24h.
+    """
+    now = dt.datetime.now(dt.timezone.utc).replace(microsecond=0)
+    window_seconds = 24 * 3600
+    h08 = now - dt.timedelta(hours=3)
+    h09 = now - dt.timedelta(hours=2)
+    h10 = now - dt.timedelta(hours=1)
+    h11 = now
+    _write_hits_at_times(history, [h08, h09, h10, h11])
+    state = cb.evaluate_global(threshold=3, window_seconds=window_seconds)
+    assert state.tripped is True
+    assert state.hits_in_window == 4
+    assert state.release_at is not None
+    expected_release = h09 + dt.timedelta(seconds=window_seconds)
+    assert state.release_at == expected_release, (
+        f"release_at should be {expected_release} (threshold-crossing hit at {h09}), "
+        f"not {h08 + dt.timedelta(seconds=window_seconds)} (oldest hit)"
+    )
+
+
+def test_release_at_exact_threshold(history):
+    """When hits == threshold, the oldest hit is the threshold-crossing hit."""
+    now = dt.datetime.now(dt.timezone.utc).replace(microsecond=0)
+    window_seconds = 24 * 3600
+    h08 = now - dt.timedelta(hours=2)
+    h09 = now - dt.timedelta(hours=1)
+    h10 = now
+    _write_hits_at_times(history, [h08, h09, h10])
+    state = cb.evaluate_global(threshold=3, window_seconds=window_seconds)
+    assert state.tripped is True
+    assert state.hits_in_window == 3
+    assert state.release_at is not None
+    expected_release = h08 + dt.timedelta(seconds=window_seconds)
+    assert state.release_at == expected_release
+
+
+def test_release_at_none_when_not_tripped(history):
+    """release_at is None when breaker is not tripped."""
+    now = dt.datetime.now(dt.timezone.utc).replace(microsecond=0)
+    window_seconds = 24 * 3600
+    h09 = now - dt.timedelta(hours=1)
+    h10 = now
+    _write_hits_at_times(history, [h09, h10])
+    state = cb.evaluate_global(threshold=3, window_seconds=window_seconds)
+    assert state.tripped is False
+    assert state.hits_in_window == 2
+    assert state.release_at is None
+
+
+def test_release_at_none_when_empty_history(history):
+    """release_at is None when no hits recorded."""
+    state = cb.evaluate_global(threshold=3)
+    assert state.tripped is False
+    assert state.hits_in_window == 0
+    assert state.release_at is None
