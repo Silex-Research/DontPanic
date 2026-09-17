@@ -1,0 +1,27 @@
+{
+  "evaluated_at": "2026-09-17T04:02:32.100517",
+  "test_ratio": 0.2,
+  "seed": 42,
+  "train_examples": 153,
+  "test_examples": 59,
+  "metrics": {
+    "total_examples": 59,
+    "overall_agreement": 0.5932203389830508,
+    "breaker_trip_cases": 37,
+    "breaker_immediate_cases": 32,
+    "breaker_trip_false_retry_rate": 0.46875,
+    "signed_off_cases": 18,
+    "signed_off_correct_retry_rate": 0.5555555555555556,
+    "operator_verified_cases": 4,
+    "confusion_matrix": {
+      "retry": {
+        "retry": 14,
+        "stop": 9
+      },
+      "stop": {
+        "retry": 15,
+        "stop": 21
+      }
+    }
+  }
+}

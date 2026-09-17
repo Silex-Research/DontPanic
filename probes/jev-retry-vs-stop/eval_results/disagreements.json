@@ -1,0 +1,638 @@
+{
+  "total_disagreements": 24,
+  "disagreements": [
+    {
+      "input": {
+        "plan_id": "2026-05-11-002-fix-harness-frictions-v3",
+        "feature_id": "F001",
+        "iteration": 0,
+        "latest_auditor_status": "needs_changes",
+        "finding_categories": [
+          "correctness"
+        ],
+        "consecutive_same_verdict": 1,
+        "breaker_state": "clear",
+        "tokens_in_so_far": 888646,
+        "implementer_harness": "claude",
+        "auditor_harness": "codex"
+      },
+      "ground_truth": "stop_and_escalate_human",
+      "ground_truth_reason": "no_progress_trip",
+      "final_outcome": "breaker_trip",
+      "rounds_until_outcome": 1,
+      "predicted_action": "retry_implementer",
+      "predicted_confidence": 0.7,
+      "predicted_reason": "first_needs_changes",
+      "correct": false,
+      "actual_class": "stop",
+      "predicted_class": "retry"
+    },
+    {
+      "input": {
+        "plan_id": "2026-05-11-002-fix-harness-frictions-v3",
+        "feature_id": "F003",
+        "iteration": 0,
+        "latest_auditor_status": "needs_changes",
+        "finding_categories": [],
+        "consecutive_same_verdict": 1,
+        "breaker_state": "clear",
+        "tokens_in_so_far": 595583,
+        "implementer_harness": "claude",
+        "auditor_harness": "codex"
+      },
+      "ground_truth": "stop_and_escalate_human",
+      "ground_truth_reason": "no_progress_trip",
+      "final_outcome": "breaker_trip",
+      "rounds_until_outcome": 1,
+      "predicted_action": "retry_implementer",
+      "predicted_confidence": 0.7,
+      "predicted_reason": "first_needs_changes",
+      "correct": false,
+      "actual_class": "stop",
+      "predicted_class": "retry"
+    },
+    {
+      "input": {
+        "plan_id": "2026-05-11-002-fix-harness-frictions-v3",
+        "feature_id": "F004",
+        "iteration": 0,
+        "latest_auditor_status": "needs_changes",
+        "finding_categories": [
+          "correctness",
+          "test_coverage"
+        ],
+        "consecutive_same_verdict": 1,
+        "breaker_state": "clear",
+        "tokens_in_so_far": 1264631,
+        "implementer_harness": "claude",
+        "auditor_harness": "codex"
+      },
+      "ground_truth": "stop_and_escalate_human",
+      "ground_truth_reason": "no_progress_trip",
+      "final_outcome": "breaker_trip",
+      "rounds_until_outcome": 0,
+      "predicted_action": "retry_implementer",
+      "predicted_confidence": 0.7,
+      "predicted_reason": "first_needs_changes",
+      "correct": false,
+      "actual_class": "stop",
+      "predicted_class": "retry"
+    },
+    {
+      "input": {
+        "plan_id": "2026-05-12-001-fix-harness-frictions-v4",
+        "feature_id": "F001",
+        "iteration": 0,
+        "latest_auditor_status": "needs_changes",
+        "finding_categories": [
+          "correctness"
+        ],
+        "consecutive_same_verdict": 1,
+        "breaker_state": "clear",
+        "tokens_in_so_far": 1629326,
+        "implementer_harness": "claude",
+        "auditor_harness": "codex"
+      },
+      "ground_truth": "stop_and_escalate_human",
+      "ground_truth_reason": "no_progress_trip",
+      "final_outcome": "breaker_trip",
+      "rounds_until_outcome": 1,
+      "predicted_action": "retry_implementer",
+      "predicted_confidence": 0.7,
+      "predicted_reason": "first_needs_changes",
+      "correct": false,
+      "actual_class": "stop",
+      "predicted_class": "retry"
+    },
+    {
+      "input": {
+        "plan_id": "2026-05-12-001-fix-harness-frictions-v4",
+        "feature_id": "F002",
+        "iteration": 0,
+        "latest_auditor_status": "needs_changes",
+        "finding_categories": [
+          "architecture",
+          "correctness",
+          "test_coverage"
+        ],
+        "consecutive_same_verdict": 1,
+        "breaker_state": "clear",
+        "tokens_in_so_far": 2050008,
+        "implementer_harness": "claude",
+        "auditor_harness": "codex"
+      },
+      "ground_truth": "stop_and_escalate_human",
+      "ground_truth_reason": "no_progress_trip",
+      "final_outcome": "breaker_trip",
+      "rounds_until_outcome": 1,
+      "predicted_action": "retry_implementer",
+      "predicted_confidence": 0.7,
+      "predicted_reason": "first_needs_changes",
+      "correct": false,
+      "actual_class": "stop",
+      "predicted_class": "retry"
+    },
+    {
+      "input": {
+        "plan_id": "2026-05-12-001-fix-harness-frictions-v4",
+        "feature_id": "F003",
+        "iteration": 0,
+        "latest_auditor_status": "needs_changes",
+        "finding_categories": [
+          "correctness",
+          "test_coverage"
+        ],
+        "consecutive_same_verdict": 1,
+        "breaker_state": "tripped",
+        "tokens_in_so_far": 2210014,
+        "implementer_harness": "claude",
+        "auditor_harness": "codex"
+      },
+      "ground_truth": "stop_and_escalate_human",
+      "ground_truth_reason": "no_progress_trip",
+      "final_outcome": "breaker_trip",
+      "rounds_until_outcome": 0,
+      "predicted_action": "retry_implementer",
+      "predicted_confidence": 0.5,
+      "predicted_reason": "progress_detected",
+      "correct": false,
+      "actual_class": "stop",
+      "predicted_class": "retry"
+    },
+    {
+      "input": {
+        "plan_id": "2026-05-12-002-fix-harness-frictions-v4-1",
+        "feature_id": "F002",
+        "iteration": 0,
+        "latest_auditor_status": "needs_changes",
+        "finding_categories": [
+          "correctness",
+          "test_coverage"
+        ],
+        "consecutive_same_verdict": 1,
+        "breaker_state": "clear",
+        "tokens_in_so_far": 996632,
+        "implementer_harness": "claude",
+        "auditor_harness": "codex"
+      },
+      "ground_truth": "stop_and_escalate_human",
+      "ground_truth_reason": "no_progress_trip",
+      "final_outcome": "breaker_trip",
+      "rounds_until_outcome": 0,
+      "predicted_action": "retry_implementer",
+      "predicted_confidence": 0.7,
+      "predicted_reason": "first_needs_changes",
+      "correct": false,
+      "actual_class": "stop",
+      "predicted_class": "retry"
+    },
+    {
+      "input": {
+        "plan_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+        "feature_id": "F004",
+        "iteration": 0,
+        "latest_auditor_status": "needs_changes",
+        "finding_categories": [
+          "correctness"
+        ],
+        "consecutive_same_verdict": 1,
+        "breaker_state": "tripped",
+        "tokens_in_so_far": 956952,
+        "implementer_harness": "claude",
+        "auditor_harness": "codex"
+      },
+      "ground_truth": "stop_and_escalate_human",
+      "ground_truth_reason": "no_progress_trip",
+      "final_outcome": "breaker_trip",
+      "rounds_until_outcome": 0,
+      "predicted_action": "retry_implementer",
+      "predicted_confidence": 0.5,
+      "predicted_reason": "progress_detected",
+      "correct": false,
+      "actual_class": "stop",
+      "predicted_class": "retry"
+    },
+    {
+      "input": {
+        "plan_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+        "feature_id": "F007",
+        "iteration": 0,
+        "latest_auditor_status": "needs_changes",
+        "finding_categories": [
+          "correctness"
+        ],
+        "consecutive_same_verdict": 1,
+        "breaker_state": "tripped",
+        "tokens_in_so_far": 2944830,
+        "implementer_harness": "claude",
+        "auditor_harness": "codex"
+      },
+      "ground_truth": "trip_breaker",
+      "ground_truth_reason": "iteration_cap_reached",
+      "final_outcome": "breaker_trip",
+      "rounds_until_outcome": 1,
+      "predicted_action": "retry_implementer",
+      "predicted_confidence": 0.5,
+      "predicted_reason": "progress_detected",
+      "correct": false,
+      "actual_class": "stop",
+      "predicted_class": "retry"
+    },
+    {
+      "input": {
+        "plan_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+        "feature_id": "F010",
+        "iteration": 0,
+        "latest_auditor_status": "needs_changes",
+        "finding_categories": [
+          "correctness",
+          "documentation",
+          "style",
+          "test_coverage"
+        ],
+        "consecutive_same_verdict": 1,
+        "breaker_state": "tripped",
+        "tokens_in_so_far": 3105582,
+        "implementer_harness": "claude",
+        "auditor_harness": "codex"
+      },
+      "ground_truth": "stop_and_escalate_human",
+      "ground_truth_reason": "no_progress_trip",
+      "final_outcome": "breaker_trip",
+      "rounds_until_outcome": 1,
+      "predicted_action": "retry_implementer",
+      "predicted_confidence": 0.5,
+      "predicted_reason": "progress_detected",
+      "correct": false,
+      "actual_class": "stop",
+      "predicted_class": "retry"
+    },
+    {
+      "input": {
+        "plan_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+        "feature_id": "F014",
+        "iteration": 0,
+        "latest_auditor_status": "needs_changes",
+        "finding_categories": [
+          "correctness",
+          "test_coverage"
+        ],
+        "consecutive_same_verdict": 1,
+        "breaker_state": "tripped",
+        "tokens_in_so_far": 1013028,
+        "implementer_harness": "claude",
+        "auditor_harness": "codex"
+      },
+      "ground_truth": "stop_and_escalate_human",
+      "ground_truth_reason": "no_progress_trip",
+      "final_outcome": "breaker_trip",
+      "rounds_until_outcome": 1,
+      "predicted_action": "retry_implementer",
+      "predicted_confidence": 0.5,
+      "predicted_reason": "progress_detected",
+      "correct": false,
+      "actual_class": "stop",
+      "predicted_class": "retry"
+    },
+    {
+      "input": {
+        "plan_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+        "feature_id": "F015",
+        "iteration": 0,
+        "latest_auditor_status": "needs_changes",
+        "finding_categories": [
+          "correctness",
+          "style"
+        ],
+        "consecutive_same_verdict": 1,
+        "breaker_state": "tripped",
+        "tokens_in_so_far": 1811240,
+        "implementer_harness": "claude",
+        "auditor_harness": "codex"
+      },
+      "ground_truth": "stop_and_escalate_human",
+      "ground_truth_reason": "no_progress_trip",
+      "final_outcome": "breaker_trip",
+      "rounds_until_outcome": 1,
+      "predicted_action": "retry_implementer",
+      "predicted_confidence": 0.5,
+      "predicted_reason": "progress_detected",
+      "correct": false,
+      "actual_class": "stop",
+      "predicted_class": "retry"
+    },
+    {
+      "input": {
+        "plan_id": "2026-05-30-001-feat-universal-agent-repo-onboarding-v0",
+        "feature_id": "F016",
+        "iteration": 0,
+        "latest_auditor_status": "needs_changes",
+        "finding_categories": [
+          "correctness",
+          "test_coverage"
+        ],
+        "consecutive_same_verdict": 1,
+        "breaker_state": "tripped",
+        "tokens_in_so_far": 1908147,
+        "implementer_harness": "claude",
+        "auditor_harness": "codex"
+      },
+      "ground_truth": "stop_and_escalate_human",
+      "ground_truth_reason": "no_progress_trip",
+      "final_outcome": "breaker_trip",
+      "rounds_until_outcome": 0,
+      "predicted_action": "retry_implementer",
+      "predicted_confidence": 0.5,
+      "predicted_reason": "progress_detected",
+      "correct": false,
+      "actual_class": "stop",
+      "predicted_class": "retry"
+    },
+    {
+      "input": {
+        "plan_id": "2026-06-03-001-feat-agent-command-surface-hardening",
+        "feature_id": "F005",
+        "iteration": 1,
+        "latest_auditor_status": "needs_changes",
+        "finding_categories": [
+          "style"
+        ],
+        "consecutive_same_verdict": 2,
+        "breaker_state": "clear",
+        "tokens_in_so_far": 1360787,
+        "implementer_harness": "claude",
+        "auditor_harness": "codex"
+      },
+      "ground_truth": "retry_implementer",
+      "ground_truth_reason": "auditor_eventually_signed_off",
+      "final_outcome": "signed_off",
+      "rounds_until_outcome": 1,
+      "predicted_action": "stop_and_escalate_human",
+      "predicted_confidence": 0.8,
+      "predicted_reason": "consecutive_no_progress",
+      "correct": false,
+      "actual_class": "retry",
+      "predicted_class": "stop"
+    },
+    {
+      "input": {
+        "plan_id": "2026-06-17-001-feat-canonical-repo-discovery",
+        "feature_id": "F002",
+        "iteration": 1,
+        "latest_auditor_status": "needs_changes",
+        "finding_categories": [
+          "correctness"
+        ],
+        "consecutive_same_verdict": 2,
+        "breaker_state": "clear",
+        "tokens_in_so_far": 1054508,
+        "implementer_harness": "claude",
+        "auditor_harness": "codex"
+      },
+      "ground_truth": "retry_implementer",
+      "ground_truth_reason": "progress_before_breaker",
+      "final_outcome": "breaker_trip",
+      "rounds_until_outcome": 2,
+      "predicted_action": "stop_and_escalate_human",
+      "predicted_confidence": 0.8,
+      "predicted_reason": "consecutive_no_progress",
+      "correct": false,
+      "actual_class": "retry",
+      "predicted_class": "stop"
+    },
+    {
+      "input": {
+        "plan_id": "2026-06-17-001-feat-canonical-repo-discovery",
+        "feature_id": "F003",
+        "iteration": 0,
+        "latest_auditor_status": "needs_changes",
+        "finding_categories": [
+          "correctness"
+        ],
+        "consecutive_same_verdict": 1,
+        "breaker_state": "tripped",
+        "tokens_in_so_far": 1284680,
+        "implementer_harness": "claude",
+        "auditor_harness": "codex"
+      },
+      "ground_truth": "stop_and_escalate_human",
+      "ground_truth_reason": "environmental_blocker",
+      "final_outcome": "breaker_trip",
+      "rounds_until_outcome": 1,
+      "predicted_action": "retry_implementer",
+      "predicted_confidence": 0.5,
+      "predicted_reason": "progress_detected",
+      "correct": false,
+      "actual_class": "stop",
+      "predicted_class": "retry"
+    },
+    {
+      "input": {
+        "plan_id": "2026-06-17-001-feat-canonical-repo-discovery",
+        "feature_id": "F004",
+        "iteration": 1,
+        "latest_auditor_status": "needs_changes",
+        "finding_categories": [
+          "style"
+        ],
+        "consecutive_same_verdict": 2,
+        "breaker_state": "tripped",
+        "tokens_in_so_far": 1603827,
+        "implementer_harness": "claude",
+        "auditor_harness": "codex"
+      },
+      "ground_truth": "retry_implementer",
+      "ground_truth_reason": "auditor_eventually_signed_off",
+      "final_outcome": "signed_off",
+      "rounds_until_outcome": 1,
+      "predicted_action": "stop_and_escalate_human",
+      "predicted_confidence": 0.8,
+      "predicted_reason": "consecutive_no_progress",
+      "correct": false,
+      "actual_class": "retry",
+      "predicted_class": "stop"
+    },
+    {
+      "input": {
+        "plan_id": "2026-06-17-001-feat-canonical-repo-discovery",
+        "feature_id": "F006",
+        "iteration": 0,
+        "latest_auditor_status": "needs_changes",
+        "finding_categories": [
+          "correctness"
+        ],
+        "consecutive_same_verdict": 1,
+        "breaker_state": "clear",
+        "tokens_in_so_far": 781812,
+        "implementer_harness": "claude",
+        "auditor_harness": "codex"
+      },
+      "ground_truth": "stop_and_escalate_human",
+      "ground_truth_reason": "environmental_blocker",
+      "final_outcome": "breaker_trip",
+      "rounds_until_outcome": 1,
+      "predicted_action": "retry_implementer",
+      "predicted_confidence": 0.7,
+      "predicted_reason": "first_needs_changes",
+      "correct": false,
+      "actual_class": "stop",
+      "predicted_class": "retry"
+    },
+    {
+      "input": {
+        "plan_id": "2026-06-21-001-feat-upgrade-readiness-doctor",
+        "feature_id": "F001",
+        "iteration": 1,
+        "latest_auditor_status": "needs_changes",
+        "finding_categories": [
+          "correctness"
+        ],
+        "consecutive_same_verdict": 1,
+        "breaker_state": "tripped",
+        "tokens_in_so_far": 1896499,
+        "implementer_harness": "claude",
+        "auditor_harness": "codex"
+      },
+      "ground_truth": "retry_implementer",
+      "ground_truth_reason": "auditor_eventually_signed_off",
+      "final_outcome": "signed_off",
+      "rounds_until_outcome": 0,
+      "predicted_action": "stop_and_escalate_human",
+      "predicted_confidence": 0.7,
+      "predicted_reason": "high_iteration_count",
+      "correct": false,
+      "actual_class": "retry",
+      "predicted_class": "stop"
+    },
+    {
+      "input": {
+        "plan_id": "2026-06-21-001-feat-upgrade-readiness-doctor",
+        "feature_id": "F006",
+        "iteration": 1,
+        "latest_auditor_status": "needs_changes",
+        "finding_categories": [
+          "correctness"
+        ],
+        "consecutive_same_verdict": 2,
+        "breaker_state": "tripped",
+        "tokens_in_so_far": 1235204,
+        "implementer_harness": "claude",
+        "auditor_harness": "codex"
+      },
+      "ground_truth": "retry_implementer",
+      "ground_truth_reason": "auditor_eventually_signed_off",
+      "final_outcome": "signed_off",
+      "rounds_until_outcome": 2,
+      "predicted_action": "stop_and_escalate_human",
+      "predicted_confidence": 0.8,
+      "predicted_reason": "consecutive_no_progress",
+      "correct": false,
+      "actual_class": "retry",
+      "predicted_class": "stop"
+    },
+    {
+      "input": {
+        "plan_id": "2026-06-21-001-feat-upgrade-readiness-doctor",
+        "feature_id": "F006",
+        "iteration": 2,
+        "latest_auditor_status": "needs_changes",
+        "finding_categories": [
+          "test_coverage"
+        ],
+        "consecutive_same_verdict": 3,
+        "breaker_state": "tripped",
+        "tokens_in_so_far": 1116299,
+        "implementer_harness": "claude",
+        "auditor_harness": "codex"
+      },
+      "ground_truth": "retry_implementer",
+      "ground_truth_reason": "auditor_eventually_signed_off",
+      "final_outcome": "signed_off",
+      "rounds_until_outcome": 1,
+      "predicted_action": "stop_and_escalate_human",
+      "predicted_confidence": 0.8,
+      "predicted_reason": "consecutive_no_progress",
+      "correct": false,
+      "actual_class": "retry",
+      "predicted_class": "stop"
+    },
+    {
+      "input": {
+        "plan_id": "2026-06-21-001-feat-upgrade-readiness-doctor",
+        "feature_id": "F008",
+        "iteration": 1,
+        "latest_auditor_status": "needs_changes",
+        "finding_categories": [
+          "correctness"
+        ],
+        "consecutive_same_verdict": 2,
+        "breaker_state": "tripped",
+        "tokens_in_so_far": 1716819,
+        "implementer_harness": "claude",
+        "auditor_harness": "codex"
+      },
+      "ground_truth": "retry_implementer",
+      "ground_truth_reason": "auditor_eventually_signed_off",
+      "final_outcome": "signed_off",
+      "rounds_until_outcome": 2,
+      "predicted_action": "stop_and_escalate_human",
+      "predicted_confidence": 0.8,
+      "predicted_reason": "consecutive_no_progress",
+      "correct": false,
+      "actual_class": "retry",
+      "predicted_class": "stop"
+    },
+    {
+      "input": {
+        "plan_id": "2026-06-21-001-feat-upgrade-readiness-doctor",
+        "feature_id": "F008",
+        "iteration": 2,
+        "latest_auditor_status": "needs_changes",
+        "finding_categories": [
+          "correctness"
+        ],
+        "consecutive_same_verdict": 3,
+        "breaker_state": "tripped",
+        "tokens_in_so_far": 4069166,
+        "implementer_harness": "claude",
+        "auditor_harness": "codex"
+      },
+      "ground_truth": "retry_implementer",
+      "ground_truth_reason": "auditor_eventually_signed_off",
+      "final_outcome": "signed_off",
+      "rounds_until_outcome": 1,
+      "predicted_action": "stop_and_escalate_human",
+      "predicted_confidence": 0.8,
+      "predicted_reason": "consecutive_no_progress",
+      "correct": false,
+      "actual_class": "retry",
+      "predicted_class": "stop"
+    },
+    {
+      "input": {
+        "plan_id": "2026-06-21-001-feat-upgrade-readiness-doctor",
+        "feature_id": "F010",
+        "iteration": 1,
+        "latest_auditor_status": "needs_changes",
+        "finding_categories": [
+          "correctness"
+        ],
+        "consecutive_same_verdict": 2,
+        "breaker_state": "tripped",
+        "tokens_in_so_far": 634927,
+        "implementer_harness": "claude",
+        "auditor_harness": "codex"
+      },
+      "ground_truth": "retry_implementer",
+      "ground_truth_reason": "auditor_eventually_signed_off",
+      "final_outcome": "signed_off",
+      "rounds_until_outcome": 1,
+      "predicted_action": "stop_and_escalate_human",
+      "predicted_confidence": 0.8,
+      "predicted_reason": "consecutive_no_progress",
+      "correct": false,
+      "actual_class": "retry",
+      "predicted_class": "stop"
+    }
+  ]
+}
