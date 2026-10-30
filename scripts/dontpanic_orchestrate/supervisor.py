@@ -565,6 +565,16 @@ def _emit_gate_paused_discord(
     )
 
 
+def _quota_hard_stop_body(plan_id: str, agent: str, role: str, exc: object) -> str:
+    """INBOX body when a quota hard limit stops the implementer or auditor."""
+    return readable_text.quota_entry(
+        readable_text.STOPPED,
+        plan_id,
+        agent,
+        f"quota hard limit stops the {role}: {exc}",
+    )
+
+
 def _maybe_emit_quota_warn(
     plan_dir: Path,
     plan_id: str,
@@ -2421,12 +2431,7 @@ def dispatch_volley(
                         loaded.plan_dir,
                         event="error",
                         plan_id=loaded.plan_id,
-                        body=readable_text.quota_entry(
-                            readable_text.STOPPED,
-                            loaded.plan_id,
-                            impl_name,
-                            f"quota hard limit stops the implementer: {exc}",
-                        ),
+                        body=_quota_hard_stop_body(loaded.plan_id, impl_name, "implementer", exc),
                         agent=impl_name,
                         feature_id=feature_id,
                     )
@@ -2508,12 +2513,7 @@ def dispatch_volley(
                         loaded.plan_dir,
                         event="error",
                         plan_id=loaded.plan_id,
-                        body=readable_text.quota_entry(
-                            readable_text.STOPPED,
-                            loaded.plan_id,
-                            aud_name,
-                            f"quota hard limit stops the auditor: {exc}",
-                        ),
+                        body=_quota_hard_stop_body(loaded.plan_id, aud_name, "auditor", exc),
                         agent=aud_name,
                         feature_id=feature_id,
                     )

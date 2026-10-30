@@ -1,13 +1,14 @@
-"""Tests for readable_text: templates, lint, redaction, and wired generators."""
+"""Tests for readable_text: templates, lint, the synthetic probe, and wired generators."""
 
 from __future__ import annotations
 
+import inspect
 import json
 from pathlib import Path
 
 import pytest
 
-from dontpanic_orchestrate import prompts, readable_text as rt, readable_text_probe as probe
+from dontpanic_orchestrate import prompts, readable_text as rt, readable_text_probe as probe, supervisor
 
 
 def rules(items: list[str]) -> set[str]:
@@ -89,35 +90,6 @@ def test_lint_flags_inconsistent_field_sets() -> None:
     assert "fields" in rules(items)
 
 
-# ── redaction ────────────────────────────────────────────────────────────────
-
-
-@pytest.mark.parametrize(
-    "raw",
-    [
-        "/Users/someone/proj/file.txt",
-        "/home/someone/proj",
-        "mail me@example.com now",
-        "id 123e4567-e89b-12d3-a456-426614174000",
-        "hash 0123456789abcdef0123",
-        "ghs_abcDEF123456",
-        "key sk-abc123",
-        "Authorization: Bearer abc.def",
-        "jwt eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.sig",
-        "-----BEGIN PRIVATE KEY-----",
-        "host build-box.local",
-    ],
-)
-def test_redact_masks_sensitive_values(raw: str) -> None:
-    out = rt.redact(raw)
-    for needle in ("someone", "@", "123e4567", "0123456789abcdef", "ghs_", "sk-", "abc.def", "eyJ", "BEGIN", "build-box"):
-        assert needle not in out
-
-
-def test_redact_keeps_tilde_relative_path() -> None:
-    assert rt.redact("/Users/someone/proj/x") == "~/proj/x"
-
-
 # ── wired generators ─────────────────────────────────────────────────────────
 
 
@@ -145,42 +117,135 @@ def test_operator_console_gate_title_passes_lint() -> None:
 
 def test_quota_entries_pass_lint() -> None:
     lines = [
-        rt.quota_entry(rt.RUNNING, "p1", "claude", "quota soft warning at 80% of weekly cap"),
-        rt.quota_entry(rt.STOPPED, "p1", "codex", "quota hard limit stops the implementer: cap"),
+        rt.quota_entry(rt.RUNNING, "p1", "agent-x", "quota soft warning at 80% of weekly cap"),
+        rt.quota_entry(rt.STOPPED, "p1", "agent-y", "quota hard limit stops the implementer: cap"),
     ]
     assert rt.lint_items(lines) == []
 
 
-def test_implementer_prompt_carries_prompt_guide() -> None:
-    text = prompts.implementer_prompt("p1", Path("/tmp/p"), {"id": "F1", "description": "d", "acceptance": "a"}, 0)
+# Guide content is restated here so an empty or reworded PROMPT_GUIDE fails.
+_GUIDE_MARKERS = (
+    "<Status>: job <name> — <reason>",
+    "Status first",
+    "fails, blocks, stops",
+    "Env: and Project: lines, finding IDs and code",
+)
+
+
+def _assert_guide(text: str) -> None:
+    assert rt.PROMPT_GUIDE.strip()
     assert rt.PROMPT_GUIDE in text
+    for marker in _GUIDE_MARKERS:
+        assert marker in text, marker
 
 
-def test_probe_output_passes_lint_and_is_redacted(tmp_path: Path) -> None:
-    (tmp_path / "dashboard").mkdir()
-    (tmp_path / "invocations.jsonl").write_text(
-        json.dumps({"command": "plan lock /Users/someone/x", "result": "error", "plan": "p1"}) + "\n"
-    )
-    (tmp_path / "dashboard" / "event-actions.jsonl").write_text(
-        json.dumps(
-            {
-                "band": "needs_action",
-                "title": "Approval needed on p1",
-                "detail": "Supervisor paused. Reference: plan `p1`, gate `pre_merge`.",
-                "dedupe_key": "supervisor:gate_hit:p1:F001",
-            }
-        )
-        + "\n"
-    )
-    md = probe.render(tmp_path)
-    assert "/Users/" not in md
-    old, new = probe.invocation_old_new({"command": "plan lock x", "result": "error", "plan": "p1"})
-    ev_old, ev_new = probe.event_old_new(
-        {"title": "Approval needed on p1", "detail": "gate `pre_merge`", "dedupe_key": "supervisor:gate_hit:p1:F001"}
-    )
-    assert rt.lint_items([new]) == []
-    assert rt.lint_items([ev_new]) == []
-    assert ev_new == "Blocked: job p1 — approval needed (gate pre_merge)"
+_FEATURE = {"id": "F1", "description": "d", "acceptance": "a"}
+
+
+def test_initial_implementer_prompt_carries_guide() -> None:
+    _assert_guide(prompts.implementer_prompt("p1", Path("/tmp/p"), _FEATURE, 0))
+
+
+def test_retry_implementer_prompt_carries_guide(tmp_path: Path) -> None:
+    audit = tmp_path / "audit.json"
+    audit.write_text(json.dumps({"findings": []}))
+    text = prompts.implementer_prompt("p1", tmp_path, _FEATURE, 1, prior_auditor_path=audit)
+    assert "Prior round's auditor produced findings" in text
+    _assert_guide(text)
+
+
+def test_supervisor_quota_warn_emission(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    sent: list[dict[str, object]] = []
+    monkeypatch.setattr(supervisor.inbox, "append_event", lambda *a, **kw: sent.append(kw))
+    monkeypatch.setattr(supervisor.notify_event, "dispatch_event", lambda *a, **kw: None)
+    supervisor._maybe_emit_quota_warn(tmp_path, "p1", "agent-x", 99.0, "F001")
+    (event,) = sent
+    body = str(event["body"])
+    assert body.startswith("Running: job p1 — quota soft warning at 99.0% of weekly cap")
+    assert body.endswith("(agent agent-x)")
+    assert rt.lint_items([body]) == []
+
+
+@pytest.mark.parametrize("role", ["implementer", "auditor"])
+def test_supervisor_quota_hard_stop_body(role: str) -> None:
+    body = supervisor._quota_hard_stop_body("p1", "agent-x", role, "weekly cap reached")
+    assert body == f"Stopped: job p1 — quota hard limit stops the {role}: weekly cap reached (agent agent-x)"
+    assert rt.lint_items([body]) == []
+
+
+def test_dispatch_volley_emits_hard_stop_through_template() -> None:
+    src = inspect.getsource(supervisor.dispatch_volley)
+    assert src.count("body=_quota_hard_stop_body(loaded.plan_id, impl_name, \"implementer\", exc)") == 1
+    assert src.count("body=_quota_hard_stop_body(loaded.plan_id, aud_name, \"auditor\", exc)") == 1
+    assert "Quota hard-block" not in src
+
+
+# ── lint: robustness ─────────────────────────────────────────────────────────
+
+
+def test_lint_reports_none_instead_of_raising() -> None:
+    violations = rt.lint_items([None, "Passed: job p1 — gate passes"])  # type: ignore[list-item]
+    assert [(v.index, v.rule) for v in violations] == [(0, "not-text")]
+
+
+@pytest.mark.parametrize("line", ["Passed: nonsense", "Passed: job p1", "Blocked: job  — x"])
+def test_lint_flags_missing_job_shape(line: str) -> None:
+    assert "shape" in rules([line])
+
+
+# ── probe (synthetic) ────────────────────────────────────────────────────────
+
+
+def test_probe_has_20_synthetic_records_each_and_says_so() -> None:
+    assert len(probe.SYNTHETIC_INVOCATIONS) == 20
+    assert len(probe.SYNTHETIC_EVENTS) == 20
+    md = probe.render()
+    assert "These records are synthetic." in md
+    for leak in ("/Users/", "/home/", "~/", "@"):
+        assert leak not in md
+
+
+def test_probe_new_lines_pass_lint() -> None:
+    rows = [probe.invocation_old_new(r) for r in probe.SYNTHETIC_INVOCATIONS]
+    rows += [probe.event_old_new(r) for r in probe.SYNTHETIC_EVENTS]
+    mapped = [new for _, new in rows if new is not None]
+    assert len(mapped) >= 30
+    for line in mapped:
+        assert rt.lint_items([line]) == [], line
+
+
+def test_help_and_listing_calls_are_not_jobs() -> None:
+    assert rt.invocation_status("ok", "plan lock --help") is None
+    assert probe.invocation_old_new({"command": "projects list", "result": "ok"})[1] is None
+    assert rt.invocation_status("ok", "plan lock x", "p1") == "Passed: job p1 — plan lock passes"
+
+
+@pytest.mark.parametrize(
+    ("final", "expected"),
+    [
+        ("signed_off", "Passed: job p1 — audit signs off"),
+        ("merged", "Merged: job p1 — pull request merges into main"),
+        ("stopped_cap", "Stopped: job p1 — volley stops: cap"),
+        ("blocked", "Blocked: job p1 — audit blocks"),
+        ("failed", "Failed: job p1 — volley fails"),
+    ],
+)
+def test_terminal_outcomes_map_explicitly(final: str, expected: str) -> None:
+    rec = probe._terminal("p1", final, 2)
+    assert probe.event_old_new(rec)[1] == expected
+
+
+def test_unknown_outcome_and_kind_are_left_as_is() -> None:
+    assert rt.terminal_status("stopped_some_new_reason") is None
+    assert probe.event_old_new(probe._terminal("p1", "stopped_some_new_reason", 1))[1] is None
+    unknown = {"title": "x", "detail": "y", "dedupe_key": "supervisor:verdict_mismatch:p1:F001"}
+    assert probe.event_old_new(unknown)[1] is None
+    assert probe.UNMAPPED in probe.render([], [unknown])
+
+
+def test_gate_hit_maps_to_blocked_with_gate_field() -> None:
+    _, new = probe.event_old_new(probe._gate("p1", "pre_merge"))
+    assert new == "Blocked: job p1 — approval needed (gate pre_merge)"
 
 
 def test_lint_rejects_past_tense_reason_on_running_status():

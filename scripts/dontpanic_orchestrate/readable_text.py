@@ -21,7 +21,7 @@ Pure stdlib; no model calls.
 from __future__ import annotations
 
 import re
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from typing import Final
 
@@ -97,15 +97,46 @@ def rollup_item(status: str, job: str, reason: str, **fields: object) -> str:
     return status_line(status, job, reason, **fields)
 
 
-def invocation_status(result: str, command: str, plan: str | None = None) -> str:
-    """Status line for one CLI invocation record (ledger ``result`` + command)."""
+def invocation_status(result: str, command: str, plan: str | None = None) -> str | None:
+    """Status line for one CLI invocation record that belongs to a job.
+
+    Returns ``None`` when the record names no plan (``--help``, ``projects
+    list`` and similar): those calls are not jobs, so they keep their old text.
+    An unknown ``result`` value maps to ``Failed`` only if non-empty; a
+    missing result means the call never finished (``Stopped``).
+    """
+    if not plan:
+        return None
     status = _RESULT_STATUS.get(result, FAILED if result else STOPPED)
     words = command.split()
     verb = " ".join(words[:2] if words[:1] in (["plan"], ["projects"]) else words[:1])
     outcome = {PASSED: "passes", FAILED: "fails", STOPPED: "stops"}[status]
-    if plan:
-        return status_line(status, plan, f"{verb or 'command'} {outcome}")
-    return status_line(status, verb or "(no command)", f"command {outcome}")
+    return status_line(status, plan, f"{verb or 'command'} {outcome}")
+
+
+#: Volley ``final_status`` -> status word. Values not listed here are not
+#: mapped: callers keep the original text instead of guessing a status.
+TERMINAL_STATUS: Final[Mapping[str, str]] = {
+    "signed_off": PASSED,
+    "merged": MERGED,
+    "failed": FAILED,
+    "error": FAILED,
+    "blocked": BLOCKED,
+    "blocked_no_findings": BLOCKED,
+    "stopped_cap": STOPPED,
+    "stopped_budget": STOPPED,
+    "stopped_quota": STOPPED,
+    "stopped_no_progress": STOPPED,
+    "stopped_wall_clock": STOPPED,
+    "stopped_global_breaker": STOPPED,
+    "stopped_diminishing_returns": STOPPED,
+    "stopped_environmental_blocker": STOPPED,
+}
+
+
+def terminal_status(final_status: str | None) -> str | None:
+    """Status word for a volley ``final_status``; ``None`` when unknown."""
+    return TERMINAL_STATUS.get(final_status or "")
 
 
 PROMPT_GUIDE: Final[str] = (
@@ -120,6 +151,8 @@ PROMPT_GUIDE: Final[str] = (
     "- Every line carries the same fields in the same order: "
     + ", ".join(FIELD_ORDER)
     + " (omit a field only when it does not apply).\n"
+    "- This applies only to status lines in your prose. Leave commands, "
+    "Env: and Project: lines, finding IDs and code exactly as they are.\n"
 )
 
 # ── Lint ────────────────────────────────────────────────────────────────────
@@ -133,6 +166,7 @@ class Violation:
 
 
 _HEAD_RE = re.compile(r"^([A-Za-z]+):\s")
+_SHAPE_RE = re.compile(r"^job \S.*? — \S")
 _FIELDS_RE = re.compile(r"\(((?:[a-z]+ [^,()]+)(?:, [a-z]+ [^,()]+)*)\)\s*$")
 
 _BANNED_JOB_WORDS = re.compile(r"\b(?:run|runs|session|sessions|task|tasks)\b", re.I)
@@ -153,11 +187,24 @@ def _field_keys(line: str) -> tuple[str, ...]:
     return tuple(part.split(" ", 1)[0] for part in m.group(1).split(", "))
 
 
-def lint_items(items: Iterable[str]) -> list[Violation]:
-    """Return rule violations for a list of generated status lines (empty = clean)."""
-    lines: Sequence[str] = list(items)
+def lint_items(items: Iterable[str | None]) -> list[Violation]:
+    """Return rule violations for a list of generated status lines (empty = clean).
+
+    ``None`` or non-text items are reported as ``not-text`` rather than raising.
+    """
     out: list[Violation] = []
+    lines: list[str] = []
+    skipped: set[int] = set()
+    for i, item in enumerate(items):
+        if not isinstance(item, str):
+            out.append(Violation(i, "not-text", f"item is {type(item).__name__}, not a status line"))
+            skipped.add(i)
+            lines.append("")
+            continue
+        lines.append(item)
     for i, line in enumerate(lines):
+        if i in skipped:
+            continue
         head = _HEAD_RE.match(line)
         if head is None:
             out.append(Violation(i, "status-first", f"no leading '<Status>:' in {line!r}"))
@@ -168,6 +215,8 @@ def lint_items(items: Iterable[str]) -> list[Violation]:
         else:
             status = head.group(1)
         body = line[head.end():] if head else line
+        if status is not None and not _SHAPE_RE.match(body):
+            out.append(Violation(i, "shape", f"expected 'job <name> — <reason>' after the status in {line!r}"))
         if _BANNED_JOB_WORDS.search(body):
             out.append(Violation(i, "vocabulary", "use 'job', not run/session/task"))
         if _BANNED_GATE_WORDS.search(body):
@@ -178,34 +227,10 @@ def lint_items(items: Iterable[str]) -> list[Violation]:
             out.append(Violation(i, "tense", f"{status} is in progress; reason uses past tense"))
         if status in PAST_STATUSES and _PAST_ONLY.search(body):
             out.append(Violation(i, "tense", f"{status} is done; reason uses in-progress wording"))
-    if len(lines) > 1:
-        keysets = {_field_keys(line) for line in lines}
-        if len(keysets) > 1:
-            first = _field_keys(lines[0])
-            for i, line in enumerate(lines[1:], start=1):
-                if _field_keys(line) != first:
-                    out.append(Violation(i, "fields", f"fields {_field_keys(line)} differ from first item's {first}"))
+    texts = [(i, line) for i, line in enumerate(lines) if i not in skipped]
+    if len(texts) > 1:
+        first = _field_keys(texts[0][1])
+        for i, line in texts[1:]:
+            if _field_keys(line) != first:
+                out.append(Violation(i, "fields", f"fields {_field_keys(line)} differ from first item's {first}"))
     return out
-
-
-# ── Redaction (used by the probe) ───────────────────────────────────────────
-
-_TOKEN = "[redacted-token]"
-_REDACTIONS: Final[tuple[tuple[re.Pattern[str], str], ...]] = (
-    (re.compile(r"-----BEGIN[ A-Z]*-----(?:[\s\S]*?-----END[ A-Z]*-----)?"), _TOKEN),
-    (re.compile(r"\beyJ[A-Za-z0-9_-]{5,}(?:\.[A-Za-z0-9_-]+){0,2}"), _TOKEN),
-    (re.compile(r"\bBearer\s+\S+", re.I), _TOKEN),
-    (re.compile(r"\b(?:gh[pousr]_|sk-|xox[a-z]-?|AIza)[A-Za-z0-9_-]*"), _TOKEN),
-    (re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+"), "[redacted-email]"),
-    (re.compile(r"\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b"), "[redacted-id]"),
-    (re.compile(r"/(?:Users|home)/[^/\s`'\"]+"), "~"),
-    (re.compile(r"\b[0-9a-fA-F]{12,}\b"), "[redacted-id]"),
-    (re.compile(r"\b[\w-]+\.(?:local|lan|internal)\b"), "[redacted-host]"),
-)
-
-
-def redact(text: str) -> str:
-    """Mask home paths, emails, UUIDs, long hex ids, tokens and hostnames."""
-    for pattern, repl in _REDACTIONS:
-        text = pattern.sub(repl, text)
-    return text
