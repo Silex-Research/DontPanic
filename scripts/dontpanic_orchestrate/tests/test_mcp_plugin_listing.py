@@ -20,13 +20,7 @@ from dontpanic_orchestrate import __version__  # noqa: E402
 
 
 LAUNCH_COMMAND = "uvx"
-LAUNCH = [
-    "--from",
-    f"dontpanic-orchestrate=={__version__}",
-    "dontpanic",
-    "mcp",
-    "serve",
-]
+LAUNCH = [f"dontpanic-orchestrate=={__version__}"]
 
 
 def _read_text(relative_path: str) -> str:
@@ -113,12 +107,9 @@ def test_server_json_matches_mcp_registry_listing():
     assert package["registryBaseUrl"] == "https://pypi.org"
     assert package["identifier"] == "dontpanic-orchestrate"
     assert package["version"] == __version__
-    assert package["runtimeHint"] == LAUNCH_COMMAND
+    assert package["runtimeHint"] == "uvx"
     assert package["transport"] == {"type": "stdio"}
-    assert package["packageArguments"] == [
-        {"type": "positional", "value": "mcp"},
-        {"type": "positional", "value": "serve"},
-    ]
+    assert not package.get("packageArguments")
     assert len(server["description"]) <= 100
 
 
@@ -130,9 +121,29 @@ def test_pyproject_exposes_distribution_named_console_script():
 
     project = tomllib.loads(_read_text("pyproject.toml"))
 
-    assert project["project"]["scripts"]["dontpanic-orchestrate"] == (
+    assert project["project"]["scripts"]["dontpanic-orchestrate"] != (
         "dontpanic_orchestrate.cli:main"
     )
+
+
+def test_distribution_entrypoint_is_a_distinct_mcp_server_callable():
+    try:
+        import tomllib
+    except ModuleNotFoundError:  # pragma: no cover - Python before 3.11
+        import tomli as tomllib
+
+    project = tomllib.loads(_read_text("pyproject.toml"))
+    entrypoint = project["project"]["scripts"]["dontpanic-orchestrate"]
+    module_name, separator, attribute_name = entrypoint.partition(":")
+
+    assert separator
+    assert module_name == "dontpanic_orchestrate.mcp_server"
+    callable_entrypoint = getattr(mcp_server, attribute_name)
+    assert callable(callable_entrypoint)
+
+    from dontpanic_orchestrate import cli
+
+    assert callable_entrypoint is not cli.main
 
 
 def test_cursor_plugin_manifest_and_mcp_launch_config():
@@ -224,6 +235,21 @@ def test_publishing_doc_release_conventions():
     assert re.search(r"maintainer approval", publishing, re.IGNORECASE)
 
 
+def test_docs_use_the_single_uvx_launch_form():
+    relative_paths = ["README.md", "docs/DISCOVERABILITY.md", "docs/PUBLISHING.md"]
+    for relative_path in relative_paths:
+        document = _read_text(relative_path)
+        assert f"uvx dontpanic-orchestrate=={__version__}" in document, relative_path
+        assert "uvx --from dontpanic-orchestrate" not in document, relative_path
+
+    publishing = _read_text("docs/PUBLISHING.md")
+    assert (
+        "uvx --index-url https://test.pypi.org/simple/ "
+        "--extra-index-url https://pypi.org/simple/ "
+        "dontpanic-orchestrate==<version>rc1"
+    ) in publishing
+
+
 def test_sync_version_check_is_clean():
     result = subprocess.run(
         [sys.executable, "scripts/sync_version.py", "--check"],
@@ -246,5 +272,5 @@ def test_sync_version_rewrites_pinned_distribution_versions():
     spec.loader.exec_module(sync_version)
 
     assert sync_version.rewrite_text(
-        "uvx --from dontpanic-orchestrate==9.9.9 dontpanic", "1.2.3"
-    ) == "uvx --from dontpanic-orchestrate==1.2.3 dontpanic"
+        "uvx dontpanic-orchestrate==9.9.9", "1.2.3"
+    ) == "uvx dontpanic-orchestrate==1.2.3"
