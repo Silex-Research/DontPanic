@@ -98,7 +98,7 @@ def _read_state(plan_dir: Path) -> dict[str, Any]:
         return {"plan_id": None, "cleared_gates": [], "history": []}
     try:
         return json.loads(p.read_text())
-    except json.JSONDecodeError:
+    except (json.JSONDecodeError, UnicodeDecodeError):
         # Reads stay side-effect free. _write_state preserves corrupt input
         # immediately before replacing it.
         return {"plan_id": None, "cleared_gates": [], "history": []}
@@ -132,7 +132,7 @@ def _write_state(plan_dir: Path, state: dict[str, Any]) -> None:
         existing = p.read_bytes()
         try:
             json.loads(existing)
-        except json.JSONDecodeError:
+        except (json.JSONDecodeError, UnicodeDecodeError):
             p.with_suffix(".corrupt.json").write_bytes(existing)
     p.write_text(json.dumps(state, indent=2, ensure_ascii=False) + "\n")
 
