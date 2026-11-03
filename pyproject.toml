@@ -103,6 +103,7 @@ dontpanic_orchestrate = [
     "data/*.json",
     "agent_conventions/VERSION",
     "agent_conventions/schemas/v1_0/*.json",
+    "capability_manifests/*.json",
     "prompts/*.md",
 ]
 

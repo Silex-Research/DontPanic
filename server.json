@@ -1,6 +1,6 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.silex-research/dontpanic",
+  "name": "io.github.Silex-Research/dontpanic",
   "title": "DontPanic",
   "description": "Local MCP server to plan, dispatch, review, and gate AI coding work.",
   "repository": {

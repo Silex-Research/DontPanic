@@ -158,12 +158,25 @@ def check_clis(skip_auth: bool = False) -> list[CheckResult]:
 def check_gcloud_auth() -> CheckResult:
     if shutil.which("gcloud") is None:
         return _bad("gcloud-auth", "gcloud missing", "install gcloud first")
-    proc = subprocess.run(
-        ["gcloud", "auth", "print-access-token"],  # noqa: S607  # PATH-relative gcloud invocation per D001
-        capture_output=True,
-        text=True,
-        timeout=15,
-    )
+    try:
+        proc = subprocess.run(
+            ["gcloud", "auth", "print-access-token"],  # noqa: S607  # PATH-relative gcloud invocation per D001
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+    except subprocess.TimeoutExpired:
+        return _bad(
+            "gcloud-auth",
+            "gcloud authentication check timed out",
+            "retry after checking gcloud",
+        )
+    except FileNotFoundError:
+        return _bad(
+            "gcloud-auth",
+            "gcloud not found while checking authentication",
+            "install gcloud first",
+        )
     if proc.returncode != 0:
         return _bad(
             "gcloud-auth",
@@ -176,12 +189,25 @@ def check_gcloud_auth() -> CheckResult:
 def check_firebase_auth() -> CheckResult:
     if shutil.which("firebase") is None:
         return _bad("firebase-auth", "firebase CLI missing", "npm i -g firebase-tools")
-    proc = subprocess.run(
-        ["firebase", "login:list"],  # noqa: S607  # PATH-relative firebase invocation per D001
-        capture_output=True,
-        text=True,
-        timeout=15,
-    )
+    try:
+        proc = subprocess.run(
+            ["firebase", "login:list"],  # noqa: S607  # PATH-relative firebase invocation per D001
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+    except subprocess.TimeoutExpired:
+        return _bad(
+            "firebase-auth",
+            "firebase authentication check timed out",
+            "retry after checking firebase",
+        )
+    except FileNotFoundError:
+        return _bad(
+            "firebase-auth",
+            "firebase not found while checking authentication",
+            "install firebase-tools",
+        )
     if proc.returncode != 0 or "@" not in proc.stdout:
         return _bad(
             "firebase-auth",

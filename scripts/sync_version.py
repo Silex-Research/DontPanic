@@ -10,6 +10,7 @@ without writing any files. The MCP launch pin is
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import sys
 from pathlib import Path
@@ -31,7 +32,12 @@ PINNED_PATHS = (
 
 _SOURCE_VERSION = re.compile(r"^__version__\s*=\s*['\"]([^'\"]+)['\"]", re.MULTILINE)
 _DISTRIBUTION_PIN = re.compile(r"(dontpanic-orchestrate==)[0-9][^\s\"'`,)]*")
-_JSON_VERSION_FIELD = re.compile(r'(?m)^(\s*"version"\s*:\s*")[^"]*(")')
+_JSON_PINNED_PATHS = {
+    "server.json",
+    ".cursor-plugin/plugin.json",
+    ".cursor-plugin/mcp.json",
+    ".claude-plugin/plugin.json",
+}
 
 
 def read_source_version() -> str:
@@ -50,22 +56,45 @@ def rewrite_text(text: str, version: str) -> str:
 
 
 def rewrite_listing_json(text: str, relative_path: str, version: str) -> str:
-    """Update published listing version fields while preserving JSON formatting."""
-    if relative_path in {
-        "server.json",
-        ".cursor-plugin/plugin.json",
-        ".claude-plugin/plugin.json",
-    }:
-        return _JSON_VERSION_FIELD.sub(
-            lambda match: f'{match.group(1)}{version}{match.group(2)}', text
-        )
+    """Update version fields in supported JSON listings."""
+    if relative_path in _JSON_PINNED_PATHS:
+        payload = json.loads(text)
+        if not isinstance(payload, dict):
+            raise ValueError(f"{relative_path}: top-level JSON value must be an object")
+
+        if relative_path in {
+            "server.json",
+            ".cursor-plugin/plugin.json",
+            ".claude-plugin/plugin.json",
+        }:
+            payload["version"] = version
+        if relative_path == "server.json":
+            packages = payload.get("packages", [])
+            if isinstance(packages, list):
+                for package in packages:
+                    if isinstance(package, dict):
+                        package["version"] = version
+
+        def rewrite_pins(value):
+            if isinstance(value, dict):
+                return {key: rewrite_pins(item) for key, item in value.items()}
+            if isinstance(value, list):
+                return [rewrite_pins(item) for item in value]
+            if isinstance(value, str):
+                return _DISTRIBUTION_PIN.sub(
+                    lambda match: f"{match.group(1)}{version}", value
+                )
+            return value
+
+        payload = rewrite_pins(payload)
+        return json.dumps(payload, indent=2, ensure_ascii=False) + "\n"
     return text
 
 
 def desired_text(relative_path: str, original: str, version: str) -> str:
-    return rewrite_listing_json(
-        rewrite_text(original, version), relative_path, version
-    )
+    if relative_path in _JSON_PINNED_PATHS:
+        return rewrite_listing_json(original, relative_path, version)
+    return rewrite_text(original, version)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -92,8 +121,22 @@ def main(argv: list[str] | None = None) -> int:
     changed: list[tuple[str, str]] = []
     for relative_path in PINNED_PATHS:
         path = ROOT / relative_path
-        original = path.read_text(encoding="utf-8")
-        updated = desired_text(relative_path, original, version)
+        try:
+            original = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError as exc:
+            print(f"Invalid JSON/text encoding in {relative_path}: {exc}", file=sys.stderr)
+            return 2
+        except OSError as exc:
+            print(f"Could not read {relative_path}: {exc}", file=sys.stderr)
+            return 2
+        try:
+            updated = desired_text(relative_path, original, version)
+        except json.JSONDecodeError as exc:
+            print(f"Invalid JSON in {relative_path}: {exc}", file=sys.stderr)
+            return 2
+        except ValueError as exc:
+            print(f"Invalid JSON structure in {relative_path}: {exc}", file=sys.stderr)
+            return 2
         if updated != original:
             changed.append((relative_path, updated))
 

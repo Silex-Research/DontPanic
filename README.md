@@ -1,6 +1,6 @@
 # DontPanic
 
-<!-- mcp-name: io.github.silex-research/dontpanic -->
+<!-- mcp-name: io.github.Silex-Research/dontpanic -->
 
 > Autonomous implementation. Independent review. Evidence before signoff.
 

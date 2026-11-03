@@ -68,7 +68,7 @@ Use this baseline when a runtime asks for an `mcp.json` block:
 
 ## MCP Directory Readiness
 
-- [ ] registry name is `io.github.silex-research/dontpanic`, with
+- [ ] registry name is `io.github.Silex-Research/dontpanic`, with
   `server.json` at the repository root.
 - [ ] not yet submitted: package launch command is
   `uvx dontpanic-orchestrate==0.2.0`.

@@ -423,7 +423,7 @@ def tool_status(args: dict[str, Any]) -> dict[str, Any]:
                 "started_at": e.started_at,
                 "supervisor_config_dir": e.supervisor_config_dir,
             }
-            for e in active_supervisors.list_active()
+            for e in active_supervisors.list_active(prune=False)
         ],
     }
     if inp.plan is not None:
@@ -541,7 +541,7 @@ def _build_tools() -> dict[str, ToolDef]:
                     "readOnlyHint": False,
                     "destructiveHint": True,
                     "idempotentHint": False,
-                    "openWorldHint": False,
+                    "openWorldHint": True,
                 },
                 description=(
                     "Mutating. Dispatch an implementer/auditor volley for a "
@@ -646,7 +646,7 @@ def _build_tools() -> dict[str, ToolDef]:
                     "readOnlyHint": True,
                     "destructiveHint": False,
                     "idempotentHint": True,
-                    "openWorldHint": False,
+                    "openWorldHint": True,
                 },
                 description=(
                     "Read-only. Return the V0b capability status envelope "
@@ -922,7 +922,7 @@ def _serialize_tools_for_list() -> list[dict[str, Any]]:
             "title": td.title,
             "description": td.description,
             "inputSchema": td.input_model.model_json_schema(),
-            "annotations": dict(td.annotations),
+            "annotations": {**td.annotations, "title": td.title},
         }
         for td in TOOLS.values()
     ]
@@ -939,9 +939,9 @@ def handle_request(message: dict[str, Any]) -> dict[str, Any] | None:
     req_id = message.get("id")
     is_notification = "id" not in message
 
+    if message.get("jsonrpc") != "2.0":
+        return _err(req_id, ERR_INVALID_REQUEST, "jsonrpc must be '2.0'")
     if not isinstance(method, str):
-        if is_notification:
-            return None
         return _err(req_id, ERR_INVALID_REQUEST, "missing/invalid method")
 
     if method == "initialize":
@@ -984,6 +984,32 @@ def handle_request(message: dict[str, Any]) -> dict[str, Any] | None:
     if is_notification:
         return None
     return _err(req_id, ERR_METHOD_NOT_FOUND, f"unknown method: {method!r}")
+
+
+def handle_message(
+    message: Any,
+) -> dict[str, Any] | list[dict[str, Any]] | None:
+    """Handle one JSON-RPC object or batch and return only response messages."""
+    if not isinstance(message, list):
+        return handle_request(message)  # type: ignore[arg-type]
+    if not message:
+        return _err(None, ERR_INVALID_REQUEST, "batch request must not be empty")
+
+    responses: list[dict[str, Any]] = []
+    for item in message:
+        if not isinstance(item, dict):
+            response = _err(None, ERR_INVALID_REQUEST, "batch item must be a JSON object")
+        elif item.get("method") == "initialize":
+            response = _err(
+                item.get("id"),
+                ERR_INVALID_REQUEST,
+                "initialize must not be included in a batch request",
+            )
+        else:
+            response = handle_request(item)
+        if response is not None:
+            responses.append(response)
+    return responses or None
 
 
 def _server_version() -> str:
@@ -1036,7 +1062,7 @@ def serve_stdio(
             out_stream.write(json.dumps(response) + "\n")
             out_stream.flush()
             continue
-        response = handle_request(message)
+        response = handle_message(message)
         if response is None:
             continue
         out_stream.write(json.dumps(response) + "\n")
@@ -1142,6 +1168,7 @@ __all__ = [
     "main",
     "serve_main",
     "serve_stdio",
+    "handle_message",
     "tool_approve_gate",
     "tool_capabilities_get_status",
     "tool_dispatch",

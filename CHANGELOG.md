@@ -65,7 +65,7 @@ Surfaces affected: <comma-separated list — see docs/RELEASE_IMPACT.md>
 ### Added
 
 - Added root `server.json` metadata for the MCP Registry entry
-  `io.github.silex-research/dontpanic`.
+  `io.github.Silex-Research/dontpanic`.
 - Added Cursor and Claude Code plugin manifests that launch the local MCP
   server with a version-pinned `uvx` command.
 - Added titles and read-only/destructive annotations to all nine MCP tools,
@@ -73,11 +73,12 @@ Surfaces affected: <comma-separated list — see docs/RELEASE_IMPACT.md>
 - Added `scripts/sync_version.py` to keep public install pins aligned with the
   package version, and added the manual publishing runbook in
   `docs/PUBLISHING.md`.
-- The wheel now ships a generated agent-conventions schema/model mirror so
+- The wheel now ships generated agent-conventions schemas and models so
   `dontpanic mcp serve` starts from an installed wheel. Run
-  `scripts/sync_agent_conventions.py --check`; a drift test keeps the mirror
-  identical to `claude/shared`. Secret-redaction patterns now live in the
-  package at `dontpanic_orchestrate.secret_patterns`, and
+  `scripts/sync_agent_conventions.py --check`; schemas are byte-identical to
+  `claude/shared`, while generated models carry a generated header and a
+  relative-import rewrite. Secret-redaction patterns now live in the package
+  at `dontpanic_orchestrate.secret_patterns`, and
   `scripts/sanitization_check.py` re-exports them.
 
 ### Changed
