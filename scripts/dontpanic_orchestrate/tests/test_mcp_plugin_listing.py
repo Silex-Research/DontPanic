@@ -276,10 +276,32 @@ def test_docs_use_the_single_uvx_launch_form():
 
     publishing = _read_text("docs/PUBLISHING.md")
     assert (
-        "uvx --index-url https://test.pypi.org/simple/ "
-        "--extra-index-url https://pypi.org/simple/ "
+        "uvx --index https://test.pypi.org/simple/ "
+        "--default-index https://pypi.org/simple/ "
         "dontpanic-orchestrate==<version>rc1"
     ) in publishing
+
+
+def test_testpypi_runbook_and_pipx_contents_are_accurate():
+    publishing = _read_text("docs/PUBLISHING.md")
+    assert "--index https://test.pypi.org/simple/" in publishing
+    assert "--default-index https://pypi.org/simple/" in publishing
+    assert (
+        "UV_PUBLISH_TOKEN=<TestPyPI API token> uv publish --publish-url "
+        "https://test.pypi.org/legacy/ dist/*"
+    ) in publishing
+    assert "--extra-index-url" not in publishing
+    assert "trusted publisher" not in publishing
+
+    roadmap = _read_text(
+        "docs/roadmap-2026-05-19-install-ux-architecture-v0.md"
+    )
+    assert (
+        "`pipx install dontpanic-orchestrate` includes the CLI, supervisor/dispatch, "
+        "doctor/init/new, vendored schemas, validators, MCP server, state projection, "
+        "and static dashboard/export. It does not include the repository-root "
+        "`docs/`, `examples/`, or `research/` directories; use a source install for those."
+    ) in roadmap
 
 
 def test_sync_version_check_is_clean():

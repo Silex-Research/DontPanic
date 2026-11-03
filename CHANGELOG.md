@@ -92,6 +92,7 @@ Surfaces affected: <comma-separated list — see docs/RELEASE_IMPACT.md>
 
 - Removed install guidance for the unrelated PyPI distribution named
   `dontpanic`.
+- Fixed the publishing runbook with an explicit TestPyPI upload command and a TestPyPI-first index for RC verification.
 
 Surfaces affected: root_changelog, readme, onboarding, cli_help, public_metadata
 
