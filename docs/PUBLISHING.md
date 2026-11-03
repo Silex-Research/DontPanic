@@ -76,11 +76,13 @@ This dry run requires maintainer approval and has not yet been run.
    response contains all nine tools and that each tool includes its read-only
    and destructive annotations.
 
-## PyPI release verification
+## PyPI trusted publishing
 
-After publishing a maintainer-approved version to PyPI, confirm that PyPI
-displays the project README containing the `mcp-name:` marker; the MCP Registry
-uses that marker for the repository ownership check.
+With maintainer approval, configure a PyPI trusted publisher for the GitHub
+repository. Build the distributions with `uv build`, then publish from a
+maintainer-approved trusted-publisher run. After publishing, confirm that
+PyPI displays the project README containing the `mcp-name:` marker; the MCP
+Registry uses that marker for the repository ownership check.
 
 ## MCP Registry
 

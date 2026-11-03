@@ -291,7 +291,7 @@ def test_testpypi_runbook_and_pipx_contents_are_accurate():
         "https://test.pypi.org/legacy/ dist/*"
     ) in publishing
     assert "--extra-index-url" not in publishing
-    assert "trusted publisher" not in publishing
+    assert "TestPyPI trusted publisher" not in publishing
 
     roadmap = _read_text(
         "docs/roadmap-2026-05-19-install-ux-architecture-v0.md"
