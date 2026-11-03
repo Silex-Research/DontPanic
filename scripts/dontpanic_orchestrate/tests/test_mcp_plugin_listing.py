@@ -1,0 +1,250 @@
+"""MCP Registry and plugin listing contracts."""
+
+from __future__ import annotations
+
+import importlib.util
+import json
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+import pytest
+
+HERE = Path(__file__).resolve()
+REPO_ROOT = HERE.parents[3]
+sys.path.insert(0, str(REPO_ROOT / "scripts"))
+
+from dontpanic_orchestrate import mcp_server  # noqa: E402
+from dontpanic_orchestrate import __version__  # noqa: E402
+
+
+LAUNCH_COMMAND = "uvx"
+LAUNCH = [
+    "--from",
+    f"dontpanic-orchestrate=={__version__}",
+    "dontpanic",
+    "mcp",
+    "serve",
+]
+
+
+def _read_text(relative_path: str) -> str:
+    return (REPO_ROOT / relative_path).read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize(
+    ("protocol_version", "expected_version"),
+    [
+        ("2025-03-26", "2025-03-26"),
+        ("2024-11-05", "2024-11-05"),
+        ("1999-01-01", "2025-03-26"),
+    ],
+)
+def test_initialize_negotiates_supported_protocol_versions(protocol_version, expected_version):
+    response = mcp_server.handle_request(
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {
+                "protocolVersion": protocol_version,
+                "capabilities": {},
+                "clientInfo": {"name": "t", "version": "0"},
+            },
+        }
+    )
+
+    assert response["result"]["protocolVersion"] == expected_version
+
+
+def test_initialize_defaults_protocol_version_when_params_are_missing():
+    response = mcp_server.handle_request(
+        {"jsonrpc": "2.0", "id": 1, "method": "initialize"}
+    )
+
+    assert response["result"]["protocolVersion"] == "2025-03-26"
+
+
+def test_supported_protocol_versions_are_explicit():
+    assert mcp_server.SUPPORTED_PROTOCOL_VERSIONS == ("2025-03-26", "2024-11-05")
+    assert mcp_server.DEFAULT_PROTOCOL_VERSION == "2025-03-26"
+
+
+def test_tools_list_includes_titles_and_read_only_annotations():
+    expected_annotations = {
+        "list_projects": {"readOnlyHint": True, "destructiveHint": False},
+        "validate_plan": {"readOnlyHint": True, "destructiveHint": False},
+        "dispatch": {"readOnlyHint": False, "destructiveHint": True},
+        "status": {"readOnlyHint": True, "destructiveHint": False},
+        "approve_gate": {"readOnlyHint": False, "destructiveHint": True},
+        "read_evidence": {"readOnlyHint": True, "destructiveHint": False},
+        "state_snapshot": {"readOnlyHint": True, "destructiveHint": False},
+        "state_stream": {"readOnlyHint": True, "destructiveHint": False},
+        "capabilities.get_status": {"readOnlyHint": True, "destructiveHint": False},
+    }
+    response = mcp_server.handle_request(
+        {"jsonrpc": "2.0", "id": 1, "method": "tools/list"}
+    )
+    tools = response["result"]["tools"]
+
+    assert {tool["name"] for tool in tools} == set(expected_annotations)
+    for tool in tools:
+        assert isinstance(tool.get("title"), str) and tool["title"].strip()
+        annotations = tool.get("annotations")
+        assert isinstance(annotations, dict)
+        assert {
+            "readOnlyHint": annotations.get("readOnlyHint"),
+            "destructiveHint": annotations.get("destructiveHint"),
+        } == expected_annotations[tool["name"]]
+
+
+def test_server_json_matches_mcp_registry_listing():
+    server = json.loads(_read_text("server.json"))
+
+    assert server["$schema"] == "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json"
+    assert server["name"] == "io.github.silex-research/dontpanic"
+    assert server["version"] == __version__
+    packages = server["packages"]
+    assert isinstance(packages, list)
+    assert len(packages) == 1
+    package = packages[0]
+    assert package["registryType"] == "pypi"
+    assert package["registryBaseUrl"] == "https://pypi.org"
+    assert package["identifier"] == "dontpanic-orchestrate"
+    assert package["version"] == __version__
+    assert package["runtimeHint"] == LAUNCH_COMMAND
+    assert package["transport"] == {"type": "stdio"}
+    assert package["packageArguments"] == [
+        {"type": "positional", "value": "mcp"},
+        {"type": "positional", "value": "serve"},
+    ]
+    assert len(server["description"]) <= 100
+
+
+def test_pyproject_exposes_distribution_named_console_script():
+    try:
+        import tomllib
+    except ModuleNotFoundError:  # pragma: no cover - Python before 3.11
+        import tomli as tomllib
+
+    project = tomllib.loads(_read_text("pyproject.toml"))
+
+    assert project["project"]["scripts"]["dontpanic-orchestrate"] == (
+        "dontpanic_orchestrate.cli:main"
+    )
+
+
+def test_cursor_plugin_manifest_and_mcp_launch_config():
+    plugin = json.loads(_read_text(".cursor-plugin/plugin.json"))
+    server_config = json.loads(_read_text(".cursor-plugin/mcp.json"))
+
+    assert plugin["name"] == "dontpanic"
+    assert plugin["version"] == __version__
+    assert plugin["mcpServers"] == ".cursor-plugin/mcp.json"
+    assert server_config["mcpServers"]["dontpanic"]["command"] == LAUNCH_COMMAND
+    assert server_config["mcpServers"]["dontpanic"]["args"] == LAUNCH
+
+
+def test_claude_plugin_manifest_has_versioned_mcp_launch_config():
+    plugin = json.loads(_read_text(".claude-plugin/plugin.json"))
+
+    assert plugin["name"] == "dontpanic"
+    assert plugin["version"] == __version__
+    assert plugin["mcpServers"]["dontpanic"]["command"] == LAUNCH_COMMAND
+    assert plugin["mcpServers"]["dontpanic"]["args"] == LAUNCH
+
+
+def test_readme_has_registry_name_and_privacy_heading():
+    readme = _read_text("README.md")
+
+    assert "<!-- mcp-name: io.github.silex-research/dontpanic -->" in readme.splitlines()
+    assert re.search(r"^## Privacy", readme, re.MULTILINE)
+
+
+def test_version_pins_do_not_drift_across_listing_surfaces():
+    relative_paths = [
+        "README.md",
+        "docs/DISCOVERABILITY.md",
+        "docs/USE_CASES.md",
+        "docs/PUBLISHING.md",
+        "docs/roadmap-2026-05-19-install-ux-architecture-v0.md",
+        "server.json",
+        ".cursor-plugin/plugin.json",
+        ".cursor-plugin/mcp.json",
+        ".claude-plugin/plugin.json",
+    ]
+    pin_pattern = re.compile(r"dontpanic-orchestrate==([0-9][^\s\"'`,)]*)")
+    pins_by_path = {
+        relative_path: pin_pattern.findall(_read_text(relative_path))
+        for relative_path in relative_paths
+    }
+
+    for relative_path, pins in pins_by_path.items():
+        assert all(version == __version__ for version in pins), (
+            f"Version pin drift in {relative_path}: {pins}"
+        )
+    assert pins_by_path["README.md"]
+    assert pins_by_path["docs/PUBLISHING.md"]
+
+
+def test_docs_do_not_recommend_installing_the_unrelated_bare_distribution():
+    doc_paths = [REPO_ROOT / "README.md", *sorted((REPO_ROOT / "docs").rglob("*.md"))]
+    wrong_install = re.compile(r"pipx\s+install\s+dontpanic(?![-\w])")
+
+    for path in doc_paths:
+        assert not wrong_install.search(path.read_text(encoding="utf-8")), str(path)
+
+
+def test_discoverability_tool_count_matches_registered_tools():
+    response = mcp_server.handle_request(
+        {"jsonrpc": "2.0", "id": 1, "method": "tools/list"}
+    )
+    registered_names = {tool["name"] for tool in response["result"]["tools"]}
+    discoverability = _read_text("docs/DISCOVERABILITY.md")
+
+    count_match = re.search(
+        r"tool\s+list\s+is\s+exactly\s+(\d+)\s+tools", discoverability
+    )
+    assert count_match is not None
+    assert int(count_match.group(1)) == len(registered_names)
+    assert all(f"`{name}`" in discoverability for name in registered_names)
+    assert all(
+        int(count) == len(registered_names)
+        for count in re.findall(r"exactly\s+(\d+)\s+(?:MCP\s+)?tools", discoverability)
+    )
+
+
+def test_publishing_doc_release_conventions():
+    publishing = _read_text("docs/PUBLISHING.md")
+
+    assert "dontpanic-v" in publishing
+    assert "TestPyPI" in publishing
+    assert "https://test.pypi.org/simple/" in publishing
+    assert re.search(r"maintainer approval", publishing, re.IGNORECASE)
+
+
+def test_sync_version_check_is_clean():
+    result = subprocess.run(
+        [sys.executable, "scripts/sync_version.py", "--check"],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert result.stderr == ""
+
+
+def test_sync_version_rewrites_pinned_distribution_versions():
+    module_path = REPO_ROOT / "scripts" / "sync_version.py"
+    spec = importlib.util.spec_from_file_location("dontpanic_sync_version_test", module_path)
+    assert spec is not None and spec.loader is not None
+    sync_version = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = sync_version
+    spec.loader.exec_module(sync_version)
+
+    assert sync_version.rewrite_text(
+        "uvx --from dontpanic-orchestrate==9.9.9 dontpanic", "1.2.3"
+    ) == "uvx --from dontpanic-orchestrate==1.2.3 dontpanic"
