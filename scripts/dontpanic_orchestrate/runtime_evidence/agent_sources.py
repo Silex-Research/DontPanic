@@ -29,7 +29,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from dontpanic_orchestrate.nested_orchestration import goal_governance_evidence_path
-from sanitization_check import SECRET_REGEXES as _SECRET_REGEXES
+from dontpanic_orchestrate.secret_patterns import SECRET_REGEXES as _SECRET_REGEXES
 
 from .harness import _BoundSource
 

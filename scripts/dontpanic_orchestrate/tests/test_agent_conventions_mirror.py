@@ -109,6 +109,35 @@ def test_runtime_modules_do_not_import_repo_schema_modules_or_candidates() -> No
     assert not violations, "\n".join(violations)
 
 
+def test_package_modules_do_not_import_top_level_sanitization_check() -> None:
+    violations: list[str] = []
+    for path in sorted(PACKAGE_DIR.rglob("*.py")):
+        relative = path.relative_to(PACKAGE_DIR)
+        if relative.parts[0] == "tests":
+            continue
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(relative))
+        for node in ast.walk(tree):
+            imported_modules: list[str] = []
+            if isinstance(node, ast.Import):
+                imported_modules.extend(alias.name for alias in node.names)
+            elif isinstance(node, ast.ImportFrom) and node.level == 0:
+                imported_modules.append(node.module or "")
+            for imported_module in imported_modules:
+                if imported_module == "sanitization_check" or imported_module.startswith(
+                    "sanitization_check."
+                ):
+                    violations.append(f"{relative}:{node.lineno}: imports {imported_module}")
+
+    assert not violations, "\n".join(violations)
+
+
+def test_sanitization_check_reexports_package_secret_regexes() -> None:
+    import sanitization_check
+    from dontpanic_orchestrate import secret_patterns
+
+    assert sanitization_check.SECRET_REGEXES is secret_patterns.SECRET_REGEXES
+
+
 def test_schema_loader_paths_resolve_inside_installed_package() -> None:
     from dontpanic_orchestrate import environments_loader, plan_loader
 

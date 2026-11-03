@@ -76,7 +76,9 @@ Surfaces affected: <comma-separated list — see docs/RELEASE_IMPACT.md>
 - The wheel now ships a generated agent-conventions schema/model mirror so
   `dontpanic mcp serve` starts from an installed wheel. Run
   `scripts/sync_agent_conventions.py --check`; a drift test keeps the mirror
-  identical to `claude/shared`.
+  identical to `claude/shared`. Secret-redaction patterns now live in the
+  package at `dontpanic_orchestrate.secret_patterns`, and
+  `scripts/sanitization_check.py` re-exports them.
 
 ### Changed
 
