@@ -97,7 +97,7 @@ def test_server_json_matches_mcp_registry_listing():
     server = json.loads(_read_text("server.json"))
 
     assert server["$schema"] == "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json"
-    assert server["name"] == "io.github.silex-research/dontpanic"
+    assert server["name"] == "io.github.Silex-Research/dontpanic"
     assert server["version"] == __version__
     packages = server["packages"]
     assert isinstance(packages, list)
@@ -201,8 +201,39 @@ def test_claude_plugin_manifest_has_versioned_mcp_launch_config():
 def test_readme_has_registry_name_and_privacy_heading():
     readme = _read_text("README.md")
 
-    assert "<!-- mcp-name: io.github.silex-research/dontpanic -->" in readme.splitlines()
+    assert "<!-- mcp-name: io.github.Silex-Research/dontpanic -->" in readme.splitlines()
     assert re.search(r"^## Privacy", readme, re.MULTILINE)
+
+
+def test_registry_namespace_is_pinned_before_pypi_upload():
+    """The README marker becomes permanent once a version is on PyPI, so this must pass before any upload."""
+    server = json.loads(_read_text("server.json"))
+    name = server["name"]
+
+    assert name == "io.github.Silex-Research/dontpanic"
+    namespace_owner = name.split("/")[0].removeprefix("io.github.")
+    repository_owner = server["repository"]["url"].split("github.com/", 1)[1].split("/", 1)[0]
+    assert namespace_owner == repository_owner
+
+    readme_lines = _read_text("README.md").splitlines()
+    marker = "<!-- mcp-name: io.github.Silex-Research/dontpanic -->"
+    assert marker in readme_lines
+    actual_marker = next(line for line in readme_lines if line.startswith("<!-- mcp-name: "))
+    marker_name = actual_marker.removeprefix("<!-- mcp-name: ").removesuffix(" -->")
+    assert marker_name == name
+
+    checked_paths = [
+        "README.md",
+        "CHANGELOG.md",
+        "server.json",
+        "docs/PUBLISHING.md",
+        "docs/DISCOVERABILITY.md",
+        ".cursor-plugin/plugin.json",
+        ".cursor-plugin/mcp.json",
+        ".claude-plugin/plugin.json",
+    ]
+    for relative_path in checked_paths:
+        assert "io.github.silex-research" not in _read_text(relative_path), relative_path
 
 
 def test_version_pins_do_not_drift_across_listing_surfaces():
@@ -272,25 +303,43 @@ def test_docs_use_the_single_uvx_launch_form():
     for relative_path in relative_paths:
         document = _read_text(relative_path)
         assert f"uvx dontpanic-orchestrate=={__version__}" in document, relative_path
+    for relative_path in relative_paths[:2]:
+        document = _read_text(relative_path)
         assert ("uvx" + " --from" + " dontpanic-orchestrate") not in document, relative_path
-
-    publishing = _read_text("docs/PUBLISHING.md")
-    assert (
-        "uvx --index https://test.pypi.org/simple/ "
-        "--default-index https://pypi.org/simple/ "
-        "dontpanic-orchestrate==<version>rc1"
-    ) in publishing
 
 
 def test_testpypi_runbook_and_pipx_contents_are_accurate():
     publishing = _read_text("docs/PUBLISHING.md")
-    assert "--index https://test.pypi.org/simple/" in publishing
-    assert "--default-index https://pypi.org/simple/" in publishing
+    code_blocks = re.findall(r"```[^\n]*\n(.*?)```", publishing, re.DOTALL)
+    commands = [
+        line.strip()
+        for block in code_blocks
+        for line in re.sub(r"\\\s*\n\s*", " ", block).splitlines()
+        if line.strip()
+    ]
+    rc_fetch_commands = [
+        command
+        for command in commands
+        if "dontpanic-orchestrate==<version>rc1" in command
+        and "https://test.pypi.org/simple/" in command
+    ]
+    assert rc_fetch_commands
+    assert any("--no-deps" in command for command in rc_fetch_commands)
+
+    local_wheel_launch = [
+        command
+        for command in commands
+        if "uvx --from " in command and ".whl" in command
+    ]
+    assert local_wheel_launch
+    assert all("test.pypi.org" not in line for line in local_wheel_launch)
+
+    assert "--index https://test.pypi.org" not in publishing
+    assert "--extra-index-url https://test.pypi.org" not in publishing
     assert (
         "UV_PUBLISH_TOKEN=<TestPyPI API token> uv publish --publish-url "
         "https://test.pypi.org/legacy/ dist/*"
     ) in publishing
-    assert "--extra-index-url" not in publishing
     assert "TestPyPI trusted publisher" not in publishing
 
     roadmap = _read_text(
@@ -302,6 +351,54 @@ def test_testpypi_runbook_and_pipx_contents_are_accurate():
         "and static dashboard/export. It does not include the repository-root "
         "`docs/`, `examples/`, or `research/` directories; use a source install for those."
     ) in roadmap
+
+
+def test_mcp_registry_runbook_uses_org_oidc_login():
+    publishing = _read_text("docs/PUBLISHING.md")
+    headings = list(re.finditer(r"(?m)^## .+$", publishing))
+    registry_heading = next(match for match in headings if match.group() == "## MCP Registry")
+    next_heading = next(
+        (match for match in headings if match.start() > registry_heading.start()),
+        None,
+    )
+    section = publishing[
+        registry_heading.start() : next_heading.start() if next_heading else len(publishing)
+    ]
+
+    for expected in (
+        "mcp-publisher login github-oidc",
+        "id-token: write",
+        "--token",
+        "read:org",
+        "1468",
+    ):
+        assert expected in section
+    assert all(line.strip() != "mcp-publisher login github" for line in publishing.splitlines())
+
+
+def test_pypi_trusted_publishing_is_documented_as_future_work():
+    publishing = _read_text("docs/PUBLISHING.md")
+    headings = list(re.finditer(r"(?m)^## .+$", publishing))
+    trusted_heading = next(
+        match for match in headings if match.group() == "## PyPI trusted publishing"
+    )
+    next_heading = next(
+        (match for match in headings if match.start() > trusted_heading.start()),
+        None,
+    )
+    section = publishing[
+        trusted_heading.start() : next_heading.start() if next_heading else len(publishing)
+    ].lower()
+
+    assert "future work" in section
+    assert "no publish workflow" in section
+
+    forbidden = ("mcp-publisher", "pypa/gh-action-pypi-publish", "uv publish", "twine")
+    workflow_files = sorted((REPO_ROOT / ".github" / "workflows").rglob("*"))
+    for path in workflow_files:
+        if path.is_file():
+            contents = path.read_text(encoding="utf-8")
+            assert not any(term in contents for term in forbidden), str(path.relative_to(REPO_ROOT))
 
 
 def test_sync_version_check_is_clean():
