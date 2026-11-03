@@ -82,9 +82,11 @@ Surfaces affected: <comma-separated list — see docs/RELEASE_IMPACT.md>
 
 ### Changed
 
-- Exposed the distribution-named console script required by the MCP Registry.
+- Made the distribution-named `dontpanic-orchestrate` console script the MCP
+  stdio server entrypoint, equivalent to `dontpanic mcp serve`; the full CLI
+  remains `dontpanic`.
 - Updated install and discoverability documentation to use
-  `dontpanic-orchestrate`.
+  `uvx dontpanic-orchestrate==0.2.0`.
 
 ### Fixed
 

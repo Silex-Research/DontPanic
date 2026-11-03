@@ -18,11 +18,7 @@
     "dontpanic": {
       "command": "uvx",
       "args": [
-        "--from",
-        "dontpanic-orchestrate==0.2.0",
-        "dontpanic",
-        "mcp",
-        "serve"
+        "dontpanic-orchestrate==0.2.0"
       ]
     }
   }

@@ -12,6 +12,7 @@ Critical policy decision: **DontPanic is self-contained for OSS users.**
 
 - DontPanic vendors the schemas under `claude/shared/`. Users never need to clone agent-conventions, OpenClaw, Axiom, or any other repo to use the core build system.
 - `pipx install dontpanic-orchestrate` (or source install) includes everything needed for core use: CLI, supervisor/dispatch, doctor/init/new, vendored schemas, validators, MCP server, state projection, static dashboard/export, docs/templates/examples.
+- `dontpanic-orchestrate` is the MCP server entrypoint, equivalent to `dontpanic mcp serve`; the full CLI is `dontpanic`.
 - Other repos are referenced as **optional ecosystem integrations**, never prerequisites. Chat/mobile/broker users can pick either the Hermes pattern (conceptual — Saboo's `/goal` cheat sheet, shared vocabulary) or OpenClaw (runtime — actual multi-channel agent UI); both interop with DontPanic, neither is required. Other optional integrations: Firebase/Axiom adapter (team dashboard), agent-conventions (external schema authors), Printing Press (external service evidence).
 
 Concrete consequences for this roadmap:

@@ -172,6 +172,9 @@ Discord; runs commands in terminal to act.
   tool inventory is automatic; agents discover via `dontpanic manifest
   show --json`).
 
+`dontpanic-orchestrate` is the MCP server entrypoint, equivalent to
+`dontpanic mcp serve`; the full CLI is `dontpanic`.
+
 **Engagement surface:** the active IDE/CLI session. The agent reads
 DontPanic state during your conversation; no notification broker needed
 because you're already at the keyboard. Volley state surfaces in the

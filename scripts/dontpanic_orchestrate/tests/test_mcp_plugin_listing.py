@@ -146,6 +146,38 @@ def test_distribution_entrypoint_is_a_distinct_mcp_server_callable():
     assert callable_entrypoint is not cli.main
 
 
+@pytest.mark.parametrize("help_arg", ["-h", "--help"])
+def test_distribution_entrypoint_help_is_stderr_only(monkeypatch, capsys, help_arg):
+    monkeypatch.setattr(sys, "argv", ["dontpanic-orchestrate", help_arg])
+
+    with pytest.raises(SystemExit) as exc_info:
+        mcp_server.console_main()
+
+    captured = capsys.readouterr()
+    assert exc_info.value.code == 0
+    assert captured.out == ""
+    assert "dontpanic-orchestrate starts the local stdio MCP server" in captured.err
+    assert "dontpanic mcp serve" in captured.err
+    assert "full CLI is `dontpanic`" in captured.err
+
+
+def test_distribution_entrypoint_delegates_arguments_and_exit_code(monkeypatch):
+    monkeypatch.setattr(sys, "argv", ["dontpanic-orchestrate"])
+    received: list[list[str]] = []
+
+    def fake_serve_main(argv: list[str]) -> int:
+        received.append(argv)
+        return 7
+
+    monkeypatch.setattr(mcp_server, "serve_main", fake_serve_main)
+
+    with pytest.raises(SystemExit) as exc_info:
+        mcp_server.console_main()
+
+    assert received == [[]]
+    assert exc_info.value.code == 7
+
+
 def test_cursor_plugin_manifest_and_mcp_launch_config():
     plugin = json.loads(_read_text(".cursor-plugin/plugin.json"))
     server_config = json.loads(_read_text(".cursor-plugin/mcp.json"))
@@ -240,7 +272,7 @@ def test_docs_use_the_single_uvx_launch_form():
     for relative_path in relative_paths:
         document = _read_text(relative_path)
         assert f"uvx dontpanic-orchestrate=={__version__}" in document, relative_path
-        assert "uvx --from dontpanic-orchestrate" not in document, relative_path
+        assert ("uvx" + " --from" + " dontpanic-orchestrate") not in document, relative_path
 
     publishing = _read_text("docs/PUBLISHING.md")
     assert (

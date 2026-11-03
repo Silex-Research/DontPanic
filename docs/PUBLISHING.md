@@ -53,10 +53,12 @@ This dry run requires maintainer approval and has not yet been run.
 4. With maintainer approval, verify the install and MCP surface:
 
    ```bash
-   uvx --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ --from dontpanic-orchestrate==<version>rc1 dontpanic mcp serve
+   uvx --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ dontpanic-orchestrate==<version>rc1
    ```
 
-   Send an MCP `initialize` request followed by `tools/list`. Confirm the
+   `dontpanic-orchestrate` is the MCP server entrypoint, equivalent to
+   `dontpanic mcp serve`; the full CLI is `dontpanic`. Send an MCP
+   `initialize` request followed by `tools/list`. Confirm the
    response contains all nine tools and that each tool includes its read-only
    and destructive annotations.
 
@@ -84,9 +86,11 @@ version and stdio launch configuration.
 
 ## Local install pins
 
-Use the versioned MCP launch command or install the CLI:
+Use the versioned MCP launch command or install the CLI. `dontpanic-orchestrate`
+is the MCP server entrypoint, equivalent to `dontpanic mcp serve`; the full
+CLI is `dontpanic`:
 
 ```bash
-uvx --from dontpanic-orchestrate==0.2.0 dontpanic mcp serve
+uvx dontpanic-orchestrate==0.2.0
 pipx install dontpanic-orchestrate
 ```

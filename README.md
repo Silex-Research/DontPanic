@@ -168,12 +168,13 @@ stores role names and runtime pointers, not API keys.
 
 ### Use as a local MCP plugin
 
-The MCP server runs on your machine over stdio. Once the package is on PyPI,
-the Cursor and Claude Code plugin manifests in `.cursor-plugin/` and
-`.claude-plugin/` launch it with:
+The MCP server runs on your machine over stdio. `dontpanic-orchestrate` is the
+MCP server entrypoint, equivalent to `dontpanic mcp serve`; the full CLI is
+`dontpanic`. Once the package is on PyPI, the Cursor and Claude Code plugin
+manifests in `.cursor-plugin/` and `.claude-plugin/` launch it with:
 
 ```bash
-uvx --from dontpanic-orchestrate==0.2.0 dontpanic mcp serve
+uvx dontpanic-orchestrate==0.2.0
 ```
 
 You can also install the CLI with `pipx install dontpanic-orchestrate`. The

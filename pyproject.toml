@@ -63,8 +63,10 @@ dev = [
 ]
 
 [project.scripts]
-# The MCP Registry launches `uvx <package>==<version> mcp serve`, so a console script named after the distribution is required.
-dontpanic-orchestrate = "dontpanic_orchestrate.cli:main"
+# The MCP Registry runs `uvx <package>==<version>` with no package arguments,
+# so this distribution-named script is the server entrypoint. The full CLI
+# stays `dontpanic`.
+dontpanic-orchestrate = "dontpanic_orchestrate.mcp_server:console_main"
 # Both the canonical command and the legacy alias resolve to the canonical
 # entrypoint per plan 2026-05-04-001 D004. The shim's `__main__.py` also
 # accepts `python -m jarvis_orchestrate` for backward compatibility (with

@@ -1079,6 +1079,21 @@ def serve_main(argv: list[str]) -> int:
     return serve_stdio()
 
 
+def console_main() -> None:
+    """Dedicated console entrypoint for ``dontpanic-orchestrate``."""
+    argv = sys.argv[1:]
+    if argv in (['-h'], ['--help']):
+        print(
+            "usage: dontpanic-orchestrate [--help]\n"
+            "  dontpanic-orchestrate starts the local stdio MCP server "
+            "(same as `dontpanic mcp serve`).\n"
+            "  The full CLI is `dontpanic`.",
+            file=sys.stderr,
+        )
+        raise SystemExit(0)
+    raise SystemExit(serve_main(argv))
+
+
 def main(argv: list[str]) -> int:
     """``dontpanic mcp <subcommand>`` dispatcher. ``serve`` is the only
     subcommand in Phase B; ``tools`` (introspection) is reserved for a

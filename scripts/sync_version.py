@@ -3,7 +3,8 @@
 
 Usage: run ``python3 scripts/sync_version.py`` after changing
 ``scripts/dontpanic_orchestrate/__init__.py``; use ``--check`` to report drift
-without writing any files. Requires Python 3.10 or newer.
+without writing any files. The MCP launch pin is
+``uvx dontpanic-orchestrate==<version>``. Requires Python 3.10 or newer.
 """
 
 from __future__ import annotations
