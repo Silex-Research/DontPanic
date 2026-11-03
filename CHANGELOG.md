@@ -60,6 +60,33 @@ behavioral surface change with the date, a short summary, and a
 Surfaces affected: <comma-separated list — see docs/RELEASE_IMPACT.md>
 ```
 
+## Unreleased — Local MCP plugin listing
+
+### Added
+
+- Added root `server.json` metadata for the MCP Registry entry
+  `io.github.silex-research/dontpanic`.
+- Added Cursor and Claude Code plugin manifests that launch the local MCP
+  server with a version-pinned `uvx` command.
+- Added titles and read-only/destructive annotations to all nine MCP tools,
+  plus negotiation for protocol versions `2025-03-26` and `2024-11-05`.
+- Added `scripts/sync_version.py` to keep public install pins aligned with the
+  package version, and added the manual publishing runbook in
+  `docs/PUBLISHING.md`.
+
+### Changed
+
+- Exposed the distribution-named console script required by the MCP Registry.
+- Updated install and discoverability documentation to use
+  `dontpanic-orchestrate`.
+
+### Fixed
+
+- Removed install guidance for the unrelated PyPI distribution named
+  `dontpanic`.
+
+Surfaces affected: root_changelog, readme, onboarding, cli_help, public_metadata
+
 ## 2026-09-05 — Optional hands-free administration and a shorter README
 
 ### Changed

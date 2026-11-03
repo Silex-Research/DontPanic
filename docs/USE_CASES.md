@@ -135,7 +135,7 @@ signal to stop and re-scope.
 
 **What they install:**
 ```zsh
-pipx install dontpanic
+pipx install dontpanic-orchestrate
 dontpanic projects add myapp /path/to/myapp
 dontpanic doctor
 ```

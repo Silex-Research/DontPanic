@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "dontpanic": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "dontpanic-orchestrate==0.1.0",
+        "dontpanic",
+        "mcp",
+        "serve"
+      ]
+    }
+  }
+}

@@ -1,5 +1,7 @@
 # DontPanic
 
+<!-- mcp-name: io.github.silex-research/dontpanic -->
+
 > Autonomous implementation. Independent review. Evidence before signoff.
 
 **Never let the same AI that wrote the code be the only AI that approves it.**
@@ -164,6 +166,20 @@ from another repo, put the installed `dontpanic` executable on its PATH or use
 its absolute path. Agent CLIs manage their own authentication; DontPanic config
 stores role names and runtime pointers, not API keys.
 
+### Use as a local MCP plugin
+
+The MCP server runs on your machine over stdio. Once the package is on PyPI,
+the Cursor and Claude Code plugin manifests in `.cursor-plugin/` and
+`.claude-plugin/` launch it with:
+
+```bash
+uvx --from dontpanic-orchestrate==0.1.0 dontpanic mcp serve
+```
+
+You can also install the CLI with `pipx install dontpanic-orchestrate`. The
+bare `dontpanic` name on PyPI belongs to an unrelated project. Until this
+package is published, use the source install above.
+
 ### Try the plan lifecycle without a paid agent call
 
 From the DontPanic checkout:
@@ -293,10 +309,22 @@ specific capabilities; a feature's own evidence establishes its delivery result.
 - [`docs/DISCOVERABILITY.md`](./docs/DISCOVERABILITY.md): agent discovery and publishing references.
 - [Platform architecture](./docs/PLATFORM.md), [product overview](./docs/PRODUCT.md), and [roadmap](./docs/ROADMAP.md).
 
-DontPanic stores its orchestration state and receipts locally. Hosted model
-providers receive the inputs sent to them, and enabled notification or storage
-integrations have their own data flows. Choose those providers and integrations
-for your requirements. No hosted DontPanic service is required.
+## Privacy
+
+The MCP server runs locally over stdio and opens no network listener. There is
+no hosted DontPanic service, and DontPanic does not send telemetry or analytics
+to the maintainers. Plans, evidence, and local orchestration state are stored
+on disk. If you configure Firebase evidence storage, selected evidence can
+also be uploaded to your Firebase project.
+
+Network traffic comes from tools and commands you configure or invoke: agent
+CLIs and model providers such as Claude, Codex, or OpenRouter; optional
+notification webhooks such as Discord; the optional Firebase adapter; and
+explicit operations such as `dontpanic doctor` connectivity probes or model
+catalog refreshes. OpenRouter model-catalog refreshes contact its models API;
+the doctor connectivity probe checks Anthropic API reachability. The MCP stdio
+server itself does not accept network connections. Firebase Storage uploads
+are used only when the Firebase evidence path is configured.
 
 ## Contributing and license
 
