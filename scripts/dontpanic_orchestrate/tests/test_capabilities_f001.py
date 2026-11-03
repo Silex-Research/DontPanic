@@ -147,13 +147,8 @@ def test_missing_setup_doc_file_fails_loud(tmp_path: Path):
         validate_capability_file(manifest_path, repo_root=tmp_path)
 
 
-def test_missing_checkout_capabilities_dir_uses_packaged_copy(tmp_path: Path):
+def test_missing_capabilities_dir_fails_loud(tmp_path: Path):
     _copy_schema_and_docs(tmp_path)
 
-    assert not (tmp_path / "capabilities").exists()
-    index = load_capabilities(tmp_path)
-    expected_ids = {
-        json.loads(path.read_text(encoding="utf-8"))["id"]
-        for path in (REPO_ROOT / "capabilities").glob("*.json")
-    }
-    assert {manifest.id for manifest in index.all} == expected_ids
+    with pytest.raises(CapabilityManifestError, match="capabilities directory not found"):
+        load_capabilities(tmp_path)

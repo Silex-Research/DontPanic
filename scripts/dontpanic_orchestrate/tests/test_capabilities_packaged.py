@@ -28,7 +28,28 @@ def _repo_capability_ids() -> set[str]:
 def test_load_capabilities_falls_back_to_packaged_manifests(tmp_path: Path):
     assert not (tmp_path / "capabilities").exists()
 
-    loaded = capabilities.load_capabilities(repo_root=tmp_path)
+    loaded = capabilities.load_capabilities(repo_root=tmp_path, packaged_fallback=True)
+
+    assert {manifest.id for manifest in loaded.all} == _repo_capability_ids()
+
+
+def test_explicit_root_without_capabilities_does_not_fall_back(tmp_path: Path):
+    assert not (tmp_path / "capabilities").exists()
+
+    with pytest.raises(
+        capabilities.CapabilityManifestError,
+        match="capabilities directory not found",
+    ):
+        capabilities.load_capabilities(repo_root=tmp_path)
+
+
+def test_default_root_falls_back_when_checkout_manifests_are_missing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    assert not (tmp_path / "capabilities").exists()
+    monkeypatch.setattr(capabilities, "_repo_root", lambda _repo_root: tmp_path)
+
+    loaded = capabilities.load_capabilities()
 
     assert {manifest.id for manifest in loaded.all} == _repo_capability_ids()
 

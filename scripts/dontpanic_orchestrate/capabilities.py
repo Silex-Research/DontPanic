@@ -140,14 +140,28 @@ class CapabilityIndex:
         return self._by_category.get(category, ())
 
 
-def load_capabilities(repo_root: Path | str | None = None) -> CapabilityIndex:
-    """Load checkout manifests, or the packaged copy outside a checkout."""
+def load_capabilities(
+    repo_root: Path | str | None = None,
+    *,
+    packaged_fallback: bool | None = None,
+) -> CapabilityIndex:
+    """Load checkout manifests, using the packaged copy only when allowed.
+
+    With no explicit root, the packaged mirror is used when default root
+    resolution finds no checkout manifests, as in an installed wheel. An
+    explicit root must contain ``capabilities/`` unless
+    ``packaged_fallback=True`` is passed.
+    """
 
     root = _repo_root(repo_root)
     capabilities_dir = root / "capabilities"
-    packaged = not capabilities_dir.is_dir()
-    if packaged:
+    fallback_allowed = packaged_fallback is True or (
+        packaged_fallback is None and repo_root is None
+    )
+    packaged = False
+    if not capabilities_dir.is_dir() and fallback_allowed:
         capabilities_dir = Path(__file__).resolve().parent / "capability_manifests"
+        packaged = True
     if not capabilities_dir.is_dir():
         raise CapabilityManifestError(f"capabilities directory not found: {capabilities_dir}")
     manifests = [
