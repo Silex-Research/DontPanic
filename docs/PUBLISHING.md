@@ -83,6 +83,6 @@ version and stdio launch configuration.
 Use the versioned MCP launch command or install the CLI:
 
 ```bash
-uvx --from dontpanic-orchestrate==0.1.0 dontpanic mcp serve
+uvx --from dontpanic-orchestrate==0.2.0 dontpanic mcp serve
 pipx install dontpanic-orchestrate
 ```

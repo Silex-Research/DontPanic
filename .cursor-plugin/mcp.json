@@ -4,7 +4,7 @@
       "command": "uvx",
       "args": [
         "--from",
-        "dontpanic-orchestrate==0.1.0",
+        "dontpanic-orchestrate==0.2.0",
         "dontpanic",
         "mcp",
         "serve"

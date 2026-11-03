@@ -173,7 +173,7 @@ the Cursor and Claude Code plugin manifests in `.cursor-plugin/` and
 `.claude-plugin/` launch it with:
 
 ```bash
-uvx --from dontpanic-orchestrate==0.1.0 dontpanic mcp serve
+uvx --from dontpanic-orchestrate==0.2.0 dontpanic mcp serve
 ```
 
 You can also install the CLI with `pipx install dontpanic-orchestrate`. The

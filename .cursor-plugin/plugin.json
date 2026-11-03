@@ -1,7 +1,7 @@
 {
   "name": "dontpanic",
   "displayName": "DontPanic",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Local MCP server to plan, dispatch, review, and gate AI coding work.",
   "author": {
     "name": "Silex Research"

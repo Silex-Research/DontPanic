@@ -60,7 +60,7 @@ behavioral surface change with the date, a short summary, and a
 Surfaces affected: <comma-separated list — see docs/RELEASE_IMPACT.md>
 ```
 
-## Unreleased — Local MCP plugin listing
+## 2026-11-03 — 0.2.0: Local MCP plugin listing
 
 ### Added
 
