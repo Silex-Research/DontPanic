@@ -25,11 +25,9 @@ from pydantic import ValidationError
 HERE = Path(__file__).resolve()
 REPO_ROOT = HERE.parents[3]
 sys.path.insert(0, str(HERE.parents[2]))
-# plan_loader's _find_schemas_dir adds the schemas dir to sys.path so
-# `from models.plan_model import ...` resolves. Importing it triggers that.
 from dontpanic_orchestrate import plan_loader as _plan_loader  # noqa: E402,F401
 
-from models.plan_model import Plan  # noqa: E402
+from dontpanic_orchestrate.agent_conventions.schemas.v1_0.models.plan_model import Plan  # noqa: E402
 
 V4_1_PLAN_DIR = REPO_ROOT / "docs" / "plans" / "2026-05-12-002-fix-harness-frictions-v4-1"
 SCHEMA_PATH = REPO_ROOT / "claude" / "shared" / "schemas" / "v1.0" / "plan.schema.json"

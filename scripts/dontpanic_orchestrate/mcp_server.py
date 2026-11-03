@@ -712,7 +712,7 @@ def tool_state_snapshot(args: dict[str, Any]) -> dict[str, Any]:
     # Build the merged envelope by hand-rolling a dict; the per-project
     # snapshots were already Pydantic-validated so the merge cannot fail
     # the F001 schema.
-    from state_snapshot_model import (
+    from .agent_conventions.schemas.v1_0.models.state_snapshot_model import (
         StateSnapshot as _Snap,
         Streams as _Streams,
         RedactLevel as _RL,

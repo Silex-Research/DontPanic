@@ -67,11 +67,12 @@ except ImportError:  # pragma: no cover — surfaced by check_python_deps
     yaml = None  # type: ignore[assignment]
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+PACKAGE_DIR = Path(__file__).resolve().parent / "dontpanic_orchestrate"
 SECRETS_DIR = REPO_ROOT / ".secrets"
 ENV_FILE = REPO_ROOT / "environments.json"
 ENV_EXAMPLE = REPO_ROOT / "environments.json.example"
-SCHEMAS_DIR = REPO_ROOT / "claude" / "shared" / "schemas" / "v1.0"
-MODELS_DIR = REPO_ROOT / "claude" / "shared" / "schemas" / "v1.0" / "models"
+SCHEMAS_DIR = PACKAGE_DIR / "agent_conventions" / "schemas" / "v1_0"
+MODELS_DIR = SCHEMAS_DIR / "models"
 PARENT_PLAN_DIR = REPO_ROOT / "docs" / "plans" / "2026-04-19-001-infra-cross-agent-orchestration"
 PLANS_ROOT = REPO_ROOT / "docs" / "plans"
 ARCHITECTURE_JSON_PATH = REPO_ROOT / "docs" / "architecture" / "architecture.json"
@@ -329,7 +330,6 @@ def check_pydantic_models() -> CheckResult:
             f"{MODELS_DIR} not found",
             "subtree pull agent-conventions",
         )
-    sys.path.insert(0, str(MODELS_DIR.parent))
     try:
         for mod in (
             "plan_model",
@@ -338,15 +338,15 @@ def check_pydantic_models() -> CheckResult:
             "environments_model",
             "signoff_model",
         ):
-            importlib.import_module(f"models.{mod}")
+            importlib.import_module(
+                f"dontpanic_orchestrate.agent_conventions.schemas.v1_0.models.{mod}"
+            )
     except Exception as exc:
         return _bad(
             "pydantic-models",
             f"failed importing models: {exc.__class__.__name__}: {exc}",
             "check pydantic version (>=2) and that schemas + models are in sync",
         )
-    finally:
-        sys.path.pop(0)
     return _ok("pydantic-models", "plan/features/audit/environments/signoff models import clean")
 
 
@@ -400,7 +400,7 @@ def check_parent_plan_validates() -> CheckResult:
             f"{PARENT_PLAN_DIR} missing",
             "this is the canonical plan dir — restore from origin",
         )
-    validator = SCHEMAS_DIR / "validate.py"
+    validator = REPO_ROOT / "claude" / "shared" / "schemas" / "v1.0" / "validate.py"
     if not validator.is_file():
         return _bad(
             "parent-plan",

@@ -97,7 +97,12 @@ exclude = ["dontpanic_orchestrate.tests*"]
 # resolved source; the canonical schema lives under claude/shared/schemas and is
 # mirrored into data/ (drift-guarded by a test). The `data/*.json` glob covers
 # both files.
-dontpanic_orchestrate = ["data/*.json"]
+dontpanic_orchestrate = [
+    "data/*.json",
+    "agent_conventions/VERSION",
+    "agent_conventions/schemas/v1_0/*.json",
+    "prompts/*.md",
+]
 
 [tool.ruff]
 target-version = "py310"

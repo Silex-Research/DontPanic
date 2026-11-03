@@ -14,17 +14,14 @@ Explicit matrix (operator-pinned):
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
-HERE = Path(__file__).resolve()
-sys.path.insert(0, str(HERE.parents[1]))  # dontpanic_orchestrate on path
-
-import experience_readiness_typing as t  # noqa: E402
-import experience_readiness as er  # noqa: E402
+from dontpanic_orchestrate import experience_readiness_typing as t  # noqa: E402
+from dontpanic_orchestrate.agent_conventions.schemas.v1_0.models import (  # noqa: E402
+    experience_readiness as er,
+)
 
 SC, EC = er.SurfaceClass, er.EvidenceClass
 CK, Cons = er.ClaimKind, er.Consumer

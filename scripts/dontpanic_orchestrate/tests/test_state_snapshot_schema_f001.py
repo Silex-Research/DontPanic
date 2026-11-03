@@ -15,16 +15,14 @@ from __future__ import annotations
 
 import datetime as dt
 import json
-import sys
 from pathlib import Path
 
 import pytest
 
 HERE = Path(__file__).resolve()
 SUBTREE = HERE.parents[3] / "claude" / "shared" / "schemas" / "v1.0"
-sys.path.insert(0, str(SUBTREE / "models"))
 
-from state_snapshot_model import (  # noqa: E402
+from dontpanic_orchestrate.agent_conventions.schemas.v1_0.models.state_snapshot_model import (  # noqa: E402
     DecisionEntry,
     EvidencePointer,
     GateEntry,

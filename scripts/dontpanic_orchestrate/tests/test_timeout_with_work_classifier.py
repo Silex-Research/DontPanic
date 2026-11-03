@@ -982,9 +982,9 @@ class TestBoundaryDiscipline:
 
     def test_no_new_audit_status_enum_values(self) -> None:
         """AC #15 — F003 introduces no new audit_status enum values."""
-        # Importing audit_writer first ensures the agent-conventions schema
-        # candidates path is on sys.path before models.audit_model loads.
-        from models.audit_model import AuditStatus  # type: ignore[import]
+        from dontpanic_orchestrate.agent_conventions.schemas.v1_0.models.audit_model import (
+            AuditStatus,
+        )
 
         from dontpanic_orchestrate import audit_writer  # noqa: F401
 

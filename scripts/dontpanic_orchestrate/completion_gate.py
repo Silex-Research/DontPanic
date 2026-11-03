@@ -59,7 +59,6 @@ import hashlib
 import json
 import os
 import re
-import sys
 from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
@@ -117,21 +116,10 @@ from dontpanic_orchestrate.sufficiency_auditor import (
     _read_frontmatter,
 )
 
-_SCHEMA_CANDIDATES = [
-    Path(__file__).resolve().parents[2] / "claude" / "shared" / "schemas" / "v1.0",
-    Path(__file__).resolve().parents[2] / ".claude" / "shared" / "schemas" / "v1.0",
-    Path(__file__).resolve().parents[3] / "agent-conventions" / "schemas" / "v1.0",
-]
-for _candidate in _SCHEMA_CANDIDATES:
-    if (_candidate / "models").is_dir():
-        sys.path.insert(0, str(_candidate))
-        break
 
-# experience_readiness lives in the same models dir; experience_readiness_typing
-# (imported above) inserts it onto sys.path, so this resolves in every checkout
-# layout the _SCHEMA_CANDIDATES walk supports.
-import experience_readiness as er  # noqa: E402
-from models.plan_model import GoalType  # noqa: E402
+# Use the same packaged model modules as the other completion gates.
+from .agent_conventions.schemas.v1_0.models import experience_readiness as er  # noqa: E402
+from .agent_conventions.schemas.v1_0.models.plan_model import GoalType  # noqa: E402
 
 # ──────────────────────────────  constants  ──────────────────────────────
 

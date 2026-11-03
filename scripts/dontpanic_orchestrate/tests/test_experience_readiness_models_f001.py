@@ -3,25 +3,15 @@ shared Pydantic models, with the structural invariants enforced at validation)."
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
 import pytest
 from pydantic import ValidationError
 
-_V10 = None
-for c in [
-    Path(__file__).resolve().parents[3] / "claude" / "shared" / "schemas" / "v1.0",
-    Path(__file__).resolve().parents[3] / ".claude" / "shared" / "schemas" / "v1.0",
-    Path(__file__).resolve().parents[4] / "agent-conventions" / "schemas" / "v1.0",
-]:
-    if (c / "models").is_dir():
-        _V10 = c
-        sys.path.insert(0, str(c / "models"))
-        break
-
-from features_model import EvidenceRef  # noqa: E402
-from objective_contract_model import UserJourney  # noqa: E402
+from dontpanic_orchestrate.agent_conventions.schemas.v1_0.models.features_model import (  # noqa: E402
+    EvidenceRef,
+)
+from dontpanic_orchestrate.agent_conventions.schemas.v1_0.models.objective_contract_model import (  # noqa: E402
+    UserJourney,
+)
 
 
 def test_legacy_evidence_ref_without_new_fields_still_valid():

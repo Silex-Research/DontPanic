@@ -10,24 +10,14 @@ EvidenceRef typing invariants.
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
 import pytest
 
-# Locate the agent-conventions models dir the same way runtime_evidence.harness does.
-_SCHEMA_CANDIDATES = [
-    Path(__file__).resolve().parents[3] / "claude" / "shared" / "schemas" / "v1.0",
-    Path(__file__).resolve().parents[3] / ".claude" / "shared" / "schemas" / "v1.0",
-    Path(__file__).resolve().parents[4] / "agent-conventions" / "schemas" / "v1.0",
-]
-for _candidate in _SCHEMA_CANDIDATES:
-    if (_candidate / "models").is_dir():
-        sys.path.insert(0, str(_candidate / "models"))
-        break
-
-import experience_readiness as er  # noqa: E402
-from features_model import Type as EvidenceType  # noqa: E402
+from dontpanic_orchestrate.agent_conventions.schemas.v1_0.models import (  # noqa: E402
+    experience_readiness as er,
+)
+from dontpanic_orchestrate.agent_conventions.schemas.v1_0.models.features_model import (  # noqa: E402
+    Type as EvidenceType,
+)
 
 
 # --- total surface_class -> family map (D049) --------------------------------

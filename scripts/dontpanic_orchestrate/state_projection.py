@@ -67,19 +67,7 @@ from dontpanic_orchestrate import (
     plan_loader,
 )
 
-# Pydantic models live in the agent-conventions subtree.
-_SUBTREE_MODELS = (
-    Path(__file__).resolve().parents[2]
-    / "claude"
-    / "shared"
-    / "schemas"
-    / "v1.0"
-    / "models"
-)
-if str(_SUBTREE_MODELS) not in _sys.path:
-    _sys.path.insert(0, str(_SUBTREE_MODELS))
-
-from state_snapshot_model import (  # noqa: E402
+from .agent_conventions.schemas.v1_0.models.state_snapshot_model import (  # noqa: E402
     DecisionEntry,
     EvidencePointer,
     GateEntry,
@@ -90,7 +78,7 @@ from state_snapshot_model import (  # noqa: E402
     StateSnapshot,
     Streams,
 )
-from state_snapshot_model import (  # noqa: E402
+from .agent_conventions.schemas.v1_0.models.state_snapshot_model import (  # noqa: E402
     SupervisorEntry as SnapshotSupervisorEntry,
 )
 

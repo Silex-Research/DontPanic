@@ -15,7 +15,6 @@ import json
 import logging
 import os
 import re
-import sys
 from pathlib import Path
 from typing import Any
 
@@ -24,21 +23,7 @@ from typing import Any
 # (see D002 of plan 2026-05-02-002).
 _FEATURE_ID_RE = re.compile(r"^F\d{3}$")
 
-# Resolve agent-conventions schemas dir so `from models.*` works regardless
-# of which sibling module imported first. Same candidate list as
-# plan_loader.py / environments_loader.py — kept inline rather than
-# extracted to keep the bootstrap surface flat.
-_SCHEMA_CANDIDATES = [
-    Path(__file__).resolve().parents[2] / "claude" / "shared" / "schemas" / "v1.0",
-    Path(__file__).resolve().parents[2] / ".claude" / "shared" / "schemas" / "v1.0",
-    Path(__file__).resolve().parents[3] / "agent-conventions" / "schemas" / "v1.0",
-]
-for _candidate in _SCHEMA_CANDIDATES:
-    if (_candidate / "models").is_dir():
-        sys.path.insert(0, str(_candidate))
-        break
-
-from models.audit_model import Audit  # noqa: E402
+from .agent_conventions.schemas.v1_0.models.audit_model import Audit  # noqa: E402
 from pydantic import ValidationError  # noqa: E402
 
 from dontpanic_orchestrate import git_state  # noqa: E402

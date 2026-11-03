@@ -73,6 +73,10 @@ Surfaces affected: <comma-separated list — see docs/RELEASE_IMPACT.md>
 - Added `scripts/sync_version.py` to keep public install pins aligned with the
   package version, and added the manual publishing runbook in
   `docs/PUBLISHING.md`.
+- The wheel now ships a generated agent-conventions schema/model mirror so
+  `dontpanic mcp serve` starts from an installed wheel. Run
+  `scripts/sync_agent_conventions.py --check`; a drift test keeps the mirror
+  identical to `claude/shared`.
 
 ### Changed
 

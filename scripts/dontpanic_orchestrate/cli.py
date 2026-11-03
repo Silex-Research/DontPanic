@@ -4830,7 +4830,7 @@ def _read_external_refs_from_frontmatter(plan_dir: Path) -> list:
     plan declares no refs, returns an empty list — caller skips."""
 
     import yaml
-    from models.plan_model import ExternalRef  # noqa: E402
+    from .agent_conventions.schemas.v1_0.models.plan_model import ExternalRef  # noqa: E402
 
     plan_md = plan_dir / "plan.md"
     if not plan_md.is_file():

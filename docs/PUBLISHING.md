@@ -14,9 +14,13 @@ contains `__version__`, the single source of truth. After changing it, run:
 ```bash
 python3 scripts/sync_version.py
 python3 scripts/sync_version.py --check
+python3 scripts/sync_agent_conventions.py
+python3 scripts/sync_agent_conventions.py --check
 ```
 
 The test suite fails when the pinned listing surfaces drift from that version.
+The agent-conventions command refreshes the packaged schema/model mirror from
+`claude/shared` and checks it for drift.
 
 ## Release tags
 
