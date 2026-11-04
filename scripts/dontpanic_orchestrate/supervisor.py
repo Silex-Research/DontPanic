@@ -42,6 +42,7 @@ from dontpanic_orchestrate import (
     prompts,
     quota_admission,
     quota_caps_loader,
+    readable_text,
     signoff_writer,
     sufficiency_gate,
     transcript,
@@ -564,6 +565,16 @@ def _emit_gate_paused_discord(
     )
 
 
+def _quota_hard_stop_body(plan_id: str, agent: str, role: str, exc: object) -> str:
+    """INBOX body when a quota hard limit stops the implementer or auditor."""
+    return readable_text.quota_entry(
+        readable_text.STOPPED,
+        plan_id,
+        agent,
+        f"quota hard limit stops the {role}: {exc}",
+    )
+
+
 def _maybe_emit_quota_warn(
     plan_dir: Path,
     plan_id: str,
@@ -578,10 +589,13 @@ def _maybe_emit_quota_warn(
         plan_dir,
         event="quota_warn",
         plan_id=plan_id,
-        body=(
-            f"Quota soft-warn: {agent} at {pct}% of weekly cap "
-            f"(threshold {SOFT_THRESHOLD_PERCENT}%). Volley proceeding because "
-            "JARVIS_QUOTA_ENFORCE=soft (default). Set =hard to halt at threshold."
+        body=readable_text.quota_entry(
+            readable_text.RUNNING,
+            plan_id,
+            agent,
+            f"quota soft warning at {pct}% of weekly cap "
+            f"(threshold {SOFT_THRESHOLD_PERCENT}%); job continues because "
+            "JARVIS_QUOTA_ENFORCE is soft (default), set hard to stop at threshold",
         ),
         agent=agent,
         percent_weekly=pct,
@@ -882,7 +896,12 @@ def _emit_budget_kind_specific_event(
             event="config_required",
             plan_id=plan_id,
             body=(
-                f"Quota config required (cause={cause}). "
+                readable_text.job_title(
+                    readable_text.BLOCKED,
+                    plan_id,
+                    f"quota config required (cause={cause})",
+                )
+                + ". "
                 + (bd_result.reason or "")
                 + "\n\nRun `python -m dontpanic_orchestrate quota-caps init` to "
                 "seed defaults, hand-edit ~/.jarvis/quota_caps.json for "
@@ -2412,7 +2431,7 @@ def dispatch_volley(
                         loaded.plan_dir,
                         event="error",
                         plan_id=loaded.plan_id,
-                        body=f"Quota hard-block (implementer): {exc}",
+                        body=_quota_hard_stop_body(loaded.plan_id, impl_name, "implementer", exc),
                         agent=impl_name,
                         feature_id=feature_id,
                     )
@@ -2494,7 +2513,7 @@ def dispatch_volley(
                         loaded.plan_dir,
                         event="error",
                         plan_id=loaded.plan_id,
-                        body=f"Quota hard-block (auditor): {exc}",
+                        body=_quota_hard_stop_body(loaded.plan_id, aud_name, "auditor", exc),
                         agent=aud_name,
                         feature_id=feature_id,
                     )

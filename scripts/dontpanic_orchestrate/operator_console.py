@@ -89,6 +89,7 @@ from pathlib import Path
 from typing import Any
 
 from dontpanic_orchestrate import global_config as _gc
+from dontpanic_orchestrate import readable_text
 from dontpanic_orchestrate.action_resolvability import (
     RESOLUTION_BLOCKED_EXTERNAL,
     RESOLUTION_CHAINED,
@@ -490,7 +491,9 @@ def provide_gate_actions(
         evidence_uri = None
         if plan_dirs and plan_id in plan_dirs:
             evidence_uri = str(plan_dirs[plan_id] / "audit" / "gate-state.json")
-        title = f"Gate {gate_name} on {plan_id} needs approval"
+        title = readable_text.gate_entry(
+            readable_text.BLOCKED, plan_id, gate_name, "approval needed"
+        )
         detail_parts: list[str] = []
         if reason:
             detail_parts.append(str(reason))

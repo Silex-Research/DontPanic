@@ -40,6 +40,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from dontpanic_orchestrate import readable_text
+
 GATE_STATE_FILENAME = "gate-state.json"
 
 # Plan 2026-05-08-003 F001 — synthetic gate-name prefixes that are valid in
@@ -725,7 +727,12 @@ def format_reconciliation_inbox_body(err: GateStateReconciliationError) -> str:
     failure. Kept module-local so every supervisor / CLI entry point emits the
     same operator-readable shape (kind + path + remediation)."""
     return (
-        f"Gate-state reconciliation refused (kind={err.kind}).\n\n"
+        readable_text.job_title(
+            readable_text.BLOCKED,
+            err.plan_id,
+            f"gate-state reconciliation fails (kind={err.kind})",
+        )
+        + "\n\n"
         f"Plan: {err.plan_id}\n"
         f"Persisted state: {err.persisted_state_path}\n"
         f"Offending gate: {err.gate or '(none)'}\n"
