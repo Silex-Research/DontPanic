@@ -137,8 +137,11 @@ signal to stop and re-scope.
 ```zsh
 pipx install dontpanic-orchestrate
 dontpanic projects add myapp /path/to/myapp
-dontpanic doctor
+dontpanic capabilities status
 ```
+
+`dontpanic doctor` needs a source checkout; from a pipx install it exits 2
+and says so. Use `dontpanic capabilities status` to check readiness instead.
 
 **Engagement surface:** terminal. INBOX.md is the durable record.
 Operators read events as they happen, run `dontpanic approve` /

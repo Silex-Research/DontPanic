@@ -328,7 +328,7 @@ def check_schemas() -> CheckResult:
         return _bad(
             "schemas",
             f"agent-conventions schemas missing at {SCHEMAS_DIR}",
-            "git submodule update --init or git subtree pull (see CONTRIBUTING.md)",
+            "regenerate the packaged mirror: python3 scripts/sync_agent_conventions.py",
         )
     expected = [
         "plan.schema.json",
@@ -342,7 +342,7 @@ def check_schemas() -> CheckResult:
         return _bad(
             "schemas",
             f"schemas dir present but missing: {missing}",
-            "subtree the agent-conventions repo is out of date — pull v1.x",
+            "packaged schema mirror is stale: python3 scripts/sync_agent_conventions.py",
         )
     return _ok(
         "schemas", f"{len(expected)} core schemas present at {SCHEMAS_DIR.relative_to(REPO_ROOT)}"
@@ -354,7 +354,7 @@ def check_pydantic_models() -> CheckResult:
         return _bad(
             "pydantic-models",
             f"{MODELS_DIR} not found",
-            "subtree pull agent-conventions",
+            "regenerate the packaged mirror: python3 scripts/sync_agent_conventions.py",
         )
     try:
         for mod in (
