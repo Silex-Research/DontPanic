@@ -8,7 +8,13 @@ from pathlib import Path
 
 import pytest
 
-from dontpanic_orchestrate import prompts, readable_text as rt, readable_text_probe as probe, supervisor
+from dontpanic_orchestrate import (
+    circuit_breakers,
+    prompts,
+    readable_text as rt,
+    readable_text_probe as probe,
+    supervisor,
+)
 
 
 def rules(items: list[str]) -> set[str]:
@@ -88,6 +94,21 @@ def test_lint_flags_wrong_tense() -> None:
 def test_lint_flags_inconsistent_field_sets() -> None:
     items = ["Blocked: job a — x (gate g)", "Blocked: job b — y"]
     assert "fields" in rules(items)
+
+
+def test_lint_flags_each_item_with_fields_out_of_field_order() -> None:
+    reverse_order = [
+        "Blocked: job a — approval needed (round 1, agent x, stage s, gate g)",
+        "Blocked: job b — approval needed (round 2, agent x, stage s, gate g)",
+    ]
+    violations = rt.lint_items(reverse_order)
+    assert [(v.index, v.rule) for v in violations] == [(0, "field-order"), (1, "field-order")]
+
+    correctly_ordered = [
+        "Blocked: job a — approval needed (gate g, stage s, agent x, round 1)",
+        "Blocked: job b — approval needed (gate g, stage s, agent x, round 2)",
+    ]
+    assert rt.lint_items(correctly_ordered) == []
 
 
 # ── wired generators ─────────────────────────────────────────────────────────
@@ -205,6 +226,12 @@ def test_probe_has_20_synthetic_records_each_and_says_so() -> None:
         assert leak not in md
 
 
+def test_committed_probe_doc_matches_rendered_output() -> None:
+    repo_root = Path(__file__).resolve().parents[3]
+    committed = (repo_root / "docs" / "readable-text-probe.md").read_text(encoding="utf-8")
+    assert committed == probe.render() + "\n"
+
+
 def test_probe_new_lines_pass_lint() -> None:
     rows = [probe.invocation_old_new(r) for r in probe.SYNTHETIC_INVOCATIONS]
     rows += [probe.event_old_new(r) for r in probe.SYNTHETIC_EVENTS]
@@ -233,6 +260,15 @@ def test_help_and_listing_calls_are_not_jobs() -> None:
 def test_terminal_outcomes_map_explicitly(final: str, expected: str) -> None:
     rec = probe._terminal("p1", final, 2)
     assert probe.event_old_new(rec)[1] == expected
+
+
+def test_convergence_collapse_terminal_maps_to_stopped() -> None:
+    assert rt.terminal_status("stopped_convergence_collapse") == rt.STOPPED
+
+
+def test_every_circuit_breaker_terminal_status_is_mapped() -> None:
+    for final_status in circuit_breakers.TERMINAL_STATUS.values():
+        assert rt.terminal_status(final_status) is not None, final_status
 
 
 def test_unknown_outcome_and_kind_are_left_as_is() -> None:
