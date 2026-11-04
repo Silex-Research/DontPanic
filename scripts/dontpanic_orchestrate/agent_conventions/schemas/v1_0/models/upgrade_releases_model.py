@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import date as _date
 from enum import Enum
 
@@ -43,6 +44,8 @@ _LABEL_RANK: dict[CommandLabel, int] = {
 
 def _validate_calendar_date(value: str) -> str:
     """Reject a YYYY-MM-DD-shaped string that is not a real calendar date."""
+    if re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", value) is None:
+        raise ValueError(f"{value!r} is not a valid YYYY-MM-DD date")
     try:
         _date.fromisoformat(value)
     except ValueError as exc:
@@ -150,7 +153,10 @@ class UpgradeRelease(BaseModel):
     show_on_first_run: bool = Field(
         False, description="First-run advisory policy (F004)."
     )
-    actions: list[UpgradeAction] = Field(default_factory=list)
+    actions: list[UpgradeAction] = Field(
+        ...,
+        description="Operator actions for this release (may be empty).",
+    )
 
     _validate_date = field_validator("date")(staticmethod(_validate_calendar_date))
 

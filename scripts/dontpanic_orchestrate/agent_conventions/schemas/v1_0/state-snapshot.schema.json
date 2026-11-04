@@ -46,14 +46,14 @@
       "properties": {
         "plan_id": {
           "type": "string",
-          "pattern": "^\\d{4}-\\d{2}-\\d{2}-\\d{3}-(feat|fix|infra|refactor|chore|docs|test)-[a-z0-9-]+$",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}-\\d{3}-(feat|fix|refactor|migration|infra|chore|docs|test)-[a-z0-9-]+$",
           "description": "Stable ID. Format: YYYY-MM-DD-NNN-type-slug. Never a SHA or internal identifier."
         },
         "status": {
           "enum": ["draft", "active", "ready_for_audit", "in_audit", "completed", "abandoned", "blocked"]
         },
         "title": { "type": "string" },
-        "type": { "enum": ["feat", "fix", "infra", "refactor", "chore", "docs", "test"] },
+        "type": { "enum": ["feat", "fix", "refactor", "migration", "infra", "chore", "docs", "test"] },
         "tier": { "enum": ["trivial", "local", "cross-cutting", "architectural", "p0"] },
         "goal_type": {
           "enum": ["mechanical", "infra", "refactor", "parity", "new_feature", "migration", "incident"]
