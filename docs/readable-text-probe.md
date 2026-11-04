@@ -43,7 +43,7 @@ Rows marked (unmapped; old text kept) are records the templates do not cover: ca
 | 6 | [info] Active AI work on example-plan-b. Volley begins (cap 3). | Running: job example-plan-b — volley starting |
 | 7 | [ready] AI work finished on example-plan-b. Volley completed after 2 round(s) with `signed_off`. No action needed. | Passed: job example-plan-b — audit signs off |
 | 8 | [needs_action] Approval needed on example-plan-b. Supervisor paused at gate `pre_merge`. Operator must approve before dispatch continues. | Blocked: job example-plan-b — approval needed (gate pre_merge) |
-| 9 | [needs_action] Blocked work on example-plan-b — merged. Volley terminated after 2 round(s) with status `merged`. Review the audit envelope before deciding next step. | Merged: job example-plan-b — merged |
+| 9 | [needs_action] Blocked work on example-plan-b — merged. Volley terminated after 2 round(s) with status `merged`. Review the audit envelope before deciding next step. | Merged: job example-plan-b — pull request merges into main |
 | 10 | [info] Active AI work on example-plan-c. Volley begins (cap 1). | Running: job example-plan-c — volley starting |
 | 11 | [needs_action] Blocked work on example-plan-c — blocked. Volley terminated after 1 round(s) with status `blocked`. Review the audit envelope before deciding next step. | Blocked: job example-plan-c — audit blocks |
 | 12 | [needs_action] Approval needed on example-plan-c. Supervisor paused at gate `pre_impl`. Operator must approve before dispatch continues. | Blocked: job example-plan-c — approval needed (gate pre_impl) |

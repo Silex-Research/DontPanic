@@ -124,12 +124,15 @@ TERMINAL_STATUS: Final[Mapping[str, str]] = {
     "blocked": BLOCKED,
     "blocked_no_findings": BLOCKED,
     "stopped_cap": STOPPED,
+    # Legacy alias retained by signoff_writer for callers that emit it directly.
+    "stopped_max_iterations": STOPPED,
     "stopped_budget": STOPPED,
     "stopped_quota": STOPPED,
     "stopped_no_progress": STOPPED,
     "stopped_wall_clock": STOPPED,
     "stopped_global_breaker": STOPPED,
     "stopped_diminishing_returns": STOPPED,
+    "stopped_convergence_collapse": STOPPED,
     "stopped_environmental_blocker": STOPPED,
 }
 
@@ -228,6 +231,13 @@ def lint_items(items: Iterable[str | None]) -> list[Violation]:
         if status in PAST_STATUSES and _PAST_ONLY.search(body):
             out.append(Violation(i, "tense", f"{status} is done; reason uses in-progress wording"))
     texts = [(i, line) for i, line in enumerate(lines) if i not in skipped]
+    for i, line in texts:
+        keys = _field_keys(line)
+        ordered = tuple(field for field in FIELD_ORDER if field in keys)
+        if keys != ordered:
+            out.append(
+                Violation(i, "field-order", f"fields {keys} are not in FIELD_ORDER order {ordered}")
+            )
     if len(texts) > 1:
         first = _field_keys(texts[0][1])
         for i, line in texts[1:]:

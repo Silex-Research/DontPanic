@@ -266,6 +266,10 @@ def test_convergence_collapse_terminal_maps_to_stopped() -> None:
     assert rt.terminal_status("stopped_convergence_collapse") == rt.STOPPED
 
 
+def test_legacy_max_iterations_terminal_maps_to_stopped() -> None:
+    assert rt.terminal_status("stopped_max_iterations") == rt.STOPPED
+
+
 def test_every_circuit_breaker_terminal_status_is_mapped() -> None:
     for final_status in circuit_breakers.TERMINAL_STATUS.values():
         assert rt.terminal_status(final_status) is not None, final_status
