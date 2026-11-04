@@ -2085,7 +2085,7 @@ def validate_plans_strict(
             _bad(
                 "validate-plans-strict",
                 f"plan schema missing at {schema_path}",
-                "subtree pull agent-conventions",
+                "regenerate the packaged mirror: python3 scripts/sync_agent_conventions.py",
             )
         ]
     try:

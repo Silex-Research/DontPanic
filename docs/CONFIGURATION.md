@@ -12,7 +12,9 @@ optional layers**, see [`GETTING_STARTED.md` § Setup tracks](./GETTING_STARTED.
 
 Each layer assumes the one above is already in place — don't skip ahead:
 
-1. **DontPanic core** (required) — `pipx install`, `dontpanic doctor`, register a project.
+1. **DontPanic core** (required) — `pipx install`, register a project, then
+   `dontpanic capabilities status` to check readiness. `dontpanic doctor` needs a
+   source checkout; from a pipx install it exits 2 and says so.
 2. **Notification sink** (optional) — pick one of three:
    - **Direct Discord webhook** (zero-config, no broker needed): set `DONTPANIC_DISCORD_WEBHOOK_URL` or `~/.dontpanic/discord.json`. Receive-only; you respond from terminal. Best for solo dev who doesn't run a chat or hosted-agent runtime.
    - **OpenClaw broker** (multi-channel chat: Discord/Telegram/WhatsApp): see plan `2026-05-03-002` F006. Skip the direct webhook — point DontPanic at OpenClaw's local receiver, OR have OpenClaw watch `INBOX.md`.
