@@ -25,18 +25,17 @@ import hashlib
 import json
 import os
 import subprocess
-import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
 from dontpanic_orchestrate.nested_orchestration import goal_governance_evidence_path
-from sanitization_check import SECRET_REGEXES as _SECRET_REGEXES
+from dontpanic_orchestrate.secret_patterns import SECRET_REGEXES as _SECRET_REGEXES
 
 from .harness import _BoundSource
 
 # models path is ensured by harness import above
-from models.features_model import EvidenceRef  # noqa: E402
-from models.features_model import Type as EvidenceType  # noqa: E402
+from dontpanic_orchestrate.agent_conventions.schemas.v1_0.models.features_model import EvidenceRef  # noqa: E402
+from dontpanic_orchestrate.agent_conventions.schemas.v1_0.models.features_model import Type as EvidenceType  # noqa: E402
 
 # --- pinned contracts (module constants; asserted by F003 equality tests) -----
 CLI_ADAPTER_ARGV: tuple[str, ...] = ("dontpanic", "doctor", "--json")
@@ -228,15 +227,9 @@ def contract_check_source(plan_dir, *, clock=None, name: str = "service_batch"):
             surface_class="service_batch", data_source="agent_conventions_schema",
             degraded_mode=mode, reason=reason, clock=clock)]
         try:
-            # path-robust: models dir on sys.path directly OR via the `models` pkg
-            try:
-                import experience_readiness  # noqa: F401
-                import objective_contract_model  # noqa: F401
-                from features_model import EvidenceRef as _ER
-            except ImportError:
-                import models.experience_readiness  # noqa: F401
-                import models.objective_contract_model  # noqa: F401
-                from models.features_model import EvidenceRef as _ER
+            from dontpanic_orchestrate.agent_conventions.schemas.v1_0.models import experience_readiness  # noqa: F401
+            from dontpanic_orchestrate.agent_conventions.schemas.v1_0.models import objective_contract_model  # noqa: F401
+            from dontpanic_orchestrate.agent_conventions.schemas.v1_0.models.features_model import EvidenceRef as _ER
         except Exception as exc:  # noqa: BLE001
             return skip("schema_import_failed", f"skipped: post-bump schema import failed: {type(exc).__name__}")
         # positive: a fully-typed agent EvidenceRef validates

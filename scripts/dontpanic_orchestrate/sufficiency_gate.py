@@ -51,7 +51,6 @@ import json
 import os
 import re
 import shlex
-import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -65,17 +64,8 @@ from dontpanic_orchestrate.sufficiency_auditor import (
 
 # Import the v1.4.0 ObjectiveContract / Plan models (same candidate-list idiom as
 # audit_writer / sufficiency_auditor — kept inline rather than centralized).
-_SCHEMA_CANDIDATES = [
-    Path(__file__).resolve().parents[2] / "claude" / "shared" / "schemas" / "v1.0",
-    Path(__file__).resolve().parents[2] / ".claude" / "shared" / "schemas" / "v1.0",
-    Path(__file__).resolve().parents[3] / "agent-conventions" / "schemas" / "v1.0",
-]
-for _candidate in _SCHEMA_CANDIDATES:
-    if (_candidate / "models").is_dir():
-        sys.path.insert(0, str(_candidate))
-        break
 
-from models.plan_model import GoalType  # noqa: E402
+from .agent_conventions.schemas.v1_0.models.plan_model import GoalType  # noqa: E402
 
 # ──────────────────────────────  constants  ──────────────────────────────
 

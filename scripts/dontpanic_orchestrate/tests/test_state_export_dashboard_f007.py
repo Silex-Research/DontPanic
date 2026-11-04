@@ -21,10 +21,11 @@ import pytest
 HERE = Path(__file__).resolve()
 ROOT = HERE.parents[3]
 sys.path.insert(0, str(ROOT / "scripts"))
-sys.path.insert(0, str(ROOT / "claude" / "shared" / "schemas" / "v1.0" / "models"))
 
 from dontpanic_orchestrate import cli  # noqa: E402
-from state_snapshot_model import StateSnapshot  # noqa: E402
+from dontpanic_orchestrate.agent_conventions.schemas.v1_0.models.state_snapshot_model import (  # noqa: E402
+    StateSnapshot,
+)
 
 
 def _run(argv: list[str]) -> tuple[int, str, str]:

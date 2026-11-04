@@ -307,12 +307,9 @@ class TestSupervisorWiring:
 
     def test_plan_model_round_trips_the_block(self):
         """spec_from_plan must read the real Pydantic Plan, not just a dict."""
-        import sys as _sys
-        from pathlib import Path as _P
-
-        schemas = _P(__file__).resolve().parents[3] / "claude" / "shared" / "schemas" / "v1.0"
-        _sys.path.insert(0, str(schemas / "models"))
-        from plan_model import Plan  # noqa: PLC0415
+        from dontpanic_orchestrate.agent_conventions.schemas.v1_0.models.plan_model import (  # noqa: PLC0415
+            Plan,
+        )
 
         plan = Plan.model_validate(
             {

@@ -32,8 +32,9 @@ class Status(Enum):
 class Type(Enum):
     feat = "feat"
     fix = "fix"
-    infra = "infra"
     refactor = "refactor"
+    migration = "migration"
+    infra = "infra"
     chore = "chore"
     docs = "docs"
     test = "test"
@@ -74,7 +75,7 @@ class PlanSummary(BaseModel):
         extra="forbid",
     )
     plan_id: constr(
-        pattern=r"^\d{4}-\d{2}-\d{2}-\d{3}-(feat|fix|infra|refactor|chore|docs|test)-[a-z0-9-]+$"
+        pattern=r"^\d{4}-\d{2}-\d{2}-\d{3}-(feat|fix|refactor|migration|infra|chore|docs|test)-[a-z0-9-]+$"
     )
     """
     Stable ID. Format: YYYY-MM-DD-NNN-type-slug. Never a SHA or internal identifier.

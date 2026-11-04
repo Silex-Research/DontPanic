@@ -5,19 +5,9 @@ substrate advisory, and the D053 obligation cells.
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
 import pytest
 
-HERE = Path(__file__).resolve()
-sys.path.insert(0, str(HERE.parents[1]))
-for _c in (HERE.parents[3] / "claude" / "shared" / "schemas" / "v1.0" / "models",
-           HERE.parents[3] / ".claude" / "shared" / "schemas" / "v1.0" / "models"):
-    if (_c / "experience_readiness.py").is_file():
-        sys.path.insert(0, str(_c)); break
-
-import experience_readiness_gate as g  # noqa: E402
+from dontpanic_orchestrate import experience_readiness_gate as g  # noqa: E402
 
 PC = g.ProductClass
 OC = g.OutcomeClass

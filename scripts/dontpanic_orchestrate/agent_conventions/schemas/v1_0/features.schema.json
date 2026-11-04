@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-conventions/schemas/v1.0/features.schema.json",
+  "title": "Features",
+  "description": "Machine-checkable ground truth for plan completion. Inviolable — agents may only flip passes false->true with evidence_refs.",
+  "type": "object",
+  "required": ["task_id", "schema_version", "features"],
+  "properties": {
+    "task_id": { "type": "string", "description": "Parent plan ID" },
+    "schema_version": { "const": "1.0" },
+    "features": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/feature" },
+      "minItems": 1
+    }
+  },
+  "$defs": {
+    "feature": {
+      "type": "object",
+      "required": ["id", "category", "description", "acceptance", "passes"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^F\\d{3}$",
+          "description": "F001, F002, ..."
+        },
+        "category": {
+          "enum": ["functional", "infra", "schema", "test", "doc", "security", "observability", "tooling"]
+        },
+        "description": { "type": "string", "minLength": 10 },
+        "steps": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Verification steps the verifier must perform end-to-end"
+        },
+        "acceptance": {
+          "type": "string",
+          "description": "Machine-checkable condition — the exact test for passes=true"
+        },
+        "passes": { "type": "boolean" },
+        "verified_by": {
+          "type": "array",
+          "items": { "type": "string", "description": "Agent names that verified" }
+        },
+        "verified_at": { "type": "string", "format": "date-time" },
+        "evidence_refs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/evidence_ref" }
+        },
+        "depends_on": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^F\\d{3}$" }
+        },
+        "phase": { "type": "integer", "minimum": 0, "maximum": 9 },
+        "tier_override": {
+          "enum": ["trivial", "local", "cross-cutting", "architectural", "p0"],
+          "description": "Force different audit tier for this feature only"
+        },
+        "user_impact": { "$ref": "#/$defs/user_impact" },
+        "proof": { "$ref": "#/$defs/proof" }
+      },
+      "allOf": [
+        {
+          "description": "If passes=true, evidence_refs and verified_by required",
+          "if": { "properties": { "passes": { "const": true } }, "required": ["passes"] },
+          "then": {
+            "required": ["verified_by", "verified_at", "evidence_refs"],
+            "properties": {
+              "evidence_refs": { "minItems": 1 },
+              "verified_by": { "minItems": 1 }
+            }
+          }
+        }
+      ],
+      "additionalProperties": false
+    },
+    "proof": {
+      "type": "object",
+      "description": "Optional cheap first-principle proof this feature carries on its own: the measurement that would show the feature delivers, and how it is taken. Same shape as objective_contract.schema.json's delivers[].proof — the two are kept in lockstep. A feature that carries one is scored as a slice in its own right by the lock/close scorer (plan 2026-08-13-001 F002), so a plan whose features each carry a proof needs no delivers[] to state an outcome. Optional by design: absence means the feature is not a slice, not that it is invalid.",
+      "required": ["metric", "method"],
+      "additionalProperties": false,
+      "properties": {
+        "metric": {
+          "type": "string",
+          "minLength": 10,
+          "description": "The cheap measurement that would show this feature delivers — a threshold, a count, an observable state change. Substantive enough that a reader can tell whether it was met (hence the 10-character floor); not a KPI programme."
+        },
+        "method": {
+          "enum": ["walk", "request", "named_test", "probe"],
+          "description": "How the metric is taken. 'walk' — a human or agent walks the path end-to-end. 'request' — a single call against a running surface. 'named_test' — an existing or new test identified by name. 'probe' — a one-off script or query run against real state. Closed set on purpose, identical to delivers[].proof.method."
+        },
+        "surface": {
+          "enum": [
+            "web",
+            "ios",
+            "android",
+            "backend",
+            "infra",
+            "security",
+            "data",
+            "ux",
+            "ml",
+            "docs",
+            "external-api-wrap"
+          ],
+          "description": "Optional — where the proof is taken. Mirrors the plan-level `surfaces` enum in plan.schema.json."
+        }
+      }
+    },
+    "user_impact": {
+      "type": "object",
+      "description": "Optional declared user impact — who feels this feature and how. Consumed by the decision brief rendered at human approval gates. Optional by design (D003): a feature that declares nothing renders 'user impact not declared' rather than a synthesized claim.",
+      "required": ["audience"],
+      "properties": {
+        "audience": {
+          "enum": ["end_user", "operator", "agent", "none"],
+          "description": "Who experiences the change. 'none' means genuinely internal work with no external consequence, and is a complete declaration on its own."
+        },
+        "summary": {
+          "type": "string",
+          "description": "One plain-language line naming what the audience experiences differently. Required (>=10 chars) unless audience is 'none'."
+        },
+        "surfaces": {
+          "type": "array",
+          "items": {
+            "enum": ["web", "ios", "android", "backend", "infra", "security", "data", "ux", "ml", "docs", "external-api-wrap"]
+          },
+          "uniqueItems": true,
+          "description": "Where the impact lands. Mirrors the plan-level `surfaces` enum in plan.schema.json — the two are kept in lockstep and asserted identical by scripts/test_user_impact_contract.py. Required (non-empty) unless audience is 'none'."
+        },
+        "description_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$",
+          "description": "SHA-256 hex digest of the UTF-8 encoded feature `description` this declaration was written against. Staleness anchor per D005: a mismatch marks the brief possibly-stale rather than presenting an old claim as current. Required whenever the declaration carries a claim (audience other than 'none') so the consuming brief in F003 never has to invent a fourth 'digest unknown' state alongside declared / possibly-stale / undeclared. Optional under audience 'none', which asserts no external consequence and so has no claim that can go stale."
+        }
+      },
+      "if": {
+        "properties": { "audience": { "const": "none" } },
+        "required": ["audience"]
+      },
+      "then": {
+        "description": "D003: 'none' is the entire declaration — summary and surfaces must be absent or empty.",
+        "properties": {
+          "summary": { "maxLength": 0 },
+          "surfaces": { "maxItems": 0 }
+        }
+      },
+      "else": {
+        "description": "Any audience other than 'none' owes a real summary, at least one surface, and the digest that binds the claim to the description it was written against.",
+        "required": ["summary", "surfaces", "description_hash"],
+        "properties": {
+          "summary": { "minLength": 10 },
+          "surfaces": { "minItems": 1 }
+        }
+      },
+      "additionalProperties": false
+    },
+    "evidence_ref": {
+      "type": "object",
+      "required": ["type", "uri"],
+      "properties": {
+        "type": { "enum": ["screenshot", "log", "test_output", "diff", "audit_json", "commit", "url", "file"] },
+        "uri": { "type": "string", "description": "Relative path, git SHA, or Firebase Storage signed URL" },
+        "hash": { "type": "string", "description": "SHA-256 of content for integrity" },
+        "captured_at": { "type": "string", "format": "date-time" },
+        "captured_by": { "type": "string", "description": "Agent or tool that captured the evidence" },
+        "note": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

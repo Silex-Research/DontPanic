@@ -22,10 +22,11 @@ import pytest
 HERE = Path(__file__).resolve()
 ROOT = HERE.parents[3]
 sys.path.insert(0, str(ROOT / "scripts"))
-sys.path.insert(0, str(ROOT / "claude" / "shared" / "schemas" / "v1.0" / "models"))
 
 from dontpanic_orchestrate import mcp_server, projects_registry  # noqa: E402
-from state_snapshot_model import StateSnapshot  # noqa: E402
+from dontpanic_orchestrate.agent_conventions.schemas.v1_0.models.state_snapshot_model import (  # noqa: E402
+    StateSnapshot,
+)
 
 
 def _make_plan(plans_root: Path, plan_id: str = "2026-05-10-001-feat-fixture") -> Path:

@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-conventions/schemas/v1.0/signoff.schema.json",
+  "title": "Signoff",
+  "description": "Supervisor's reconciled decision across parallel audits.",
+  "type": "object",
+  "required": ["task_id", "signoff_id", "iteration", "tier", "agents_in_panel", "audits", "signoff", "next_action", "decided_at"],
+  "properties": {
+    "task_id": { "type": "string" },
+    "signoff_id": { "type": "string" },
+    "iteration": { "type": "integer", "minimum": 0 },
+    "tier": { "enum": ["trivial", "local", "cross-cutting", "architectural", "p0"] },
+    "agents_in_panel": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "audits": {
+      "type": "array",
+      "items": { "type": "string", "description": "Relative paths to audit JSONs" },
+      "minItems": 1
+    },
+    "vote_summary": {
+      "type": "object",
+      "required": ["signed_off_count", "needs_changes_count", "blocked_count"],
+      "properties": {
+        "signed_off_count": { "type": "integer", "minimum": 0 },
+        "needs_changes_count": { "type": "integer", "minimum": 0 },
+        "blocked_count": { "type": "integer", "minimum": 0 },
+        "inconclusive_count": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "reconciliation": {
+      "type": "object",
+      "properties": {
+        "agreements": {
+          "type": "array",
+          "description": "Findings from 2+ agents — high confidence",
+          "items": { "type": "object" }
+        },
+        "disagreements": {
+          "type": "array",
+          "description": "Conflicting findings + supervisor rationale",
+          "items": {
+            "type": "object",
+            "required": ["finding", "agents_pro", "agents_con", "rationale"],
+            "properties": {
+              "finding": { "type": "string" },
+              "agents_pro": { "type": "array", "items": { "type": "string" } },
+              "agents_con": { "type": "array", "items": { "type": "string" } },
+              "rationale": { "type": "string" },
+              "resolution": { "enum": ["accept_finding", "reject_finding", "escalate_to_human"] }
+            }
+          }
+        },
+        "security_veto": {
+          "type": "boolean",
+          "description": "Codex flagged critical/high security. If true, signoff must be false regardless of vote."
+        }
+      }
+    },
+    "signoff": { "type": "boolean" },
+    "signoff_reason": { "type": "string" },
+    "next_action": {
+      "enum": ["merge", "remediate", "escalate", "defer", "blocked_awaiting_human"]
+    },
+    "quota_consumed_total": {
+      "type": "object",
+      "properties": {
+        "claude_percent": { "type": "number" },
+        "codex_percent": { "type": "number" },
+        "gemini_percent": { "type": "number" },
+        "grok_calls": { "type": "integer" }
+      },
+      "additionalProperties": false
+    },
+    "escalation": {
+      "type": "object",
+      "properties": {
+        "reason": { "type": "string" },
+        "inbox_entry_id": { "type": "string" },
+        "human_response": { "type": "string" },
+        "resolved_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "decided_at": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

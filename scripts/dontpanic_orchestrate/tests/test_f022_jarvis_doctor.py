@@ -201,12 +201,46 @@ def test_python_deps_skips_firebase_admin_with_skip_auth(doctor) -> None:
 def test_run_all_checks_produces_results(doctor) -> None:
     results = doctor.run_all_checks()
     assert len(results) > 5
+    assert "gcloud-auth" in {r.name for r in results}
     # Every result has the four expected fields
     for r in results:
+        assert isinstance(r, doctor.CheckResult)
         assert isinstance(r.name, str) and r.name
         assert isinstance(r.ok, bool)
         assert isinstance(r.message, str)
         assert isinstance(r.remediation, str)
+
+
+def test_gcloud_auth_timeout_is_reported_not_raised(doctor, monkeypatch) -> None:
+    monkeypatch.setattr(doctor.shutil, "which", lambda name: "/stub/gcloud" if name == "gcloud" else None)
+
+    def timeout_run(args, **kwargs):
+        assert args[0] == "gcloud"
+        raise doctor.subprocess.TimeoutExpired(args, kwargs.get("timeout"))
+
+    monkeypatch.setattr(doctor.subprocess, "run", timeout_run)
+    result = doctor.check_gcloud_auth()
+
+    assert result.ok is False
+    assert "timed out" in result.message.lower()
+
+
+def test_firebase_auth_timeout_is_reported_not_raised(doctor, monkeypatch) -> None:
+    monkeypatch.setattr(
+        doctor.shutil,
+        "which",
+        lambda name: "/stub/firebase" if name == "firebase" else None,
+    )
+
+    def timeout_run(args, **kwargs):
+        assert args[0] == "firebase"
+        raise doctor.subprocess.TimeoutExpired(args, kwargs.get("timeout"))
+
+    monkeypatch.setattr(doctor.subprocess, "run", timeout_run)
+    result = doctor.check_firebase_auth()
+
+    assert result.ok is False
+    assert "timed out" in result.message.lower()
 
 
 def test_render_text_contains_summary_line(doctor) -> None:

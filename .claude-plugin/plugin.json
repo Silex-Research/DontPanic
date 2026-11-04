@@ -1,0 +1,25 @@
+{
+  "name": "dontpanic",
+  "version": "0.2.0",
+  "description": "Local MCP server to plan, dispatch, review, and gate AI coding work.",
+  "author": {
+    "name": "Silex Research"
+  },
+  "homepage": "https://github.com/Silex-Research/DontPanic",
+  "repository": "https://github.com/Silex-Research/DontPanic",
+  "license": "Apache-2.0",
+  "keywords": [
+    "mcp",
+    "agent-orchestration",
+    "code-review",
+    "local-first"
+  ],
+  "mcpServers": {
+    "dontpanic": {
+      "command": "uvx",
+      "args": [
+        "dontpanic-orchestrate==0.2.0"
+      ]
+    }
+  }
+}

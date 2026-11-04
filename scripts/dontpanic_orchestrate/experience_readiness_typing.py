@@ -18,25 +18,10 @@ No I/O, no input mutation.
 
 from __future__ import annotations
 
-import sys
 from dataclasses import dataclass
 from enum import Enum
-from pathlib import Path
 
-# Locate the agent-conventions models dir (same discovery as runtime_evidence.harness).
-_SCHEMA_CANDIDATES = [
-    Path(__file__).resolve().parents[2] / "claude" / "shared" / "schemas" / "v1.0",
-    Path(__file__).resolve().parents[2] / ".claude" / "shared" / "schemas" / "v1.0",
-    Path(__file__).resolve().parents[3] / "agent-conventions" / "schemas" / "v1.0",
-]
-for _candidate in _SCHEMA_CANDIDATES:
-    if (_candidate / "models").is_dir():
-        _models = str(_candidate / "models")
-        if _models not in sys.path:
-            sys.path.insert(0, _models)
-        break
-
-import experience_readiness as er  # noqa: E402
+from .agent_conventions.schemas.v1_0.models import experience_readiness as er  # noqa: E402
 
 EC = er.EvidenceClass
 SC = er.SurfaceClass

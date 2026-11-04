@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-conventions/schemas/v1.0/architecture-snapshot.schema.json",
+  "title": "ArchitectureSnapshot",
+  "description": "DontPanic-local v0 schema (plan 2026-05-19-004 F001). Promote-later note: lives under claude/shared/schemas/v1.0 so future subtree-pull into agent-conventions is one rename away. Captures a stable, fingerprinted view of the DontPanic codebase + plan inventory consumed by drift detection (F003), HTML rendering (F002), supervisor regen (F004), and Plan 4.5's dontpanic new context gatherer (graceful fallback when missing/stale).",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "generated_at",
+    "source_fingerprint",
+    "modules",
+    "schemas",
+    "plans"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 UTC. The only timestamp that floats with regen; reused when fingerprint is unchanged to preserve byte-identical output."
+    },
+    "source_fingerprint": {
+      "type": "object",
+      "required": ["algo", "files_count", "file_hashes_root", "file_hashes", "computed_at"],
+      "additionalProperties": false,
+      "properties": {
+        "algo": { "type": "string", "const": "sha256" },
+        "files_count": { "type": "integer", "minimum": 0 },
+        "file_hashes_root": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "sha256 over sorted `<rel_path>:<sha256-of-content>\\n` pairs across tracked source roots."
+        },
+        "file_hashes": {
+          "type": "object",
+          "description": "Per-file sha256 map keyed by repo-relative path. Enables exact added/removed/modified diffs without re-walking the prior tree. Restricted under docs/plans/ to plan.md + features.json so audit/evidence artifacts don't cause false drift.",
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        },
+        "computed_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "modules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "name", "public_symbols", "imports", "summary"],
+        "additionalProperties": false,
+        "properties": {
+          "path": { "type": "string" },
+          "name": { "type": "string" },
+          "public_symbols": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "imports": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "summary": { "type": "string" }
+        }
+      }
+    },
+    "schemas": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "name", "version", "validator_present"],
+        "additionalProperties": false,
+        "properties": {
+          "path": { "type": "string" },
+          "name": { "type": "string" },
+          "version": { "type": ["string", "null"] },
+          "validator_present": { "type": "boolean" }
+        }
+      }
+    },
+    "plans": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "status", "features_count"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "status": { "type": "string" },
+          "features_count": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "truncated": {
+      "type": "boolean",
+      "description": "True when the structured sections were clipped to keep the artifact under the size cap (~200KB). When true, truncation_marker explains where."
+    },
+    "truncation_marker": {
+      "type": "string",
+      "description": "Human-readable note describing which sections were truncated and the cap that was hit."
+    }
+  }
+}
