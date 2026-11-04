@@ -19,6 +19,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from dontpanic_orchestrate import readable_text
+
 # F023 EC3/EC9: kept in sync with command_guard._reject patterns. Update both
 # when adding a new forbidden CLI shape so prompt + post-hoc check agree.
 FORBIDDEN_COMMAND_PATTERNS = [
@@ -183,6 +185,7 @@ Steps:
                 "\nImplement the feature. Run any verification commands specified in steps.\n"
                 "Reply with a concise paragraph (3-6 sentences) summarizing what you did and the outcome.\n"
                 "Do NOT output JSON; the supervisor wraps your reply.\n"
+                + readable_text.PROMPT_GUIDE
             )
         )
 
@@ -198,6 +201,7 @@ Steps:
             "Address each finding. Make code changes as needed. Run verification commands.\n"
             "Reply with a concise paragraph naming each finding ID and how you addressed it.\n"
             "Do NOT output JSON; the supervisor wraps your reply.\n"
+            + readable_text.PROMPT_GUIDE
         )
     )
 
