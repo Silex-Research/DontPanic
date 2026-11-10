@@ -3,35 +3,22 @@
 from __future__ import annotations
 
 import json
-import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 import yaml
 
-# Discover schemas. Priority order from plan-artifacts SKILL.md.
-_SCHEMA_CANDIDATES = [
-    Path(__file__).resolve().parents[2] / "claude" / "shared" / "schemas" / "v1.0",
-    Path(__file__).resolve().parents[2] / ".claude" / "shared" / "schemas" / "v1.0",
-    Path(__file__).resolve().parents[3] / "agent-conventions" / "schemas" / "v1.0",
-]
-
-
 def _find_schemas_dir() -> Path:
-    for c in _SCHEMA_CANDIDATES:
-        if (c / "models").is_dir():
-            sys.path.insert(0, str(c))
-            return c
-    raise FileNotFoundError(
-        "agent-conventions v1.0 schemas not found. Tried: "
-        + ", ".join(str(c) for c in _SCHEMA_CANDIDATES)
-    )
+    schemas_dir = Path(__file__).resolve().parent / "agent_conventions" / "schemas" / "v1_0"
+    if not (schemas_dir / "plan.schema.json").is_file():
+        raise FileNotFoundError(f"packaged agent-conventions plan schema not found at {schemas_dir}")
+    return schemas_dir
 
 
 SCHEMAS_DIR = _find_schemas_dir()
-from models.features_model import Features  # noqa: E402
-from models.plan_model import ExternalRef, Plan  # noqa: E402
+from .agent_conventions.schemas.v1_0.models.features_model import Features  # noqa: E402
+from .agent_conventions.schemas.v1_0.models.plan_model import ExternalRef, Plan  # noqa: E402
 
 from dontpanic_orchestrate.integrations.pm_tool_sync import (  # noqa: E402
     ExternalSyncRecord,
@@ -240,7 +227,7 @@ def load(plan_dir: Path) -> LoadedPlan:
     # Plan 2026-05-02-003 F001 + F002: pop the optional nested-orchestration
     # blocks before Plan.model_validate (which has extra='forbid' and would
     # reject them). The blocks live on LoadedPlan as separate parser-level
-    # concerns; canonical Plan model in agent-conventions/schemas is unchanged
+    # concerns; canonical Plan model in the packaged agent-conventions tree is unchanged
     # (D006-style schema discipline — no schema bump required for nested
     # orchestration v1).
     orch_block = fm.pop("orchestration", None)

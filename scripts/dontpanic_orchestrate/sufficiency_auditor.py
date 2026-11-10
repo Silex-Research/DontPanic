@@ -45,21 +45,7 @@ from dontpanic_orchestrate.nested_orchestration import (
     goal_governance_evidence_path,
 )
 
-# Re-resolve the agent-conventions schemas dir so the v1.4.0
-# ``ObjectiveContract`` model is importable. Same candidate list used by
-# ``audit_writer.py`` / ``plan_loader.py`` / ``environments_loader.py``
-# (kept inline rather than centralized to keep the bootstrap surface flat).
-_SCHEMA_CANDIDATES = [
-    Path(__file__).resolve().parents[2] / "claude" / "shared" / "schemas" / "v1.0",
-    Path(__file__).resolve().parents[2] / ".claude" / "shared" / "schemas" / "v1.0",
-    Path(__file__).resolve().parents[3] / "agent-conventions" / "schemas" / "v1.0",
-]
-for _candidate in _SCHEMA_CANDIDATES:
-    if (_candidate / "models").is_dir():
-        sys.path.insert(0, str(_candidate))
-        break
-
-from models.objective_contract_model import ObjectiveContract  # noqa: E402
+from .agent_conventions.schemas.v1_0.models.objective_contract_model import ObjectiveContract  # noqa: E402
 
 # ──────────────────────────────  constants  ──────────────────────────────
 

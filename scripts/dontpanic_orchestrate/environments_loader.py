@@ -15,31 +15,22 @@ intentionally stays simple so codegen output is clean):
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 
 from pydantic import ValidationError
 
-_SCHEMA_CANDIDATES = [
-    Path(__file__).resolve().parents[2] / "claude" / "shared" / "schemas" / "v1.0",
-    Path(__file__).resolve().parents[2] / ".claude" / "shared" / "schemas" / "v1.0",
-    Path(__file__).resolve().parents[3] / "agent-conventions" / "schemas" / "v1.0",
-]
-
-
 def _find_schemas_dir() -> Path:
-    for c in _SCHEMA_CANDIDATES:
-        if (c / "models").is_dir():
-            sys.path.insert(0, str(c))
-            return c
-    raise FileNotFoundError(
-        "agent-conventions v1.0 schemas not found. Tried: "
-        + ", ".join(str(c) for c in _SCHEMA_CANDIDATES)
-    )
+    schemas_dir = Path(__file__).resolve().parent / "agent_conventions" / "schemas" / "v1_0"
+    if not (schemas_dir / "plan.schema.json").is_file():
+        raise FileNotFoundError(f"packaged agent-conventions plan schema not found at {schemas_dir}")
+    return schemas_dir
 
 
 SCHEMAS_DIR = _find_schemas_dir()
-from models.environments_model import EnvBlock, Environments  # noqa: E402
+from .agent_conventions.schemas.v1_0.models.environments_model import (  # noqa: E402
+    EnvBlock,
+    Environments,
+)
 
 ENVIRONMENTS_FILENAME = "environments.json"
 DECLARABLE_TIERS = ("dev", "staging", "prod")

@@ -62,7 +62,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import sys
 from collections.abc import Iterable
 from datetime import datetime, timezone
 from pathlib import Path
@@ -76,19 +75,10 @@ from dontpanic_orchestrate.nested_orchestration import (
     GoalGapFinding,
 )
 
-_SCHEMA_CANDIDATES = [
-    Path(__file__).resolve().parents[2] / "claude" / "shared" / "schemas" / "v1.0",
-    Path(__file__).resolve().parents[2] / ".claude" / "shared" / "schemas" / "v1.0",
-    Path(__file__).resolve().parents[3] / "agent-conventions" / "schemas" / "v1.0",
-]
-for _candidate in _SCHEMA_CANDIDATES:
-    if (_candidate / "models").is_dir():
-        sys.path.insert(0, str(_candidate))
-        break
 
-from models.features_model import EvidenceRef  # noqa: E402
-from models.features_model import Type as EvidenceType  # noqa: E402
-from models.objective_contract_model import ObjectiveContract  # noqa: E402
+from .agent_conventions.schemas.v1_0.models.features_model import EvidenceRef  # noqa: E402
+from .agent_conventions.schemas.v1_0.models.features_model import Type as EvidenceType  # noqa: E402
+from .agent_conventions.schemas.v1_0.models.objective_contract_model import ObjectiveContract  # noqa: E402
 
 # ──────────────────────────────  constants  ──────────────────────────────
 

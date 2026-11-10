@@ -1453,8 +1453,9 @@ def test_a_proof_carrying_feature_is_schema_valid(tmp_path: Path) -> None:
     """The contract has to be authorable: features.json carrying `proof` must
     pass the same Features model plan_loader validates against."""
     print("\n[test] proof_carrying_feature_is_schema_valid ...")
-    sys.path.insert(0, str(HERE.parents[3] / "claude" / "shared" / "schemas" / "v1.0"))
-    from models.features_model import Features  # noqa: PLC0415
+    from dontpanic_orchestrate.agent_conventions.schemas.v1_0.models.features_model import (  # noqa: PLC0415
+        Features,
+    )
     from pydantic import ValidationError  # noqa: PLC0415
 
     validated = Features.model_validate(

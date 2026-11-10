@@ -40,6 +40,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from dontpanic_orchestrate import readable_text
+
 GATE_STATE_FILENAME = "gate-state.json"
 
 # Plan 2026-05-08-003 F001 — synthetic gate-name prefixes that are valid in
@@ -98,11 +100,9 @@ def _read_state(plan_dir: Path) -> dict[str, Any]:
         return {"plan_id": None, "cleared_gates": [], "history": []}
     try:
         return json.loads(p.read_text())
-    except json.JSONDecodeError:
-        # Corrupt file — treat as fresh state but preserve the original
-        # for forensics.
-        backup = p.with_suffix(".corrupt.json")
-        backup.write_text(p.read_text())
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        # Reads stay side-effect free. _write_state preserves corrupt input
+        # immediately before replacing it.
         return {"plan_id": None, "cleared_gates": [], "history": []}
 
 
@@ -130,6 +130,12 @@ def _coerce_cleared_gates(raw: Any) -> list[str]:
 def _write_state(plan_dir: Path, state: dict[str, Any]) -> None:
     p = gate_state_path(plan_dir)
     p.parent.mkdir(parents=True, exist_ok=True)
+    if p.is_file():
+        existing = p.read_bytes()
+        try:
+            json.loads(existing)
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            p.with_suffix(".corrupt.json").write_bytes(existing)
     p.write_text(json.dumps(state, indent=2, ensure_ascii=False) + "\n")
 
 
@@ -725,7 +731,12 @@ def format_reconciliation_inbox_body(err: GateStateReconciliationError) -> str:
     failure. Kept module-local so every supervisor / CLI entry point emits the
     same operator-readable shape (kind + path + remediation)."""
     return (
-        f"Gate-state reconciliation refused (kind={err.kind}).\n\n"
+        readable_text.job_title(
+            readable_text.BLOCKED,
+            err.plan_id,
+            f"gate-state reconciliation fails (kind={err.kind})",
+        )
+        + "\n\n"
         f"Plan: {err.plan_id}\n"
         f"Persisted state: {err.persisted_state_path}\n"
         f"Offending gate: {err.gate or '(none)'}\n"

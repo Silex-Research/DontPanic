@@ -36,9 +36,11 @@ from dontpanic_orchestrate.integrations.pm_tool_sync import (  # noqa: E402
     make_pushed_record,
 )
 
-_SCHEMAS = HERE.parents[2].parent / "claude" / "shared" / "schemas" / "v1.0"
-sys.path.insert(0, str(_SCHEMAS))
-from models.plan_model import ExternalRef, ExternalRefKind, ExternalRefSync  # noqa: E402
+from dontpanic_orchestrate.agent_conventions.schemas.v1_0.models.plan_model import (  # noqa: E402
+    ExternalRef,
+    ExternalRefKind,
+    ExternalRefSync,
+)
 
 REPO_ROOT = HERE.parents[3]
 

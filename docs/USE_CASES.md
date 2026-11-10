@@ -135,10 +135,13 @@ signal to stop and re-scope.
 
 **What they install:**
 ```zsh
-pipx install dontpanic
+pipx install dontpanic-orchestrate
 dontpanic projects add myapp /path/to/myapp
-dontpanic doctor
+dontpanic capabilities status
 ```
+
+`dontpanic doctor` needs a source checkout; from a pipx install it exits 2
+and says so. Use `dontpanic capabilities status` to check readiness instead.
 
 **Engagement surface:** terminal. INBOX.md is the durable record.
 Operators read events as they happen, run `dontpanic approve` /
@@ -171,6 +174,9 @@ Discord; runs commands in terminal to act.
 - IDE/CLI's MCP client config pointing at `dontpanic mcp serve` (the
   tool inventory is automatic; agents discover via `dontpanic manifest
   show --json`).
+
+`dontpanic-orchestrate` is the MCP server entrypoint, equivalent to
+`dontpanic mcp serve`; the full CLI is `dontpanic`.
 
 **Engagement surface:** the active IDE/CLI session. The agent reads
 DontPanic state during your conversation; no notification broker needed

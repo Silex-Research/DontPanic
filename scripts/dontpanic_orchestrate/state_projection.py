@@ -54,7 +54,6 @@ import datetime as dt
 import json
 import logging
 import socket
-import sys as _sys
 from collections.abc import Callable, Iterable
 from pathlib import Path
 from typing import Final
@@ -67,19 +66,7 @@ from dontpanic_orchestrate import (
     plan_loader,
 )
 
-# Pydantic models live in the agent-conventions subtree.
-_SUBTREE_MODELS = (
-    Path(__file__).resolve().parents[2]
-    / "claude"
-    / "shared"
-    / "schemas"
-    / "v1.0"
-    / "models"
-)
-if str(_SUBTREE_MODELS) not in _sys.path:
-    _sys.path.insert(0, str(_SUBTREE_MODELS))
-
-from state_snapshot_model import (  # noqa: E402
+from .agent_conventions.schemas.v1_0.models.state_snapshot_model import (  # noqa: E402
     DecisionEntry,
     EvidencePointer,
     GateEntry,
@@ -90,17 +77,11 @@ from state_snapshot_model import (  # noqa: E402
     StateSnapshot,
     Streams,
 )
-from state_snapshot_model import (  # noqa: E402
+from .agent_conventions.schemas.v1_0.models.state_snapshot_model import (  # noqa: E402
     SupervisorEntry as SnapshotSupervisorEntry,
 )
 
-# Import secret-shape regexes from sanitization_check as the single
-# source of truth. F003 redactor matches operator-level scrubbing
-# coverage to what the OSS sanitization gate already enforces.
-_SCRIPTS_DIR = Path(__file__).resolve().parent.parent
-if str(_SCRIPTS_DIR) not in _sys.path:
-    _sys.path.insert(0, str(_SCRIPTS_DIR))
-from sanitization_check import SECRET_REGEXES as _SECRET_REGEXES  # noqa: E402
+from .secret_patterns import SECRET_REGEXES as _SECRET_REGEXES
 
 _REDACT_PLACEHOLDER: Final[str] = "[REDACTED]"
 
@@ -777,9 +758,9 @@ def _parse_iso(s: str | None) -> dt.datetime | None:
 def scrub_secrets(s: str | None) -> str | None:
     """Replace every secret-shape match in ``s`` with ``[REDACTED]``.
 
-    Single source-of-truth: SECRET_REGEXES from scripts/
-    sanitization_check.py. New patterns added there propagate here
-    automatically. Returns the input unchanged when no match.
+    Single source-of-truth: SECRET_REGEXES from
+    dontpanic_orchestrate.secret_patterns. New patterns added there propagate
+    here automatically. Returns the input unchanged when no match.
 
     Plan 2026-05-24-004 F004 (D020): promoted from the private
     ``_scrub_secrets`` to a public symbol so the live notification

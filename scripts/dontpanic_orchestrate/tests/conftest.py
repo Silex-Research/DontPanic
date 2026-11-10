@@ -49,8 +49,94 @@ from __future__ import annotations
 
 import os
 import re
+import shlex
+import shutil
+import subprocess
+import tempfile
 
 import pytest
+
+
+@pytest.fixture(autouse=True)
+def _block_real_cloud_clis(monkeypatch):
+    """Never let tests reach a real cloud CLI; CI runners ship gcloud.
+
+    Return a failed process result for cloud commands while allowing every
+    other subprocess call through. Tests that need a custom subprocess
+    behavior can patch the module after this fixture is installed.
+    """
+    cloud_clis = {"gcloud", "firebase", "gsutil", "bq"}
+    original_run = subprocess.run
+    original_check_output = subprocess.check_output
+
+    def _argv0(args):
+        if isinstance(args, (list, tuple)):
+            if not args:
+                return ""
+            executable = args[0]
+        else:
+            parts = shlex.split(os.fsdecode(args))
+            if not parts:
+                return ""
+            executable = parts[0]
+        return os.fsdecode(os.fspath(executable))
+
+    def _is_temp_stub(executable, kwargs):
+        if not executable:
+            return False
+        has_path = os.path.dirname(executable) or os.path.sep in executable
+        if os.path.altsep:
+            has_path = has_path or os.path.altsep in executable
+        if has_path:
+            resolved = executable
+        else:
+            env = kwargs.get("env")
+            search_path = (
+                os.environ.get("PATH", "")
+                if env is None
+                else env.get("PATH", "")
+            )
+            resolved = shutil.which(executable, path=search_path)
+        if resolved is None:
+            return False
+        real_path = os.path.realpath(resolved)
+        temp_root = os.path.realpath(tempfile.gettempdir())
+        try:
+            return os.path.commonpath((temp_root, real_path)) == temp_root
+        except ValueError:
+            return False
+
+    def _is_blocked_cloud_cli(args, kwargs):
+        executable = _argv0(args)
+        if os.path.basename(executable).lower() not in cloud_clis:
+            return False
+        return not _is_temp_stub(executable, kwargs)
+
+    def _text_mode(kwargs):
+        return bool(
+            kwargs.get("text")
+            or kwargs.get("universal_newlines")
+            or kwargs.get("encoding") is not None
+        )
+
+    def guarded_run(args, *pargs, **kwargs):
+        if _is_blocked_cloud_cli(args, kwargs):
+            blocked = "cloud CLI blocked in tests" if _text_mode(kwargs) else b"cloud CLI blocked in tests"
+            return subprocess.CompletedProcess(
+                args,
+                1,
+                stdout="" if _text_mode(kwargs) else b"",
+                stderr=blocked,
+            )
+        return original_run(args, *pargs, **kwargs)
+
+    def guarded_check_output(args, *pargs, **kwargs):
+        if _is_blocked_cloud_cli(args, kwargs):
+            raise subprocess.CalledProcessError(1, args)
+        return original_check_output(args, *pargs, **kwargs)
+
+    monkeypatch.setattr(subprocess, "run", guarded_run)
+    monkeypatch.setattr(subprocess, "check_output", guarded_check_output)
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:

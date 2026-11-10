@@ -1,11 +1,10 @@
-"""F001 — secret-shape regex coverage tests for sanitization_check.py.
+"""Secret-shape regex coverage tests for the packaged pattern source.
 
-Per D005, every secret-shape regex in sanitization_check.py carries a code-
-comment citation. Per F001 acceptance, every regex must be pinned by a
-matched POSITIVE example AND a near-miss NEGATIVE example that asserts the
-boundary of the pattern. Together they catch (a) silent regex-shape rot if
-a vendor changes its key format and (b) over-eager rules that would flag
-placeholder strings in docs, env-example files, or commit fixtures.
+Every secret-shape regex in ``dontpanic_orchestrate.secret_patterns`` carries
+a source citation. Each regex is pinned by a matched positive example and a
+near-miss negative example that asserts the pattern boundary. Together they
+catch silent regex-shape rot and over-eager rules that would flag placeholder
+strings in docs, env-example files, or commit fixtures.
 
 The test file lives under scripts/dontpanic_orchestrate/tests/, which is in
 ALLOWED_GLOBS — sanitization_check itself skips this directory, so we can
@@ -18,6 +17,7 @@ import importlib.util
 from pathlib import Path
 
 import pytest
+from dontpanic_orchestrate import secret_patterns
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 CHECK_PATH = REPO_ROOT / "scripts" / "sanitization_check.py"
@@ -116,7 +116,7 @@ CASES = [
 def test_secret_regex_positive_match(attr: str, positive: str, negative: str) -> None:
     """Canonical-shape string MUST match — guards against regex rot."""
     mod = _load()
-    rx = getattr(mod, attr)
+    rx = getattr(secret_patterns, attr)
     assert rx.search(positive), f"{attr} failed to match canonical positive {positive!r}"
 
 
@@ -124,20 +124,19 @@ def test_secret_regex_positive_match(attr: str, positive: str, negative: str) ->
 def test_secret_regex_negative_no_match(attr: str, positive: str, negative: str) -> None:
     """Placeholder/lookalike MUST NOT match — guards against over-eager rules."""
     mod = _load()
-    rx = getattr(mod, attr)
+    rx = getattr(secret_patterns, attr)
     assert not rx.search(negative), f"{attr} wrongly matched placeholder {negative!r}"
 
 
 def test_secret_regexes_count_and_export() -> None:
-    """sanitization_check.py exports exactly the 9 patterns enumerated:
-    8 from plan 2026-05-01-003 F001 + Discord webhook from
-    plan 2026-05-01-002 F004."""
+    """sanitization_check.py re-exports all ten package patterns."""
     mod = _load()
     assert len(mod.SECRET_REGEXES) == 10
+    assert mod.SECRET_REGEXES is secret_patterns.SECRET_REGEXES
     expected_attrs = [c[0] for c in CASES]
     pattern_strs = {rx.pattern for rx in mod.SECRET_REGEXES}
     for attr in expected_attrs:
-        rx = getattr(mod, attr)
+        rx = getattr(secret_patterns, attr)
         assert rx.pattern in pattern_strs, f"{attr} missing from SECRET_REGEXES tuple"
 
 

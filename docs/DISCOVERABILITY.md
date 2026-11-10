@@ -46,8 +46,12 @@ Use this baseline when a runtime asks for an `mcp.json` block:
 - [ ] not yet submitted: project description uses the DontPanic tagline.
 - [ ] not yet submitted: project URLs point to GitHub, docs, SECURITY.md, and
   the roadmap.
-- [ ] not yet submitted: install command documented as `pipx install
-  dontpanic`.
+- [ ] install command: `pipx install dontpanic-orchestrate` or
+  `uvx dontpanic-orchestrate==0.2.0`.
+- The bare `dontpanic` name on PyPI belongs to an unrelated project.
+
+`dontpanic-orchestrate` is the MCP server entrypoint, equivalent to
+`dontpanic mcp serve`; the full CLI is `dontpanic`.
 
 ## GitHub Readiness
 
@@ -64,11 +68,15 @@ Use this baseline when a runtime asks for an `mcp.json` block:
 
 ## MCP Directory Readiness
 
-- [ ] not yet submitted: server name is `dontpanic`.
-- [ ] not yet submitted: command is `dontpanic`.
-- [ ] not yet submitted: args are `["mcp", "serve"]`.
-- [ ] not yet submitted: tool list is exactly `list_projects`,
-  `validate_plan`, `dispatch`, `status`, `approve_gate`, `read_evidence`.
+- [ ] registry name is `io.github.Silex-Research/dontpanic`, with
+  `server.json` at the repository root.
+- [ ] not yet submitted: package launch command is
+  `uvx dontpanic-orchestrate==0.2.0`.
+- [ ] not yet submitted: tool list is exactly 9 tools: `list_projects`,
+  `validate_plan`, `dispatch`, `status`, `approve_gate`, `read_evidence`,
+  `state_snapshot`, `state_stream`, `capabilities.get_status`.
+- [ ] read-only and destructive tool annotations are published in
+  `tools/list`.
 - [ ] not yet submitted: directory copy states there is no `intake` tool in
   Phase B.
 

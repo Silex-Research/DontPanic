@@ -18,7 +18,6 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve()
 sys.path.insert(0, str(HERE.parents[2]))
-sys.path.insert(0, str(HERE.parents[2].parent / "claude" / "shared" / "schemas" / "v1.0" / "models"))
 
 from dontpanic_orchestrate.plan_review.lint import Resolvers  # noqa: E402
 from dontpanic_orchestrate.plan_review.report import build_plan_scope_report, render_text  # noqa: E402
@@ -44,7 +43,7 @@ def _flag_kinds(fr):
 
 
 def test_feature_model_accepts_introduces():
-    from features_model import Feature
+    from dontpanic_orchestrate.agent_conventions.schemas.v1_0.models.features_model import Feature
 
     f = Feature.model_validate(
         {
@@ -60,7 +59,7 @@ def test_feature_model_accepts_introduces():
 
 
 def test_feature_model_without_introduces_unchanged():
-    from features_model import Feature
+    from dontpanic_orchestrate.agent_conventions.schemas.v1_0.models.features_model import Feature
 
     f = Feature.model_validate(
         {

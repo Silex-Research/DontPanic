@@ -32,15 +32,13 @@ HERE = Path(__file__).resolve()
 ROOT = HERE.parents[3]
 sys.path.insert(0, str(ROOT / "scripts"))
 
-# Pydantic model subtree
-SUBTREE = ROOT / "claude" / "shared" / "schemas" / "v1.0"
-sys.path.insert(0, str(SUBTREE / "models"))
-
 from dontpanic_orchestrate import (  # noqa: E402
     active_supervisors,
     state_projection,
 )
-from state_snapshot_model import StateSnapshot  # noqa: E402
+from dontpanic_orchestrate.agent_conventions.schemas.v1_0.models.state_snapshot_model import (  # noqa: E402
+    StateSnapshot,
+)
 
 
 # ─────────────────────────── helpers ───────────────────────────

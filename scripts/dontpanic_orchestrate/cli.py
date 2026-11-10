@@ -2732,6 +2732,15 @@ def _doctor_main(argv: list[str]) -> int:
                 print(f"  [{check['status'].upper():>4}] {check['probe']}")
         return result.exit_code
 
+    source_root = Path(__file__).resolve().parents[2]
+    if not (source_root / "scripts" / "dontpanic_doctor.py").is_file():
+        print(
+            "dontpanic doctor requires a source checkout; source-only doctor "
+            "checks are unavailable in this installation.",
+            file=sys.stderr,
+        )
+        return 2
+
     # Lazy import: scripts/ may not be on sys.path when the console script
     # is installed via pipx. Add it before importing jarvis_doctor.
     # ``jarvis_doctor`` is a thin alias that re-exports the canonical
@@ -4830,7 +4839,7 @@ def _read_external_refs_from_frontmatter(plan_dir: Path) -> list:
     plan declares no refs, returns an empty list — caller skips."""
 
     import yaml
-    from models.plan_model import ExternalRef  # noqa: E402
+    from .agent_conventions.schemas.v1_0.models.plan_model import ExternalRef  # noqa: E402
 
     plan_md = plan_dir / "plan.md"
     if not plan_md.is_file():

@@ -29,22 +29,11 @@ Rule summary (see features.json F001 acceptance + decisions D021-D053):
 
 from __future__ import annotations
 
-import sys
 from dataclasses import dataclass, field
 from enum import Enum
-from pathlib import Path
 from typing import Sequence
 
-# Resolve the merged 2a-core enums (same path strategy as the F004 module).
-for _c in (
-    Path(__file__).resolve().parents[2] / "claude" / "shared" / "schemas" / "v1.0" / "models",
-    Path(__file__).resolve().parents[2] / ".claude" / "shared" / "schemas" / "v1.0" / "models",
-):
-    if (_c / "experience_readiness.py").is_file():
-        sys.path.insert(0, str(_c))
-        break
-
-import experience_readiness as er  # noqa: E402
+from .agent_conventions.schemas.v1_0.models import experience_readiness as er  # noqa: E402, F401
 
 # D022 product-class goal types.
 PRODUCT_CLASS_GOALS: frozenset = frozenset({"parity", "new_feature", "migration", "incident"})

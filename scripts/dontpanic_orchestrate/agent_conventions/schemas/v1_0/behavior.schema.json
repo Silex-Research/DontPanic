@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-conventions/schemas/v1.0/behavior.schema.json",
+  "title": "Behavior",
+  "description": "Process-behavior verdict judged from an existing audit envelope (commands_run, vendor, declaration) after the fact. Behavior specs are hidden from worker prompts — they are never injected into implementer or auditor prompts. Skills tell the agent what to do; behaviors grade whether it did. adherence violated requires at least one evidence_ref; n/a with no evidence_refs is valid.",
+  "type": "object",
+  "required": ["id", "trigger", "owner_role", "adherence"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable behavior name (e.g. acceptance_test_invoked)."
+    },
+    "trigger": {
+      "type": "string",
+      "minLength": 1,
+      "description": "When this behavior applies, as a condition on the envelope or plan."
+    },
+    "owner_role": {
+      "enum": ["implementer", "auditor", "supervisor"]
+    },
+    "adherence": {
+      "enum": ["expected", "n/a", "violated"]
+    },
+    "evidence_refs": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/evidence_ref" },
+      "description": "Pointers at the existing audit envelope. Required and non-empty when adherence is violated."
+    }
+  },
+  "allOf": [
+    {
+      "description": "A violated verdict must cite at least one evidence_ref on the envelope.",
+      "if": {
+        "properties": { "adherence": { "const": "violated" } },
+        "required": ["adherence"]
+      },
+      "then": {
+        "required": ["evidence_refs"],
+        "properties": {
+          "evidence_refs": { "minItems": 1 }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "evidence_ref": {
+      "type": "object",
+      "required": ["type", "uri"],
+      "properties": {
+        "type": { "enum": ["screenshot", "log", "test_output", "diff", "audit_json", "commit", "url", "file"] },
+        "uri": { "type": "string", "description": "Relative path, git SHA, or Firebase Storage signed URL" },
+        "hash": { "type": "string", "description": "SHA-256 of content for integrity" },
+        "captured_at": { "type": "string", "format": "date-time" },
+        "captured_by": { "type": "string", "description": "Agent or tool that captured the evidence" },
+        "note": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

@@ -140,15 +140,32 @@ class CapabilityIndex:
         return self._by_category.get(category, ())
 
 
-def load_capabilities(repo_root: Path | str | None = None) -> CapabilityIndex:
-    """Load every manifest under ``<repo_root>/capabilities``."""
+def load_capabilities(
+    repo_root: Path | str | None = None,
+    *,
+    packaged_fallback: bool | None = None,
+) -> CapabilityIndex:
+    """Load checkout manifests, using the packaged copy only when allowed.
+
+    With no explicit root, the packaged mirror is used when default root
+    resolution finds no checkout manifests, as in an installed wheel. An
+    explicit root must contain ``capabilities/`` unless
+    ``packaged_fallback=True`` is passed.
+    """
 
     root = _repo_root(repo_root)
     capabilities_dir = root / "capabilities"
+    fallback_allowed = packaged_fallback is True or (
+        packaged_fallback is None and repo_root is None
+    )
+    packaged = False
+    if not capabilities_dir.is_dir() and fallback_allowed:
+        capabilities_dir = Path(__file__).resolve().parent / "capability_manifests"
+        packaged = True
     if not capabilities_dir.is_dir():
         raise CapabilityManifestError(f"capabilities directory not found: {capabilities_dir}")
     manifests = [
-        validate_capability_file(path, repo_root=root)
+        validate_capability_file(path, repo_root=root, _require_setup_doc=not packaged)
         for path in sorted(capabilities_dir.glob("*.json"))
     ]
     return CapabilityIndex(manifests)
@@ -158,13 +175,23 @@ def validate_capability_file(
     path: Path | str,
     *,
     repo_root: Path | str | None = None,
+    _require_setup_doc: bool = True,
 ) -> CapabilityManifest:
-    """Validate one manifest against the checked-in JSON schema."""
+    """Validate one manifest against the checkout or packaged JSON schema."""
 
     manifest_path = Path(path)
     root = _repo_root(repo_root) if repo_root is not None else _infer_repo_root(manifest_path)
     payload = _read_json(manifest_path)
-    schema = _read_json(root / "claude" / "shared" / "schemas" / "v1.0" / "capability.schema.json")
+    schema_path = root / "claude" / "shared" / "schemas" / "v1.0" / "capability.schema.json"
+    if not schema_path.is_file():
+        schema_path = (
+            Path(__file__).resolve().parent
+            / "agent_conventions"
+            / "schemas"
+            / "v1_0"
+            / "capability.schema.json"
+        )
+    schema = _read_json(schema_path)
     _jsonschema_validate(payload, schema, manifest_path)
 
     try:
@@ -178,7 +205,7 @@ def validate_capability_file(
             f"{manifest_path}: id {manifest.id!r} must match filename stem {manifest_path.stem!r}"
         )
     setup_doc_path = root / manifest.setup_doc.split("#", 1)[0]
-    if not setup_doc_path.is_file():
+    if _require_setup_doc and not setup_doc_path.is_file():
         raise CapabilityManifestError(
             f"{manifest_path}: setup_doc target not found: {manifest.setup_doc}"
         )

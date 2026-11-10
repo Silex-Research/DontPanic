@@ -5,4 +5,4 @@ Exposes ``__version__`` as the single source of truth consumed by
 the ``dontpanic --version`` console script.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"

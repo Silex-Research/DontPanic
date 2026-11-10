@@ -1,0 +1,57 @@
+{
+  "schema_version": "1.0.0",
+  "id": "codex_app",
+  "title": "Codex App operator surface",
+  "kind": "operator_surface",
+  "category": "operator-surface",
+  "summary": "Codex App operator surface — the operator engages DontPanic from within the OpenAI Codex cloud-task environment.",
+  "setup_required": false,
+  "setup_doc": "docs/GETTING_STARTED.md#setup-tracks--pick-yours",
+  "default_in_profiles": [],
+  "use_cases": [],
+  "requires": {
+    "commands": [],
+    "env": [],
+    "files": ["~/.dontpanic/config.json"],
+    "services": [],
+    "auth": [],
+    "config": ["roles.implementer"]
+  },
+  "verify": {
+    "doctor_profiles": [],
+    "probes": [
+      "path",
+      "home",
+      "repo_visibility",
+      "worktree_binding",
+      "config",
+      "mcp_availability"
+    ],
+    "readiness": "Codex App surface is usable when PATH resolves dontpanic, the DontPanic home directory is present, the repo is visible to the Codex task environment, any declared worktree binding is healthy, the operator config is valid, and MCP is reachable."
+  },
+  "owner_boundary": {
+    "dontpanic_core": [
+      "invocation context resolution for codex_app surface",
+      "probe dispatch via doctor registry",
+      "canonical surface id from F001 OperatorSurface enum"
+    ],
+    "adapter": [],
+    "operator": [
+      "provisions the Codex cloud-task environment with repo access",
+      "installs DontPanic in the Codex task image or pre-step"
+    ]
+  },
+  "mutation_boundary": {
+    "writes_dontpanic_state": false,
+    "external_mutation": "none",
+    "allowed_path": "Operator surface manifests are read-only descriptors; DontPanic does not mutate the Codex App cloud environment or task configuration.",
+    "forbidden": [
+      "DontPanic must not provision or configure the Codex task environment on the operator's behalf"
+    ]
+  },
+  "notes": [
+    "Codex App is an external operator surface produced by OpenAI; DontPanic does not bundle or install it.",
+    "The repo_visibility probe is especially relevant for Codex App, which runs in a sandboxed cloud environment with restricted filesystem access.",
+    "MCP availability may be limited or unavailable in sandboxed Codex environments; the probe reports the actual state."
+  ]
+}

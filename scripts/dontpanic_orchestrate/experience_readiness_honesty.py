@@ -37,22 +37,11 @@ data_source) (D016).
 
 from __future__ import annotations
 
-import sys
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from enum import Enum
-from pathlib import Path
 
-# Resolve the merged 2a-core models dir the same way the F002/F003 modules do.
-for _c in (
-    Path(__file__).resolve().parents[2] / "claude" / "shared" / "schemas" / "v1.0" / "models",
-    Path(__file__).resolve().parents[2] / ".claude" / "shared" / "schemas" / "v1.0" / "models",
-):
-    if (_c / "experience_readiness.py").is_file():
-        sys.path.insert(0, str(_c))
-        break
-
-import experience_readiness as er  # noqa: E402
+from .agent_conventions.schemas.v1_0.models import experience_readiness as er  # noqa: E402
 
 Fam = er.SurfaceFamily
 Prov = er.DataProvenance

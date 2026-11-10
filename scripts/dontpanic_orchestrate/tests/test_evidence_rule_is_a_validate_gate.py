@@ -36,10 +36,11 @@ import pytest
 
 _REPO = Path(__file__).resolve().parents[3]
 _SCHEMAS = _REPO / "claude" / "shared" / "schemas" / "v1.0"
-sys.path.insert(0, str(_SCHEMAS))
-sys.path.insert(0, str(_SCHEMAS / "models"))
 
-from features_model import Features, evidence_gaps  # noqa: E402
+from dontpanic_orchestrate.agent_conventions.schemas.v1_0.models.features_model import (  # noqa: E402
+    Features,
+    evidence_gaps,
+)
 
 _JSON_SCHEMA = json.loads((_SCHEMAS / "features.schema.json").read_text())
 

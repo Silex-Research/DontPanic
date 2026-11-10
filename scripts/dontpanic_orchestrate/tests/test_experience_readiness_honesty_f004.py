@@ -14,25 +14,14 @@ Pinned acceptance cases + the three round-3 implementation obligations (D018):
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
-HERE = Path(__file__).resolve()
-sys.path.insert(0, str(HERE.parents[1]))  # dontpanic_orchestrate on path
-# 2a-core models dir, same resolution as the F002 tests
-for _c in (
-    HERE.parents[3] / "claude" / "shared" / "schemas" / "v1.0" / "models",
-    HERE.parents[3] / ".claude" / "shared" / "schemas" / "v1.0" / "models",
-):
-    if _c.is_dir():
-        sys.path.insert(0, str(_c))
-        break
-
-import experience_readiness as er  # noqa: E402
-import experience_readiness_honesty as h  # noqa: E402
+from dontpanic_orchestrate.agent_conventions.schemas.v1_0.models import (  # noqa: E402
+    experience_readiness as er,
+)
+from dontpanic_orchestrate import experience_readiness_honesty as h  # noqa: E402
 
 SC, EC = er.SurfaceClass, er.EvidenceClass
 Fam, Prov, Avail = er.SurfaceFamily, er.DataProvenance, er.Availability

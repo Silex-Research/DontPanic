@@ -67,11 +67,12 @@ except ImportError:  # pragma: no cover — surfaced by check_python_deps
     yaml = None  # type: ignore[assignment]
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+PACKAGE_DIR = Path(__file__).resolve().parent / "dontpanic_orchestrate"
 SECRETS_DIR = REPO_ROOT / ".secrets"
 ENV_FILE = REPO_ROOT / "environments.json"
 ENV_EXAMPLE = REPO_ROOT / "environments.json.example"
-SCHEMAS_DIR = REPO_ROOT / "claude" / "shared" / "schemas" / "v1.0"
-MODELS_DIR = REPO_ROOT / "claude" / "shared" / "schemas" / "v1.0" / "models"
+SCHEMAS_DIR = PACKAGE_DIR / "agent_conventions" / "schemas" / "v1_0"
+MODELS_DIR = SCHEMAS_DIR / "models"
 PARENT_PLAN_DIR = REPO_ROOT / "docs" / "plans" / "2026-04-19-001-infra-cross-agent-orchestration"
 PLANS_ROOT = REPO_ROOT / "docs" / "plans"
 ARCHITECTURE_JSON_PATH = REPO_ROOT / "docs" / "architecture" / "architecture.json"
@@ -157,12 +158,25 @@ def check_clis(skip_auth: bool = False) -> list[CheckResult]:
 def check_gcloud_auth() -> CheckResult:
     if shutil.which("gcloud") is None:
         return _bad("gcloud-auth", "gcloud missing", "install gcloud first")
-    proc = subprocess.run(
-        ["gcloud", "auth", "print-access-token"],  # noqa: S607  # PATH-relative gcloud invocation per D001
-        capture_output=True,
-        text=True,
-        timeout=15,
-    )
+    try:
+        proc = subprocess.run(
+            ["gcloud", "auth", "print-access-token"],  # noqa: S607  # PATH-relative gcloud invocation per D001
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+    except subprocess.TimeoutExpired:
+        return _bad(
+            "gcloud-auth",
+            "gcloud authentication check timed out",
+            "retry after checking gcloud",
+        )
+    except FileNotFoundError:
+        return _bad(
+            "gcloud-auth",
+            "gcloud not found while checking authentication",
+            "install gcloud first",
+        )
     if proc.returncode != 0:
         return _bad(
             "gcloud-auth",
@@ -175,12 +189,25 @@ def check_gcloud_auth() -> CheckResult:
 def check_firebase_auth() -> CheckResult:
     if shutil.which("firebase") is None:
         return _bad("firebase-auth", "firebase CLI missing", "npm i -g firebase-tools")
-    proc = subprocess.run(
-        ["firebase", "login:list"],  # noqa: S607  # PATH-relative firebase invocation per D001
-        capture_output=True,
-        text=True,
-        timeout=15,
-    )
+    try:
+        proc = subprocess.run(
+            ["firebase", "login:list"],  # noqa: S607  # PATH-relative firebase invocation per D001
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+    except subprocess.TimeoutExpired:
+        return _bad(
+            "firebase-auth",
+            "firebase authentication check timed out",
+            "retry after checking firebase",
+        )
+    except FileNotFoundError:
+        return _bad(
+            "firebase-auth",
+            "firebase not found while checking authentication",
+            "install firebase-tools",
+        )
     if proc.returncode != 0 or "@" not in proc.stdout:
         return _bad(
             "firebase-auth",
@@ -301,7 +328,7 @@ def check_schemas() -> CheckResult:
         return _bad(
             "schemas",
             f"agent-conventions schemas missing at {SCHEMAS_DIR}",
-            "git submodule update --init or git subtree pull (see CONTRIBUTING.md)",
+            "regenerate the packaged mirror: python3 scripts/sync_agent_conventions.py",
         )
     expected = [
         "plan.schema.json",
@@ -315,7 +342,7 @@ def check_schemas() -> CheckResult:
         return _bad(
             "schemas",
             f"schemas dir present but missing: {missing}",
-            "subtree the agent-conventions repo is out of date — pull v1.x",
+            "packaged schema mirror is stale: python3 scripts/sync_agent_conventions.py",
         )
     return _ok(
         "schemas", f"{len(expected)} core schemas present at {SCHEMAS_DIR.relative_to(REPO_ROOT)}"
@@ -327,9 +354,8 @@ def check_pydantic_models() -> CheckResult:
         return _bad(
             "pydantic-models",
             f"{MODELS_DIR} not found",
-            "subtree pull agent-conventions",
+            "regenerate the packaged mirror: python3 scripts/sync_agent_conventions.py",
         )
-    sys.path.insert(0, str(MODELS_DIR.parent))
     try:
         for mod in (
             "plan_model",
@@ -338,15 +364,15 @@ def check_pydantic_models() -> CheckResult:
             "environments_model",
             "signoff_model",
         ):
-            importlib.import_module(f"models.{mod}")
+            importlib.import_module(
+                f"dontpanic_orchestrate.agent_conventions.schemas.v1_0.models.{mod}"
+            )
     except Exception as exc:
         return _bad(
             "pydantic-models",
             f"failed importing models: {exc.__class__.__name__}: {exc}",
             "check pydantic version (>=2) and that schemas + models are in sync",
         )
-    finally:
-        sys.path.pop(0)
     return _ok("pydantic-models", "plan/features/audit/environments/signoff models import clean")
 
 
@@ -400,7 +426,7 @@ def check_parent_plan_validates() -> CheckResult:
             f"{PARENT_PLAN_DIR} missing",
             "this is the canonical plan dir — restore from origin",
         )
-    validator = SCHEMAS_DIR / "validate.py"
+    validator = REPO_ROOT / "claude" / "shared" / "schemas" / "v1.0" / "validate.py"
     if not validator.is_file():
         return _bad(
             "parent-plan",
@@ -2059,7 +2085,7 @@ def validate_plans_strict(
             _bad(
                 "validate-plans-strict",
                 f"plan schema missing at {schema_path}",
-                "subtree pull agent-conventions",
+                "regenerate the packaged mirror: python3 scripts/sync_agent_conventions.py",
             )
         ]
     try:

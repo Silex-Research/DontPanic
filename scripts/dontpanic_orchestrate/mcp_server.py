@@ -23,6 +23,10 @@ Tool surface (D002 base surface plus later read-only projections; NO ``intake``)
     dispatch        — wraps :func:`supervisor.dispatch_volley`
     approve_gate    — wraps :func:`gate_pause.approve_gate`
 
+The initialize handshake negotiates ``2025-03-26`` or ``2024-11-05`` and
+defaults to ``2025-03-26``. Each ``tools/list`` entry includes a human-readable
+title and MCP behavior annotations alongside its input schema.
+
 Path validation (D005): every tool that takes a plan or evidence path
 resolves it through :func:`_resolve_safe_path`, which is stricter than
 the CLI's ``_resolve_plan_dir`` — registered projects only, no
@@ -42,7 +46,7 @@ import json
 import logging
 import sys
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -66,10 +70,18 @@ ERR_METHOD_NOT_FOUND = -32601
 ERR_INVALID_PARAMS = -32602
 ERR_INTERNAL = -32603
 
-# MCP protocol version this server speaks. Matches the version string used
-# by callers (Claude Code, Codex CLI, Cursor) at the time of writing. The
-# initialize handshake is the only place this is sent.
-MCP_PROTOCOL_VERSION = "2024-11-05"
+# MCP protocol versions supported by the initialize handshake.
+DEFAULT_PROTOCOL_VERSION = "2025-03-26"
+SUPPORTED_PROTOCOL_VERSIONS: tuple[str, ...] = ("2025-03-26", "2024-11-05")
+# Backward-compatible alias for callers that used the former constant.
+MCP_PROTOCOL_VERSION = DEFAULT_PROTOCOL_VERSION
+
+
+def negotiate_protocol_version(requested: Any) -> str:
+    """Return a supported requested version or the server's default."""
+    if isinstance(requested, str) and requested in SUPPORTED_PROTOCOL_VERSIONS:
+        return requested
+    return DEFAULT_PROTOCOL_VERSION
 
 # Canonical operator CLI invocation that the F001 manifest advertises.
 # `python -m dontpanic_orchestrate ...` is reserved for module-invocation
@@ -411,7 +423,7 @@ def tool_status(args: dict[str, Any]) -> dict[str, Any]:
                 "started_at": e.started_at,
                 "supervisor_config_dir": e.supervisor_config_dir,
             }
-            for e in active_supervisors.list_active()
+            for e in active_supervisors.list_active(prune=False)
         ],
     }
     if inp.plan is not None:
@@ -481,6 +493,8 @@ class ToolDef:
     description: str
     input_model: type[BaseModel]
     handler: Callable[[dict[str, Any]], dict[str, Any]]
+    title: str = ""
+    annotations: dict[str, bool] = field(default_factory=dict)
 
 
 def _build_tools() -> dict[str, ToolDef]:
@@ -491,6 +505,13 @@ def _build_tools() -> dict[str, ToolDef]:
         for td in (
             ToolDef(
                 name="list_projects",
+                title="List projects",
+                annotations={
+                    "readOnlyHint": True,
+                    "destructiveHint": False,
+                    "idempotentHint": True,
+                    "openWorldHint": False,
+                },
                 description=(
                     "Read-only. Return registered projects from ~/.dontpanic/projects.json."
                 ),
@@ -499,6 +520,13 @@ def _build_tools() -> dict[str, ToolDef]:
             ),
             ToolDef(
                 name="validate_plan",
+                title="Validate plan",
+                annotations={
+                    "readOnlyHint": True,
+                    "destructiveHint": False,
+                    "idempotentHint": True,
+                    "openWorldHint": False,
+                },
                 description=(
                     "Read-only. Load and validate a plan directory against "
                     "the agent-conventions v1.0 schema."
@@ -508,6 +536,13 @@ def _build_tools() -> dict[str, ToolDef]:
             ),
             ToolDef(
                 name="dispatch",
+                title="Dispatch feature (dry-run unless confirmed)",
+                annotations={
+                    "readOnlyHint": False,
+                    "destructiveHint": True,
+                    "idempotentHint": False,
+                    "openWorldHint": True,
+                },
                 description=(
                     "Mutating. Dispatch an implementer/auditor volley for a "
                     "plan + feature. Defaults to dry-run; pass confirm=true "
@@ -519,6 +554,13 @@ def _build_tools() -> dict[str, ToolDef]:
             ),
             ToolDef(
                 name="status",
+                title="Plan status",
+                annotations={
+                    "readOnlyHint": True,
+                    "destructiveHint": False,
+                    "idempotentHint": True,
+                    "openWorldHint": False,
+                },
                 description=(
                     "Read-only. Return active supervisors and (optionally) "
                     "gate state for a specific plan."
@@ -528,6 +570,13 @@ def _build_tools() -> dict[str, ToolDef]:
             ),
             ToolDef(
                 name="approve_gate",
+                title="Approve gate (requires confirm)",
+                annotations={
+                    "readOnlyHint": False,
+                    "destructiveHint": True,
+                    "idempotentHint": False,
+                    "openWorldHint": False,
+                },
                 description=(
                     "Mutating. Clear a single human gate on a plan. Defaults "
                     "to dry-run; pass confirm=true to mutate."
@@ -537,6 +586,13 @@ def _build_tools() -> dict[str, ToolDef]:
             ),
             ToolDef(
                 name="read_evidence",
+                title="Read evidence",
+                annotations={
+                    "readOnlyHint": True,
+                    "destructiveHint": False,
+                    "idempotentHint": True,
+                    "openWorldHint": False,
+                },
                 description=(
                     "Read-only. Return the contents of a file under the "
                     "plan's evidence/ directory. Path is constrained to "
@@ -547,6 +603,13 @@ def _build_tools() -> dict[str, ToolDef]:
             ),
             ToolDef(
                 name="state_snapshot",
+                title="State snapshot",
+                annotations={
+                    "readOnlyHint": True,
+                    "destructiveHint": False,
+                    "idempotentHint": True,
+                    "openWorldHint": False,
+                },
                 description=(
                     "Read-only. Return a state-snapshot envelope (F001 schema) "
                     "aggregated across every registered project. redact_level "
@@ -560,6 +623,13 @@ def _build_tools() -> dict[str, ToolDef]:
             ),
             ToolDef(
                 name="state_stream",
+                title="State stream",
+                annotations={
+                    "readOnlyHint": True,
+                    "destructiveHint": False,
+                    "idempotentHint": True,
+                    "openWorldHint": False,
+                },
                 description=(
                     "Read-only. Long-poll cursor on the inbox stream. "
                     "Returns events with captured_at > `since`. v0 is a "
@@ -571,6 +641,13 @@ def _build_tools() -> dict[str, ToolDef]:
             ),
             ToolDef(
                 name="capabilities.get_status",
+                title="Capability status",
+                annotations={
+                    "readOnlyHint": True,
+                    "destructiveHint": False,
+                    "idempotentHint": True,
+                    "openWorldHint": True,
+                },
                 description=(
                     "Read-only. Return the V0b capability status envelope "
                     "(same shape as `dontpanic capabilities status --format=json`) "
@@ -635,7 +712,7 @@ def tool_state_snapshot(args: dict[str, Any]) -> dict[str, Any]:
     # Build the merged envelope by hand-rolling a dict; the per-project
     # snapshots were already Pydantic-validated so the merge cannot fail
     # the F001 schema.
-    from state_snapshot_model import (
+    from .agent_conventions.schemas.v1_0.models.state_snapshot_model import (
         StateSnapshot as _Snap,
         Streams as _Streams,
         RedactLevel as _RL,
@@ -842,8 +919,10 @@ def _serialize_tools_for_list() -> list[dict[str, Any]]:
     return [
         {
             "name": td.name,
+            "title": td.title,
             "description": td.description,
             "inputSchema": td.input_model.model_json_schema(),
+            "annotations": {**td.annotations, "title": td.title},
         }
         for td in TOOLS.values()
     ]
@@ -860,16 +939,19 @@ def handle_request(message: dict[str, Any]) -> dict[str, Any] | None:
     req_id = message.get("id")
     is_notification = "id" not in message
 
+    if message.get("jsonrpc") != "2.0":
+        return _err(req_id, ERR_INVALID_REQUEST, "jsonrpc must be '2.0'")
     if not isinstance(method, str):
-        if is_notification:
-            return None
         return _err(req_id, ERR_INVALID_REQUEST, "missing/invalid method")
 
     if method == "initialize":
+        requested_version = (
+            params.get("protocolVersion") if isinstance(params, dict) else None
+        )
         return _ok(
             req_id,
             {
-                "protocolVersion": MCP_PROTOCOL_VERSION,
+                "protocolVersion": negotiate_protocol_version(requested_version),
                 "capabilities": {"tools": {}},
                 "serverInfo": {"name": "dontpanic-mcp", "version": _server_version()},
             },
@@ -902,6 +984,32 @@ def handle_request(message: dict[str, Any]) -> dict[str, Any] | None:
     if is_notification:
         return None
     return _err(req_id, ERR_METHOD_NOT_FOUND, f"unknown method: {method!r}")
+
+
+def handle_message(
+    message: Any,
+) -> dict[str, Any] | list[dict[str, Any]] | None:
+    """Handle one JSON-RPC object or batch and return only response messages."""
+    if not isinstance(message, list):
+        return handle_request(message)  # type: ignore[arg-type]
+    if not message:
+        return _err(None, ERR_INVALID_REQUEST, "batch request must not be empty")
+
+    responses: list[dict[str, Any]] = []
+    for item in message:
+        if not isinstance(item, dict):
+            response = _err(None, ERR_INVALID_REQUEST, "batch item must be a JSON object")
+        elif item.get("method") == "initialize":
+            response = _err(
+                item.get("id"),
+                ERR_INVALID_REQUEST,
+                "initialize must not be included in a batch request",
+            )
+        else:
+            response = handle_request(item)
+        if response is not None:
+            responses.append(response)
+    return responses or None
 
 
 def _server_version() -> str:
@@ -954,7 +1062,7 @@ def serve_stdio(
             out_stream.write(json.dumps(response) + "\n")
             out_stream.flush()
             continue
-        response = handle_request(message)
+        response = handle_message(message)
         if response is None:
             continue
         out_stream.write(json.dumps(response) + "\n")
@@ -997,6 +1105,21 @@ def serve_main(argv: list[str]) -> int:
     return serve_stdio()
 
 
+def console_main() -> None:
+    """Dedicated console entrypoint for ``dontpanic-orchestrate``."""
+    argv = sys.argv[1:]
+    if argv in (['-h'], ['--help']):
+        print(
+            "usage: dontpanic-orchestrate [--help]\n"
+            "  dontpanic-orchestrate starts the local stdio MCP server "
+            "(same as `dontpanic mcp serve`).\n"
+            "  The full CLI is `dontpanic`.",
+            file=sys.stderr,
+        )
+        raise SystemExit(0)
+    raise SystemExit(serve_main(argv))
+
+
 def main(argv: list[str]) -> int:
     """``dontpanic mcp <subcommand>`` dispatcher. ``serve`` is the only
     subcommand in Phase B; ``tools`` (introspection) is reserved for a
@@ -1027,6 +1150,7 @@ __all__ = [
     "ERR_INVALID_REQUEST",
     "ERR_METHOD_NOT_FOUND",
     "ERR_PARSE",
+    "DEFAULT_PROTOCOL_VERSION",
     "ListProjectsInput",
     "MCP_PROTOCOL_VERSION",
     "MCP_SERVER_ARGS",
@@ -1034,6 +1158,7 @@ __all__ = [
     "MCPError",
     "ReadEvidenceInput",
     "StatusInput",
+    "SUPPORTED_PROTOCOL_VERSIONS",
     "TOOLS",
     "ToolDef",
     "ValidatePlanInput",
@@ -1043,6 +1168,7 @@ __all__ = [
     "main",
     "serve_main",
     "serve_stdio",
+    "handle_message",
     "tool_approve_gate",
     "tool_capabilities_get_status",
     "tool_dispatch",

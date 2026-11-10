@@ -29,6 +29,7 @@ A maintainer profile is explicitly OUT of v0 scope (Roadmap Plan 5/7).
 
 from __future__ import annotations
 
+import importlib
 import json
 import shutil
 import subprocess
@@ -400,15 +401,12 @@ def _discord_webhook_probe() -> tuple[bool, str]:
 
 
 def _sanitization_regex_probe() -> tuple[bool, str]:
-    """Make sure scripts/sanitization_check.py exists and is importable.
-    The sanitization regex bank is what stops a Discord notification from
-    spilling tokens — required for the discord profile."""
-
-    repo_root = Path(__file__).resolve().parents[2]
-    target = repo_root / "scripts" / "sanitization_check.py"
-    if not target.is_file():
-        return False, f"sanitization_check.py missing at {target}"
-    return True, "sanitization_check.py present"
+    """Check that the packaged secret-shape regex bank can be imported."""
+    try:
+        importlib.import_module("dontpanic_orchestrate.secret_patterns")
+    except ImportError as exc:
+        return False, f"packaged secret-pattern module is unavailable: {exc}"
+    return True, "packaged secret-pattern module is importable"
 
 
 def _openrouter_key_probe() -> tuple[bool, str]:

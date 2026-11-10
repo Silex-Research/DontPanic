@@ -89,6 +89,7 @@ from pathlib import Path
 from typing import Any
 
 from dontpanic_orchestrate import global_config as _gc
+from dontpanic_orchestrate import readable_text
 from dontpanic_orchestrate.action_resolvability import (
     RESOLUTION_BLOCKED_EXTERNAL,
     RESOLUTION_CHAINED,
@@ -98,10 +99,9 @@ from dontpanic_orchestrate.action_resolvability import (
     validate_resolution_class,
 )
 
-# Bind to the existing sanitization regexes so the no-secret invariant
-# matches the OSS sanitization gate. Imported lazily so test isolation
-# does not need to load the whole scripts dir when only ActionItem
-# helpers are exercised.
+# Bind to the shared package regexes so the no-secret invariant matches
+# the sanitization gate. Keep the import lazy when only ActionItem helpers
+# are exercised.
 _SECRET_REGEXES: tuple[re.Pattern[str], ...] | None = None
 
 
@@ -109,12 +109,7 @@ def _load_secret_regexes() -> tuple[re.Pattern[str], ...]:
     global _SECRET_REGEXES
     if _SECRET_REGEXES is not None:
         return _SECRET_REGEXES
-    import sys as _sys
-
-    scripts_dir = Path(__file__).resolve().parent.parent
-    if str(scripts_dir) not in _sys.path:
-        _sys.path.insert(0, str(scripts_dir))
-    from sanitization_check import SECRET_REGEXES as _RX  # noqa: E402
+    from .secret_patterns import SECRET_REGEXES as _RX
 
     _SECRET_REGEXES = tuple(_RX)
     return _SECRET_REGEXES
@@ -490,7 +485,9 @@ def provide_gate_actions(
         evidence_uri = None
         if plan_dirs and plan_id in plan_dirs:
             evidence_uri = str(plan_dirs[plan_id] / "audit" / "gate-state.json")
-        title = f"Gate {gate_name} on {plan_id} needs approval"
+        title = readable_text.gate_entry(
+            readable_text.BLOCKED, plan_id, gate_name, "approval needed"
+        )
         detail_parts: list[str] = []
         if reason:
             detail_parts.append(str(reason))

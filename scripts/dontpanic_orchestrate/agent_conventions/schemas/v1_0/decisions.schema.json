@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-conventions/schemas/v1.0/decisions.schema.json",
+  "title": "Decision",
+  "description": "One decisions.jsonl line. Accepts the two DontPanic line shapes already on disk — {id,date,question,answer,status} and {id,ts,by,title,body} — without requiring a mass rewrite. id matches ^D\\d{3}$. A line needs date or ts, and question or title. When status is present it is open|resolved|deferred.",
+  "type": "object",
+  "required": ["id"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^D\\d{3}$",
+      "description": "D001, D002, ..."
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Calendar date used by the current question/answer convention."
+    },
+    "ts": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp used by the legacy title/body convention."
+    },
+    "question": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The decision question (current convention)."
+    },
+    "answer": {
+      "type": "string",
+      "description": "The decision answer (current convention)."
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The decision title (legacy convention)."
+    },
+    "body": {
+      "type": "string",
+      "description": "The decision body (legacy convention)."
+    },
+    "status": {
+      "enum": ["open", "resolved", "deferred"]
+    },
+    "rationale": {
+      "type": "string",
+      "description": "Optional supporting rationale on the current convention."
+    },
+    "by": {
+      "type": "string",
+      "description": "Who recorded the line (legacy convention)."
+    }
+  },
+  "allOf": [
+    {
+      "description": "A line carries date or ts (or both).",
+      "anyOf": [
+        { "required": ["date"] },
+        { "required": ["ts"] }
+      ]
+    },
+    {
+      "description": "A line carries question or title (or both).",
+      "anyOf": [
+        { "required": ["question"] },
+        { "required": ["title"] }
+      ]
+    }
+  ],
+  "additionalProperties": false
+}

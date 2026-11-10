@@ -74,16 +74,8 @@ FALLBACK_AUDITOR = "codex"
 
 def _known_gate_names() -> set[str]:
     """Return the canonical set of gate name strings declared by the
-    plan model's ``HumanGate`` enum. Imported lazily to avoid forcing the
-    plan-loader's schema-discovery to run at import time."""
-    # plan_loader's import side-effect adds the schemas dir to sys.path;
-    # we depend on that being run before we import the enum. The supervisor
-    # always imports plan_loader, so by the time per-project config is
-    # consulted the path is populated. Order matters: keep plan_loader first
-    # so its `_find_schemas_dir()` runs before models.plan_model resolves.
-    from dontpanic_orchestrate import plan_loader  # noqa: F401, I001
-
-    from models.plan_model import HumanGate  # noqa: I001
+    packaged plan model's ``HumanGate`` enum."""
+    from .agent_conventions.schemas.v1_0.models.plan_model import HumanGate
 
     return {g.value for g in HumanGate}
 

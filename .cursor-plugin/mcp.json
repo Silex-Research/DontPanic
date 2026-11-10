@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "dontpanic": {
+      "command": "uvx",
+      "args": [
+        "dontpanic-orchestrate==0.2.0"
+      ]
+    }
+  }
+}
