@@ -127,15 +127,17 @@ Surfaces affected: <comma-separated list — see docs/RELEASE_IMPACT.md>
   has a top-level `version` but no `uvx dontpanic-orchestrate==<version>`
   launch pin.
 - A sibling plan counts as the satisfied successor of a `superseded` child
-  only while, for every feature in its `features.json`, that feature's latest
-  auditor envelope is `signed_off`, has its signoff's iteration, and is listed
-  in that signoff. A feature with no auditor envelope, or whose latest audit is
-  blocked, needs changes, or unlisted, therefore disqualifies a success signoff
-  left on disk. The latest envelope per feature is picked by modification
-  time, then iteration index, then file name, so the result is the same when
-  timestamps are equal (for example after a clone or copy). Unreadable or
-  truncated auditor files are still skipped when picking each feature's latest
-  one.
+  only while every feature in its `features.json` has a latest auditor
+  envelope that is `signed_off`, and its signoff lists the latest auditor
+  envelope of its own feature (the feature whose auditor envelopes it lists)
+  at the signoff's iteration. A feature with no auditor envelope, or whose
+  latest audit is blocked or needs changes, therefore disqualifies a success
+  signoff left on disk. Each feature's latest envelope is picked by the
+  envelope's `completed_at`, then iteration index, then file name — never by
+  file timestamps, so touching, copying, cloning or switching branches cannot
+  change the result. An auditor envelope with a missing or unparseable
+  `completed_at` disqualifies the successor. Unreadable or truncated auditor
+  files are still skipped when picking each feature's latest one.
 
 Surfaces affected: cli, mcp, inbox, notify, root_changelog
 
