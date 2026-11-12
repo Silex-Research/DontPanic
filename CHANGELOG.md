@@ -60,6 +60,82 @@ behavioral surface change with the date, a short summary, and a
 Surfaces affected: <comma-separated list — see docs/RELEASE_IMPACT.md>
 ```
 
+## 2026-11-12 — 0.2.1: Gate and signoff correctness fixes
+
+### Fixed
+
+- `pre_merge` can no longer be approved ahead of time. The MCP `approve_gate`
+  tool and the shared approval writer refuse it until the `pre_merge` stage is
+  pending, including when the run is paused at another stage or no stage is
+  pending at all (matching the CLI `approve`). The preview reports
+  `would_clear: false`, and a confirmed call changes nothing.
+- When a lifecycle stage is pending (`pending_stage`), it decides which gates
+  are eligible, even if a stale `pause_gates` names another stage. CLI
+  `approve`, `resume --gate`, `resume --all`, MCP `approve_gate` and the
+  shared writer all apply this one rule; breaker, defer and child-return gates
+  are unchanged.
+- A dispatch whose auditor signs off but whose required signoff cannot be
+  written (a child charter violation or a signoff write error) now ends
+  `blocked` instead of `signed_off`. The CLI exits 3, and MCP `dispatch`
+  returns `final_status: "blocked"`. The INBOX success event and the
+  `signoff` notification are sent only after `signoff.json` is written.
+- `dontpanic finalize` refuses to repair a child plan's signoff when its
+  charter compliance fails, so `passes` is not set.
+- `dontpanic finalize` fails closed when the plan cannot be loaded
+  (`plan_unloadable`): nothing is written and `passes` is not set.
+- `dontpanic finalize` no longer trusts an existing signoff file blindly. It
+  refuses, without writing anything or setting `passes`, when the file is
+  empty or unreadable (`signoff_unreadable`), is for another plan
+  (`signoff_wrong_plan`), is not a success signoff (`signoff_not_success`),
+  does not match the signed_off audit being finalized (`signoff_stale`), or,
+  for a child plan, lacks a passing charter-compliance record
+  (`child_signoff_missing`). A valid existing signoff is still left untouched.
+- The volley transcript records the final terminal status, so a signoff that
+  ends `blocked` is never logged as `signed_off`.
+- The child charter-compliance record is written before the signoff, and both
+  are written atomically, so a failed write cannot leave a valid-looking
+  signoff behind.
+- A `signed_off` result with no audit envelopes ends `blocked` (no signoff is
+  possible) instead of being announced as success.
+- When the patch-completeness or cross-feature gate stops a signoff, the
+  INBOX and notification now record one `blocked` terminal naming the error
+  before it propagates.
+- `scripts/sync_version.py --check` now fails, naming the file, when a
+  required pinned file is missing or has no version pin at all, not only when
+  a pin differs.
+- A child plan's charter-compliance record now names the signoff it belongs
+  to (iteration, signoff id, audits, charter digest). `dontpanic finalize`
+  refuses (`child_signoff_stale`) a record from another iteration or audit, or
+  one written before the charter changed.
+- `dontpanic finalize` refuses a child plan whose return condition is
+  `blocked`, or `superseded` with no satisfied successor
+  (`child_not_satisfied`). How the status is recorded is unchanged.
+- `dontpanic finalize` refuses an existing signoff as `signoff_stale` when
+  the audit's `completed_at` (or the signoff's `decided_at`) is missing or
+  unreadable, instead of skipping the freshness check.
+- Rewriting an existing signoff is all-or-nothing: if any write fails, the
+  previous signoff and compliance record are restored together.
+- An invalid `pending_stage` in the gate state blocks every lifecycle gate
+  approval (`pre_merge` included) in the shared writer, MCP `approve_gate` and
+  `resume --all`, instead of falling back to `pause_gates`.
+- If the transcript cannot be written after a signoff is saved and announced,
+  the result stays `signed_off` and no second `blocked` terminal is announced.
+- `dontpanic finalize` refuses an unloadable plan with `plan_unloadable`
+  instead of crashing. Each refusal code now has its own exit code (3–5, 7–15;
+  6 stays plan drift).
+- `scripts/sync_version.py --check` fails when `.claude-plugin/plugin.json`
+  has a top-level `version` but no `uvx dontpanic-orchestrate==<version>`
+  launch pin.
+- A sibling plan counts as the satisfied successor of a `superseded` child
+  only while the newest auditor envelope in its whole `audit/` dir (any
+  feature, ranked like the finalizer's own selection) is `signed_off`, has its
+  signoff's iteration, and is listed in that signoff. A newer blocked or
+  unlisted audit for any feature therefore disqualifies a success signoff left
+  on disk. Unreadable or truncated auditor files are still skipped when picking
+  the newest one.
+
+Surfaces affected: cli, mcp, inbox, notify, root_changelog
+
 ## 2026-11-03 — 0.2.0: Local MCP plugin listing
 
 ### Added

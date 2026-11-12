@@ -1056,7 +1056,34 @@ def check_child_charter_compliance(
         "compliance_checks_satisfied": satisfied,
         "commit_policy_mode": commit_policy.mode,
         "decided_at": _now_iso(),
+        # Sentinel 5870049314 HIGH-1 — bind the side-car to the exact signoff
+        # it was computed for (iteration + signoff_id + the audit envelopes it
+        # lists) and to the charter/policy in force. Additive fields only; the
+        # recorded return_condition_status is unchanged.
+        "iteration": signoff_data.get("iteration"),
+        "signoff_id": signoff_data.get("signoff_id"),
+        "audits": list(signoff_data.get("audits") or []),
+        "charter_digest": charter_digest(child_charter, commit_policy),
     }
+
+
+def charter_digest(child_charter: ChildCharter, commit_policy: CommitPolicy) -> str:
+    """Stable SHA-256 hex digest of the child charter + commit policy.
+
+    Canonical JSON (sorted keys, no whitespace) of both models' dumps, so the
+    digest changes iff a charter/policy field value changes. Recorded in the
+    charter-compliance side-car and re-computed by the finalizer to refuse a
+    side-car computed under a different charter."""
+    canonical = json.dumps(
+        {
+            "child_charter": child_charter.model_dump(mode="json"),
+            "commit_policy": commit_policy.model_dump(mode="json"),
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    )
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 # ──────────────────────────────  F003 — parent pause / fan-in protocol  ──────────────────────────────
@@ -1355,6 +1382,7 @@ __all__ = [
     "SpawnReason",
     "approve_pre_resume_after_child",
     "build_goal_gap_charter",
+    "charter_digest",
     "check_child_charter_compliance",
     "check_cycle",
     "check_depth",

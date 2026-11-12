@@ -1497,26 +1497,13 @@ class VolleyResult:
     audit_paths: list[Path]  # all audit JSONs produced, in order
 
 
-def _emit_volley_terminal(
+def _announce_volley_terminal(
     result: VolleyResult,
     *,
     loaded: plan_loader.LoadedPlan,
     feature_id: str,
-    agents_in_panel: list[str],
-    allow_incomplete_patch_reason: str | None = None,
-    unrelated_dirty_state_note: str | None = None,
-    cross_feature_ack_reason: str | None = None,
-) -> VolleyResult:
-    """F008 Items 1+3+4 — fire INBOX entry, terminal-notifier, signoff.json on
-    any volley terminal state. Returns the input result unchanged so callers
-    can `return _emit_volley_terminal(...)`.
-
-    Plan 2026-05-01-004 F003: between notify and signoff_writer we run the
-    patch-completeness gate. Block-tier findings without override raise
-    ``PatchCompletenessError`` and skip signoff persistence. The pass /
-    override path threads the resulting block into ``signoff.json`` via the
-    new ``patch_completeness`` kwarg.
-    """
+) -> None:
+    """F008 — INBOX ``volley_terminal`` entry + notify fan-out for a terminal."""
     plan_dir = loaded.plan_dir
     inbox.append_event(
         plan_dir,
@@ -1570,6 +1557,123 @@ def _emit_volley_terminal(
         ),
         plan_dir=plan_dir,
     )
+
+
+def _run_signed_off_gates(
+    result: VolleyResult,
+    *,
+    loaded: plan_loader.LoadedPlan,
+    feature_id: str,
+    iteration: int,
+    allow_incomplete_patch_reason: str | None,
+    unrelated_dirty_state_note: str | None,
+    cross_feature_ack_reason: str | None,
+) -> dict | None:
+    """Pre-signoff gates for the signed_off terminal (unchanged behaviour,
+    extracted from ``_emit_volley_terminal``). Returns the patch-completeness
+    block; raises ``PatchCompletenessError`` / ``CrossFeatureEditError``."""
+    plan_dir = loaded.plan_dir
+    affected_paths = getattr(loaded.plan, "affected_paths", None) or []
+    patch_completeness_block = patch_completeness_gate.enforce(
+        plan_dir,
+        plan_id=loaded.plan_id,
+        iteration=iteration,
+        role="implementer",
+        audit_paths=list(result.audit_paths),
+        affected_paths=list(affected_paths) if affected_paths else None,
+        repo_root=plan_dir,
+        allow_incomplete_patch_reason=allow_incomplete_patch_reason,
+        unrelated_dirty_state_note=unrelated_dirty_state_note,
+        dry_run=False,
+    )
+    # Plan 2026-06-01-001 F008 — cross-feature edit detection. Runs at
+    # patch-completeness on the signed_off terminal, alongside the F003
+    # patch gate. Additive + degrades-never-blocks on lint-infra failure
+    # (cannot load features / git-state) — mirrors the F004 pre-lock
+    # gate's D005 contract; only a genuine bleed
+    # (CrossFeatureEditError) blocks. The feature->owned-paths map is
+    # derived from the plan's own features; the diff surface is the F001
+    # git-state sidecar.
+    try:
+        feature_dicts = [f.model_dump() for f in loaded.features.features]
+        git_state_path = plan_dir / "evidence" / f"git-state-{iteration}-implementer.json"
+        # The dispatch DIFF is the git-state sidecar only (staged ∪
+        # unstaged_modified ∪ untracked). `affected_paths` is a plan
+        # DECLARATION, not what the patch actually touched, so it is
+        # deliberately NOT folded in here — including it would flag
+        # foreign-owned paths the dispatch never touched (codex F008
+        # audit i0, acceptance #2/#3 "diff touching").
+        touched: set[str] = set()
+        if git_state_path.is_file():
+            git_state = json.loads(git_state_path.read_text())
+            touched = cross_feature.touched_paths_from_git_state(git_state)
+    except Exception as exc:  # noqa: BLE001 — degrade, never block on infra
+        print(
+            f"[volley] WARN: cross-feature edit detection skipped "
+            f"({exc!r}); detector did not run"
+        )
+        feature_dicts = None
+        touched = set()
+    if feature_dicts is not None and touched:
+        cross_feature.enforce(
+            plan_dir,
+            plan_id=loaded.plan_id,
+            current_feature_id=feature_id,
+            features=feature_dicts,
+            touched_paths=touched,
+            acknowledge_reason=cross_feature_ack_reason,
+        )
+    return patch_completeness_block
+
+
+def _emit_volley_terminal(
+    result: VolleyResult,
+    *,
+    loaded: plan_loader.LoadedPlan,
+    feature_id: str,
+    agents_in_panel: list[str],
+    allow_incomplete_patch_reason: str | None = None,
+    unrelated_dirty_state_note: str | None = None,
+    cross_feature_ack_reason: str | None = None,
+    announce: bool = True,
+) -> VolleyResult:
+    """F008 Items 1+3+4 — fire INBOX entry, terminal-notifier, signoff.json on
+    any volley terminal state. Returns the result so callers can
+    `return _emit_volley_terminal(...)`.
+
+    Plan 2026-05-01-004 F003: before signoff_writer we run the
+    patch-completeness gate. Block-tier findings without override raise
+    ``PatchCompletenessError`` and skip signoff persistence. The pass /
+    override path threads the resulting block into ``signoff.json`` via the
+    new ``patch_completeness`` kwarg.
+
+    DP-003: a ``signed_off`` terminal is announced (INBOX success event +
+    ``signoff`` notification) only AFTER ``signoff.json`` is durably written.
+    If the writer raises ``SignoffWriteError`` / ``ChildCharterViolation`` the
+    result is downgraded to the existing ``blocked`` terminal (CLI exit 3)
+    and announced as such; a raw ``OSError`` propagates with no success
+    announcement. Non-success terminals keep the announce-first order.
+
+    A ``signed_off`` result with NO audit paths cannot produce a signoff, so it
+    is downgraded to ``blocked`` before anything is announced. A
+    ``PatchCompletenessError`` / ``CrossFeatureEditError`` raised by the
+    signed_off gates announces a ``blocked`` terminal (INBOX + notify) naming
+    the error class, then re-raises the original exception (marked
+    ``volley_terminal_announced = True`` so the dispatch_volley backstop does
+    not announce the same failure twice; it passes ``announce=False``).
+    """
+    plan_dir = loaded.plan_dir
+    if result.final_status == "signed_off" and not result.audit_paths:
+        result = VolleyResult(
+            "blocked",
+            result.rounds,
+            "auditor signed off but no audit envelopes were recorded; "
+            "no signoff possible",
+            result.audit_paths,
+        )
+    defer_announce = result.final_status == "signed_off" and bool(result.audit_paths)
+    if announce and not defer_announce:
+        _announce_volley_terminal(result, loaded=loaded, feature_id=feature_id)
     if result.audit_paths:
         iteration = max(0, result.rounds - 1)
         # Plan 2026-05-01-004 F003: pre-signoff patch-completeness gate.
@@ -1581,56 +1685,37 @@ def _emit_volley_terminal(
         # the F001 sidecar.
         patch_completeness_block: dict | None = None
         if result.final_status == "signed_off":
-            affected_paths = getattr(loaded.plan, "affected_paths", None) or []
-            patch_completeness_block = patch_completeness_gate.enforce(
-                plan_dir,
-                plan_id=loaded.plan_id,
-                iteration=iteration,
-                role="implementer",
-                audit_paths=list(result.audit_paths),
-                affected_paths=list(affected_paths) if affected_paths else None,
-                repo_root=plan_dir,
-                allow_incomplete_patch_reason=allow_incomplete_patch_reason,
-                unrelated_dirty_state_note=unrelated_dirty_state_note,
-                dry_run=False,
-            )
-            # Plan 2026-06-01-001 F008 — cross-feature edit detection. Runs at
-            # patch-completeness on the signed_off terminal, alongside the F003
-            # patch gate. Additive + degrades-never-blocks on lint-infra failure
-            # (cannot load features / git-state) — mirrors the F004 pre-lock
-            # gate's D005 contract; only a genuine bleed
-            # (CrossFeatureEditError) blocks. The feature->owned-paths map is
-            # derived from the plan's own features; the diff surface is the F001
-            # git-state sidecar.
             try:
-                feature_dicts = [f.model_dump() for f in loaded.features.features]
-                git_state_path = plan_dir / "evidence" / f"git-state-{iteration}-implementer.json"
-                # The dispatch DIFF is the git-state sidecar only (staged ∪
-                # unstaged_modified ∪ untracked). `affected_paths` is a plan
-                # DECLARATION, not what the patch actually touched, so it is
-                # deliberately NOT folded in here — including it would flag
-                # foreign-owned paths the dispatch never touched (codex F008
-                # audit i0, acceptance #2/#3 "diff touching").
-                touched: set[str] = set()
-                if git_state_path.is_file():
-                    git_state = json.loads(git_state_path.read_text())
-                    touched = cross_feature.touched_paths_from_git_state(git_state)
-            except Exception as exc:  # noqa: BLE001 — degrade, never block on infra
-                print(
-                    f"[volley] WARN: cross-feature edit detection skipped "
-                    f"({exc!r}); detector did not run"
+                patch_completeness_block = _run_signed_off_gates(
+                    result,
+                    loaded=loaded,
+                    feature_id=feature_id,
+                    iteration=iteration,
+                    allow_incomplete_patch_reason=allow_incomplete_patch_reason,
+                    unrelated_dirty_state_note=unrelated_dirty_state_note,
+                    cross_feature_ack_reason=cross_feature_ack_reason,
                 )
-                feature_dicts = None
-                touched = set()
-            if feature_dicts is not None and touched:
-                cross_feature.enforce(
-                    plan_dir,
-                    plan_id=loaded.plan_id,
-                    current_feature_id=feature_id,
-                    features=feature_dicts,
-                    touched_paths=touched,
-                    acknowledge_reason=cross_feature_ack_reason,
+            except (
+                patch_completeness_gate.PatchCompletenessError,
+                cross_feature.CrossFeatureEditError,
+            ) as exc:
+                # DP-003 — the deferred success announcement never fires; the
+                # operator still gets one NON-success terminal INBOX + notify
+                # entry before the exception propagates to callers.
+                blocked = VolleyResult(
+                    "blocked",
+                    result.rounds,
+                    f"auditor signed off but signoff was blocked "
+                    f"({type(exc).__name__}): {exc}",
+                    result.audit_paths,
                 )
+                if announce:
+                    try:
+                        _announce_volley_terminal(blocked, loaded=loaded, feature_id=feature_id)
+                        exc.volley_terminal_announced = True  # type: ignore[attr-defined]
+                    except Exception as announce_exc:  # noqa: BLE001 — never mask the gate error
+                        print(f"[volley] WARN: blocked terminal announce failed: {announce_exc!r}")
+                raise
         try:
             signoff_writer.write_signoff(
                 plan_id=loaded.plan_id,
@@ -1660,6 +1745,18 @@ def _emit_volley_terminal(
             nested_orchestration.ChildCharterViolation,
         ) as exc:
             print(f"[volley] signoff_writer skipped: {exc}")
+            # DP-003 — a required signoff that was not durably written (or a
+            # child charter violation) is never presented as success.
+            if result.final_status == "signed_off":
+                result = VolleyResult(
+                    "blocked",
+                    result.rounds,
+                    f"auditor signed off but signoff was not written "
+                    f"({type(exc).__name__}): {exc}",
+                    result.audit_paths,
+                )
+    if announce and defer_announce:
+        _announce_volley_terminal(result, loaded=loaded, feature_id=feature_id)
     return result
 
 
@@ -2746,13 +2843,10 @@ def dispatch_volley(
                     if _drift_pause is not None:
                         return _drift_pause
 
-                    transcript.append_terminal(
-                        loaded.plan_dir,
-                        feature_id,
-                        aud_status,
-                        iteration + 1,
-                        reason="auditor signed off",
-                    )
+                    # DP-003 — the transcript terminal is recorded AFTER
+                    # _emit_volley_terminal (below) with its FINAL status, so a
+                    # signed_off that is downgraded to blocked never leaves a
+                    # signed_off transcript entry.
                     # Plan 2026-05-19-004 F004 — post-commit architecture regen
                     # hook. Fires only when commit_policy.mode == 'child_commit'
                     # (the implementer just landed a commit on this volley) AND
@@ -2786,7 +2880,11 @@ def dispatch_volley(
                         )
                     except Exception as _arch_exc:  # noqa: BLE001 — never crash terminal
                         print(f"[volley] architecture regen hook skipped: {_arch_exc}")
-                    return _emit_volley_terminal(
+                    # If _emit_volley_terminal raises, the iter-loop backstop
+                    # below (F003 ValueError / F004 broad Exception) records a
+                    # NON-success ``blocked`` transcript terminal before the
+                    # error propagates — never a signed_off entry.
+                    _signed_off_final = _emit_volley_terminal(
                         VolleyResult(
                             "signed_off", iteration + 1, "auditor signed off", audit_paths
                         ),
@@ -2801,6 +2899,28 @@ def dispatch_volley(
                         # Plan 2026-06-01-001 F008: cross-feature-edit acknowledgement.
                         cross_feature_ack_reason=cross_feature_ack_reason,
                     )
+                    # Sentinel 5870049314 MED-3 — by now the terminal is
+                    # decided, persisted (durable signoff on success) and
+                    # announced exactly once. The transcript line is a
+                    # best-effort human trace: a failure to append it must
+                    # NOT reach the iter-loop backstop, which would record and
+                    # announce a contradicting ``blocked`` terminal over the
+                    # already-announced result. Log and return the verdict.
+                    try:
+                        transcript.append_terminal(
+                            loaded.plan_dir,
+                            feature_id,
+                            _signed_off_final.final_status,
+                            _signed_off_final.rounds,
+                            reason=_signed_off_final.reason,
+                        )
+                    except Exception as _transcript_exc:  # noqa: BLE001 — trace only
+                        print(
+                            "[volley] WARN: transcript terminal append failed after "
+                            f"the {_signed_off_final.final_status} terminal was "
+                            f"announced; verdict unchanged: {_transcript_exc!r}"
+                        )
+                    return _signed_off_final
 
                 if aud_status == "blocked":
                     # Plan 2026-05-12-001 v4 F002 — reconcile verdict string
@@ -3433,6 +3553,9 @@ def dispatch_volley(
                 loaded=loaded,
                 feature_id=feature_id,
                 agents_in_panel=[impl_name, aud_name],
+                # DP-003: a signed_off gate error already announced its own
+                # blocked terminal (INBOX + notify); do not announce it twice.
+                announce=not getattr(_f004_exc, "volley_terminal_announced", False),
             )
 
         # F006 — iteration cap. Triggers the breaker (counted toward the global

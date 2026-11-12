@@ -481,8 +481,12 @@ def _make_plan(
 def test_collect_state_signoff_cleared_offers_finalize(tmp_path, monkeypatch):
     monkeypatch.setenv("JARVIS_QUOTA_STATE_PATH", str(tmp_path / "no-quota.json"))
     plan_dir = _make_plan(tmp_path)
-    gate_pause.approve_gate(plan_dir, "pre_impl", plan_id=COLLECT_PLAN_ID)
-    gate_pause.approve_gate(plan_dir, "pre_merge", plan_id=COLLECT_PLAN_ID)
+    assert gate_pause.approve_gate(plan_dir, "pre_impl", plan_id=COLLECT_PLAN_ID)
+    # F1: pre_merge is only approvable while the pre_merge stage is pending.
+    gate_pause.record_pause(
+        plan_dir, plan_id=COLLECT_PLAN_ID, pause_gates=["pre_merge"], stage="pre_merge"
+    )
+    assert gate_pause.approve_gate(plan_dir, "pre_merge", plan_id=COLLECT_PLAN_ID)
     g = og.collect_state(plan_dir, plan_id=COLLECT_PLAN_ID, feature_id="F001")
     assert og.KIND_FINALIZE in _kinds(g)
     fin = _by_kind(g, og.KIND_FINALIZE)
@@ -539,8 +543,12 @@ def test_dashboard_gathers_operations_action_items(tmp_path, monkeypatch):
 
     monkeypatch.setenv("JARVIS_QUOTA_STATE_PATH", str(tmp_path / "no-quota.json"))
     plan_dir = _make_plan(tmp_path)  # signed_off
-    gate_pause.approve_gate(plan_dir, "pre_impl", plan_id=COLLECT_PLAN_ID)
-    gate_pause.approve_gate(plan_dir, "pre_merge", plan_id=COLLECT_PLAN_ID)
+    assert gate_pause.approve_gate(plan_dir, "pre_impl", plan_id=COLLECT_PLAN_ID)
+    # F1: pre_merge is only approvable while the pre_merge stage is pending.
+    gate_pause.record_pause(
+        plan_dir, plan_id=COLLECT_PLAN_ID, pause_gates=["pre_merge"], stage="pre_merge"
+    )
+    assert gate_pause.approve_gate(plan_dir, "pre_merge", plan_id=COLLECT_PLAN_ID)
 
     items = dashboard._gather_operations_items({COLLECT_PLAN_ID: plan_dir})
     finalize_items = [i for i in items if "signoff-finalize" in i.id]
@@ -588,8 +596,12 @@ def test_dashboard_surfaces_f007_blocked_feature(tmp_path, monkeypatch):
     monkeypatch.setenv("DONTPANIC_HOME", str(tmp_path / "canon"))
     monkeypatch.setenv("JARVIS_HOME", str(tmp_path / "legacy"))
     plan_dir = _make_plan(tmp_path, feature_id="F007")  # signed_off
-    gate_pause.approve_gate(plan_dir, "pre_impl", plan_id=COLLECT_PLAN_ID)
-    gate_pause.approve_gate(plan_dir, "pre_merge", plan_id=COLLECT_PLAN_ID)
+    assert gate_pause.approve_gate(plan_dir, "pre_impl", plan_id=COLLECT_PLAN_ID)
+    # F1: pre_merge is only approvable while the pre_merge stage is pending.
+    gate_pause.record_pause(
+        plan_dir, plan_id=COLLECT_PLAN_ID, pause_gates=["pre_merge"], stage="pre_merge"
+    )
+    assert gate_pause.approve_gate(plan_dir, "pre_merge", plan_id=COLLECT_PLAN_ID)
 
     items = dashboard._gather_operations_items({COLLECT_PLAN_ID: plan_dir})
     finalize = [i for i in items if "signoff-finalize" in i.id]

@@ -20,24 +20,71 @@ Refusals (each a distinct ``FinalizeError.code`` for distinct CLI exit codes):
   - ``no_audit``            — no auditor envelope exists for the feature.
   - ``not_signed_off``      — latest auditor verdict is not ``signed_off``.
   - ``pre_merge_uncleared`` — the ``pre_merge`` gate has not been cleared.
+  - ``plan_unloadable``     — the plan cannot be loaded, so charter
+    compliance cannot be checked (fails closed; no writes).
+  - ``child_charter_violation`` — child plan whose charter compliance fails
+    on repair.
+  - ``signoff_unreadable`` / ``signoff_wrong_plan`` / ``signoff_not_success`` /
+    ``signoff_stale`` / ``child_signoff_missing`` / ``child_signoff_stale`` —
+    an EXISTING signoff envelope (or its required child compliance side-car) is
+    not a durable successful signoff for this verdict; see
+    :func:`_validate_existing_signoff`.
+  - ``child_not_satisfied`` — a child plan whose recorded return condition is
+    ``blocked``, or ``superseded`` without a satisfied successor.
+
+``REFUSAL_EXIT_CODES`` maps every refusal code to a distinct, stable
+``dontpanic finalize`` exit code.
 
 Idempotent: re-running on an already-flipped feature is a no-op success.
 """
 from __future__ import annotations
 
+import datetime as dt
 import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from dontpanic_orchestrate import closeout, gate_pause, signoff_writer
+import yaml
+
+from dontpanic_orchestrate import (
+    closeout,
+    gate_pause,
+    nested_orchestration,
+    plan_loader,
+    signoff_writer,
+)
 
 SIGNED_OFF_VERDICT = "signed_off"
 PRE_MERGE_GATE = "pre_merge"
 FINALIZE_REASON = "signed_off_finalize"
 _DEFAULT_TIER = "cross-cutting"
 _TIER_RE = re.compile(r"^tier:\s*([A-Za-z0-9_-]+)\s*$", re.MULTILINE)
+# nested_orchestration.ReturnConditionStatus — the statuses a passing
+# check_child_charter_compliance records (a violation raises instead).
+_RETURN_CONDITION_STATUSES = frozenset({"satisfied", "blocked", "superseded"})
+
+
+# Stable, documented ``dontpanic finalize`` exit code per refusal code (each
+# distinct). 0 = success, 2 = usage, 6 = plan drift (CLI-level refusal before
+# the finalizer runs) are reserved and never reused here.
+REFUSAL_EXIT_CODES: dict[str, int] = {
+    "not_signed_off": 3,
+    "pre_merge_uncleared": 4,
+    "no_audit": 5,
+    "plan_unloadable": 7,
+    "child_charter_violation": 8,
+    "signoff_unreadable": 9,
+    "signoff_wrong_plan": 10,
+    "signoff_not_success": 11,
+    "signoff_stale": 12,
+    "child_signoff_missing": 13,
+    "child_signoff_stale": 14,
+    "child_not_satisfied": 15,
+}
+# Fallback for an unmapped code (should never happen; covered by a test).
+UNKNOWN_REFUSAL_EXIT_CODE = 1
 
 
 class FinalizeError(Exception):
@@ -124,6 +171,469 @@ def _agents_in_panel(audit_paths: list[Path]) -> list[str]:
     return seen
 
 
+def _load_charter_context(plan_dir: Path, plan_id: str) -> tuple[Any, Any, Any]:
+    """Return ``(child_charter, commit_policy, orchestration)`` for the plan.
+
+    Fails closed (Sentinel r3b / F4): if the plan cannot be loaded, its charter
+    compliance cannot be verified, so finalization is refused with
+    ``plan_unloadable`` — no signoff write, no ``passes`` flip. There is no
+    text-sniffing fallback: an unloadable plan is never treated as a legacy
+    top-level plan."""
+    try:
+        loaded = plan_loader.load(plan_dir)
+    except Exception as exc:  # noqa: BLE001 — any load failure refuses
+        raise FinalizeError(
+            "plan_unloadable",
+            f"plan {plan_id} could not be loaded ({type(exc).__name__}: {exc}); "
+            f"its charter compliance cannot be checked, refusing to finalize.",
+        ) from exc
+    return loaded.child_charter, loaded.commit_policy, loaded.orchestration
+
+
+def _parse_iso(value: Any) -> dt.datetime | None:
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        parsed = dt.datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=dt.timezone.utc)
+    return parsed
+
+
+def _signoff_lists_audit(audits: list[Any], auditor_path: Path, plan_dir: Path) -> bool:
+    """True when one of the signoff's ``audits`` entries (plan-relative or
+    absolute) resolves to ``auditor_path``."""
+    target = auditor_path.resolve()
+    for entry in audits:
+        if not isinstance(entry, str) or not entry:
+            continue
+        p = Path(entry)
+        if not p.is_absolute():
+            p = plan_dir / p
+        if p.resolve() == target:
+            return True
+    return False
+
+
+def _validate_existing_signoff(
+    out_path: Path,
+    *,
+    plan_dir: Path,
+    plan_id: str,
+    iteration: int,
+    auditor_path: Path | None,
+    child_charter: Any,
+    commit_policy: Any,
+    parent_plan_id: str | None = None,
+) -> None:
+    """Refuse (``FinalizeError``) unless the existing signoff envelope is a
+    durable, successful signoff for THIS plan and THIS signed_off verdict.
+
+    Read-only: never writes. Checks, in order (each a distinct stable code):
+
+      * ``signoff_unreadable``  — empty, torn/unparseable JSON, not an object,
+        or fails the agent-conventions ``Signoff`` schema (the post-validation
+        ``patch_completeness`` sibling key is ignored for the schema check).
+      * ``signoff_wrong_plan``  — ``task_id`` != the plan being finalized.
+      * ``signoff_not_success`` — ``signoff`` is not ``true`` or
+        ``next_action`` != ``merge`` (a non-success terminal record).
+      * ``signoff_stale``       — the signoff does not correspond to the
+        signed_off auditor envelope this finalizer selected. Stale means ANY of:
+          - ``signoff.iteration`` != the selected envelope's ``iteration``;
+          - the selected auditor envelope is not listed in ``signoff.audits``;
+          - the envelope's ``completed_at`` or the signoff's ``decided_at`` is
+            missing or unparseable (freshness unverifiable — fail closed);
+          - ``signoff.decided_at`` is earlier than the envelope's
+            ``completed_at`` (second granularity) — the signoff predates the
+            verdict, e.g. a re-dispatch rewrote the same ``-iN`` filename.
+      * ``child_signoff_missing`` — the plan declares a ``child_charter`` and
+        the charter-compliance side-car written by ``signoff_writer`` is
+        missing, unreadable, for another plan, has an unknown
+        ``return_condition_status``, records a different commit-policy mode,
+        or does not list every ``commit_policy.requires`` item as satisfied.
+      * ``child_signoff_stale`` — the side-car is not bound to THIS signoff,
+        selected audit and current charter (see
+        :func:`_side_car_binding_problem`).
+      * ``child_not_satisfied`` — the bound side-car records ``blocked``, or
+        ``superseded`` with no satisfied successor (see
+        :func:`_require_child_satisfied`).
+    """
+    from dontpanic_orchestrate.agent_conventions.schemas.v1_0.models.signoff_model import (
+        Signoff,
+    )
+    from pydantic import ValidationError
+
+    try:
+        raw = out_path.read_text()
+        data = json.loads(raw)
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise FinalizeError(
+            "signoff_unreadable",
+            f"existing signoff {out_path} is empty or unparseable ({exc}); "
+            f"refusing to finalize on a torn signoff.",
+        ) from exc
+    if not isinstance(data, dict):
+        raise FinalizeError(
+            "signoff_unreadable",
+            f"existing signoff {out_path} is not a JSON object; refusing to finalize.",
+        )
+    try:
+        Signoff.model_validate({k: v for k, v in data.items() if k != "patch_completeness"})
+    except ValidationError as exc:
+        raise FinalizeError(
+            "signoff_unreadable",
+            f"existing signoff {out_path} fails the Signoff schema; refusing to "
+            f"finalize: {exc}",
+        ) from exc
+
+    if data.get("task_id") != plan_id:
+        raise FinalizeError(
+            "signoff_wrong_plan",
+            f"existing signoff {out_path} is for plan {data.get('task_id')!r}, "
+            f"not {plan_id!r}; refusing to finalize.",
+        )
+
+    if data.get("signoff") is not True or data.get("next_action") != "merge":
+        raise FinalizeError(
+            "signoff_not_success",
+            f"existing signoff {out_path} is not a success signoff "
+            f"(signoff={data.get('signoff')!r}, next_action={data.get('next_action')!r}); "
+            f"refusing to finalize.",
+        )
+
+    stale_reason: str | None = None
+    if data.get("iteration") != iteration:
+        stale_reason = (
+            f"signoff iteration {data.get('iteration')!r} != signed_off auditor "
+            f"envelope iteration {iteration}"
+        )
+    elif auditor_path is None or not _signoff_lists_audit(
+        list(data.get("audits") or []), auditor_path, plan_dir
+    ):
+        stale_reason = (
+            f"signoff audits {data.get('audits')!r} do not include the signed_off "
+            f"auditor envelope {auditor_path}"
+        )
+    else:
+        try:
+            envelope = json.loads(auditor_path.read_text())
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            envelope = {}
+        if not isinstance(envelope, dict):
+            envelope = {}
+        completed = _parse_iso(envelope.get("completed_at"))
+        decided = _parse_iso(data.get("decided_at"))
+        # Sentinel 5870049314 HIGH-2 — freshness is never skipped: a missing or
+        # unparseable timestamp on either side means freshness cannot be
+        # proven, so the existing signoff is refused as stale (fail closed).
+        if completed is None:
+            stale_reason = (
+                f"signed_off auditor envelope {auditor_path} has a missing or "
+                f"unparseable completed_at ({envelope.get('completed_at')!r}); "
+                f"signoff freshness cannot be verified"
+            )
+        elif decided is None:
+            stale_reason = (
+                f"signoff decided_at {data.get('decided_at')!r} is missing or "
+                f"unparseable; signoff freshness cannot be verified"
+            )
+        elif decided < completed.replace(microsecond=0):
+            stale_reason = (
+                f"signoff decided_at {data.get('decided_at')} predates the "
+                f"signed_off auditor envelope completed_at {envelope.get('completed_at')}"
+            )
+    if stale_reason is not None:
+        raise FinalizeError(
+            "signoff_stale",
+            f"existing signoff {out_path} is stale: {stale_reason}; refusing to finalize.",
+        )
+
+    if child_charter is not None:
+        side_car = signoff_writer.charter_compliance_path(plan_dir, plan_id)
+        problem: str | None = None
+        compliance: Any = None
+        if not side_car.is_file():
+            problem = "side-car is missing"
+        else:
+            try:
+                compliance = json.loads(side_car.read_text())
+            except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+                problem = f"side-car is unparseable ({exc})"
+        if problem is None and not isinstance(compliance, dict):
+            problem = "side-car is not a JSON object"
+        if problem is None:
+            satisfied = compliance.get("compliance_checks_satisfied")
+            required = list(getattr(commit_policy, "requires", None) or [])
+            expected_mode = getattr(commit_policy, "mode", None)
+            if compliance.get("task_id") != plan_id:
+                problem = f"side-car task_id {compliance.get('task_id')!r} != {plan_id!r}"
+            elif compliance.get("return_condition_status") not in _RETURN_CONDITION_STATUSES:
+                problem = (
+                    f"side-car return_condition_status "
+                    f"{compliance.get('return_condition_status')!r} is not a recorded result"
+                )
+            elif expected_mode is not None and compliance.get("commit_policy_mode") != expected_mode:
+                problem = (
+                    f"side-car commit_policy_mode {compliance.get('commit_policy_mode')!r} "
+                    f"!= plan commit_policy.mode {expected_mode!r}"
+                )
+            elif not isinstance(satisfied, list) or not set(required) <= set(satisfied):
+                problem = (
+                    f"side-car compliance_checks_satisfied {satisfied!r} does not "
+                    f"cover commit_policy.requires {required!r}"
+                )
+        if problem is not None:
+            raise FinalizeError(
+                "child_signoff_missing",
+                f"plan {plan_id} declares a child_charter but its required child "
+                f"charter-compliance signoff ({side_car}) is not passing: {problem}; "
+                f"refusing to finalize.",
+            )
+
+        binding_problem = _side_car_binding_problem(
+            compliance,
+            signoff=data,
+            iteration=iteration,
+            auditor_path=auditor_path,
+            plan_dir=plan_dir,
+            child_charter=child_charter,
+            commit_policy=commit_policy,
+        )
+        if binding_problem is not None:
+            raise FinalizeError(
+                "child_signoff_stale",
+                f"plan {plan_id} charter-compliance side-car ({side_car}) is not "
+                f"bound to this signoff: {binding_problem}; refusing to finalize.",
+            )
+
+        _require_child_satisfied(
+            plan_dir,
+            plan_id=plan_id,
+            status=compliance.get("return_condition_status"),
+            child_charter=child_charter,
+            parent_plan_id=parent_plan_id,
+        )
+
+
+def _side_car_binding_problem(
+    compliance: dict[str, Any],
+    *,
+    signoff: dict[str, Any],
+    iteration: int,
+    auditor_path: Path | None,
+    plan_dir: Path,
+    child_charter: Any,
+    commit_policy: Any,
+) -> str | None:
+    """Sentinel 5870049314 HIGH-1 — side-car binding rule.
+
+    A charter-compliance side-car authorizes a child signoff ONLY when it was
+    computed for exactly that signoff, the selected verdict, and the charter
+    in force now. ALL of the following must hold (else the side-car is stale
+    and finalization is refused with ``child_signoff_stale``):
+
+      * ``side_car.iteration``  == the selected signed_off envelope's iteration
+        (== ``signoff.iteration``, already enforced upstream);
+      * ``side_car.signoff_id`` == ``signoff.signoff_id``;
+      * ``side_car.audits`` lists the selected signed_off auditor envelope;
+      * ``side_car.charter_digest`` == :func:`nested_orchestration.charter_digest`
+        of the plan's CURRENT ``child_charter`` + ``commit_policy``.
+
+    Side-cars predating these fields carry no binding and are refused (fail
+    closed). Returns a human-readable problem, or None when bound."""
+    side_iter = compliance.get("iteration")
+    if isinstance(side_iter, bool) or side_iter != iteration:
+        return f"side-car iteration {side_iter!r} != signed_off iteration {iteration}"
+    if compliance.get("signoff_id") != signoff.get("signoff_id"):
+        return (
+            f"side-car signoff_id {compliance.get('signoff_id')!r} != signoff "
+            f"signoff_id {signoff.get('signoff_id')!r}"
+        )
+    side_audits = compliance.get("audits")
+    if (
+        auditor_path is None
+        or not isinstance(side_audits, list)
+        or not _signoff_lists_audit(side_audits, auditor_path, plan_dir)
+    ):
+        return (
+            f"side-car audits {side_audits!r} do not include the selected signed_off "
+            f"auditor envelope {auditor_path}"
+        )
+    if child_charter is None or commit_policy is None:
+        return "plan charter/commit_policy unavailable; cannot verify charter_digest"
+    expected = nested_orchestration.charter_digest(child_charter, commit_policy)
+    if compliance.get("charter_digest") != expected:
+        return (
+            f"side-car charter_digest {compliance.get('charter_digest')!r} != current "
+            f"charter digest {expected!r} (charter changed since the side-car was written)"
+        )
+    return None
+
+
+def _frontmatter(plan_dir: Path) -> dict[str, Any] | None:
+    plan_md = plan_dir / "plan.md"
+    try:
+        text = plan_md.read_text()
+    except (OSError, UnicodeDecodeError):
+        return None
+    parts = text.split("---", 2)
+    if not text.startswith("---") or len(parts) < 3:
+        return None
+    try:
+        fm = yaml.safe_load(parts[1])
+    except yaml.YAMLError:
+        return None
+    return fm if isinstance(fm, dict) else None
+
+
+def _is_satisfied_successor(sibling_dir: Path, *, parent_plan_id: str, acceptance_item: str) -> bool:
+    """True when ``sibling_dir`` is a child plan of the same parent for the same
+    ``parent_acceptance_item`` whose CURRENT success signoff carries a bound
+    side-car recording ``return_condition_status: satisfied``. Read-only;
+    any unreadable/malformed artifact means "not a successor"."""
+    fm = _frontmatter(sibling_dir)
+    if fm is None:
+        return False
+    orch = fm.get("orchestration")
+    charter_block = fm.get("child_charter")
+    sib_id = fm.get("id")
+    if not isinstance(orch, dict) or not isinstance(charter_block, dict) or not isinstance(sib_id, str):
+        return False
+    if orch.get("parent_plan_id") != parent_plan_id:
+        return False
+    if charter_block.get("parent_acceptance_item") != acceptance_item:
+        return False
+    try:
+        sib_charter = nested_orchestration.ChildCharter.model_validate(charter_block)
+        sib_policy = nested_orchestration.CommitPolicy.model_validate(fm.get("commit_policy") or {})
+        signoff = json.loads(signoff_writer.signoff_path(sibling_dir, sib_id).read_text())
+        side = json.loads(signoff_writer.charter_compliance_path(sibling_dir, sib_id).read_text())
+    except Exception:  # noqa: BLE001 — any unreadable artifact disqualifies
+        return False
+    if not isinstance(signoff, dict) or not isinstance(side, dict):
+        return False
+    return (
+        signoff.get("task_id") == sib_id
+        and signoff.get("signoff") is True
+        and signoff.get("next_action") == "merge"
+        and side.get("task_id") == sib_id
+        and side.get("return_condition_status") == "satisfied"
+        and side.get("iteration") == signoff.get("iteration")
+        and side.get("signoff_id") == signoff.get("signoff_id")
+        and side.get("charter_digest") == nested_orchestration.charter_digest(sib_charter, sib_policy)
+        and _successor_signoff_is_current(sibling_dir, signoff)
+    )
+
+
+def _successor_signoff_is_current(sibling_dir: Path, signoff: dict[str, Any]) -> bool:
+    """True when the successor's success signoff is still backed by its LATEST
+    auditor verdict. The signoff is plan-level but volleys run per feature, so
+    the single NEWEST auditor envelope across the successor's whole ``audit/``
+    dir (every feature, ranked mtime-then-iteration exactly like the
+    finalizer's own selection) must be ``signed_off``, carry the signoff's
+    ``iteration`` and be listed in the signoff's ``audits``. A later blocked /
+    needs_changes audit for ANY feature (e.g. after the writer refused a
+    blocked rewrite and left the old pair on disk) therefore disqualifies the
+    successor. Read-only; fails closed."""
+    audits = signoff.get("audits")
+    iteration = signoff.get("iteration")
+    if not isinstance(audits, list) or not isinstance(iteration, int) or isinstance(iteration, bool):
+        return False
+    audit_dir = sibling_dir / "audit"
+    try:
+        # Same envelope naming filter as closeout._audit_paths_for_feature
+        # (``<vendor>-<role>-<feature_id>-i<N>.json``), restricted to the
+        # auditor role, across every feature.
+        paths = [
+            p
+            for p in sorted(audit_dir.iterdir())
+            if p.name.endswith(".json")
+            and p.is_file()
+            and len(p.name[:-5].split("-")) >= 4
+            and "auditor" in p.name[:-5].split("-")
+        ]
+        latest_path = _latest_auditor_path(paths)
+        envelope = json.loads(latest_path.read_text()) if latest_path is not None else None
+    except Exception:  # noqa: BLE001 — missing/unreadable audit dir disqualifies
+        return False
+    if latest_path is None or not isinstance(envelope, dict):
+        return False
+    if _verdict_of(envelope) != SIGNED_OFF_VERDICT:
+        return False
+    env_iter = envelope.get("iteration")
+    if isinstance(env_iter, bool) or env_iter != iteration:
+        return False
+    if not _signoff_lists_audit(audits, latest_path, sibling_dir):
+        return False
+    return True
+
+
+def _satisfied_successor(
+    plan_dir: Path, *, plan_id: str, child_charter: Any, parent_plan_id: str | None
+) -> Path | None:
+    """Locate a satisfied successor for a ``superseded`` child: a sibling plan
+    directory (same plans root) that is a child of the same parent for the
+    same ``parent_acceptance_item`` and is durably ``satisfied`` (see
+    :func:`_is_satisfied_successor`). Returns its directory, or None."""
+    acceptance_item = getattr(child_charter, "parent_acceptance_item", None)
+    if not parent_plan_id or not isinstance(acceptance_item, str):
+        return None
+    plans_root = plan_dir.parent
+    try:
+        candidates = sorted(p for p in plans_root.iterdir() if p.is_dir())
+    except OSError:
+        return None
+    for sibling in candidates:
+        if sibling.resolve() == plan_dir.resolve() or sibling.name == plan_id:
+            continue
+        if _is_satisfied_successor(
+            sibling, parent_plan_id=parent_plan_id, acceptance_item=acceptance_item
+        ):
+            return sibling
+    return None
+
+
+def _require_child_satisfied(
+    plan_dir: Path,
+    *,
+    plan_id: str,
+    status: Any,
+    child_charter: Any,
+    parent_plan_id: str | None,
+) -> None:
+    """Thanos guard (Sentinel 5870049314 HIGH-2): finalization of a child plan
+    succeeds only when the child is satisfied. Recording is unchanged — this
+    only reads the recorded ``return_condition_status``:
+
+      * ``satisfied``  → accepted;
+      * ``superseded`` → accepted only when a satisfied successor exists
+        (:func:`_satisfied_successor`);
+      * ``blocked`` (or anything else) → refused.
+
+    Refusal code: ``child_not_satisfied``."""
+    if status == "satisfied":
+        return
+    if status == "superseded":
+        if _satisfied_successor(
+            plan_dir, plan_id=plan_id, child_charter=child_charter, parent_plan_id=parent_plan_id
+        ) is not None:
+            return
+        raise FinalizeError(
+            "child_not_satisfied",
+            f"child plan {plan_id} is superseded but no satisfied successor (a "
+            f"sibling child of parent {parent_plan_id!r} for the same "
+            f"parent_acceptance_item with a durable satisfied signoff) exists; "
+            f"refusing to finalize.",
+        )
+    raise FinalizeError(
+        "child_not_satisfied",
+        f"child plan {plan_id} return_condition_status is {status!r}, not "
+        f"'satisfied'; a {status!r} child is not success, refusing to finalize.",
+    )
+
+
 def finalize_signed_off_feature(
     plan_dir: Path,
     *,
@@ -174,25 +684,76 @@ def finalize_signed_off_feature(
 
     auditor = str(envelope.get("agent") or envelope.get("auditor") or "unknown")
     iteration = int(envelope.get("iteration", 0) or 0)
+    auditor_path = _latest_auditor_path(audit_paths)
+
+    # DP-003 — a child plan's signoff (repaired or existing) must carry the
+    # same charter compliance as the supervisor path. Load once for both.
+    child_charter, commit_policy, orchestration = _load_charter_context(plan_dir, plan_id)
+    parent_plan_id = getattr(orchestration, "parent_plan_id", None)
 
     # Step 4 — repair signoff envelope only if missing (the pre_merge pause
-    # skipped _emit_volley_terminal). Never clobber an existing one.
+    # skipped _emit_volley_terminal). Never clobber an existing one, but never
+    # trust it blindly either: an existing envelope must validate against the
+    # selected signed_off audit envelope before anything is flipped.
     out_path = signoff_writer.signoff_path(plan_dir, plan_id)
     signoff_repaired = False
-    if not out_path.is_file():
-        out_path = signoff_writer.write_signoff(
-            plan_id=plan_id,
-            tier=_read_plan_tier(plan_dir),
-            iteration=iteration,
-            agents_in_panel=_agents_in_panel(audit_paths),
-            audit_paths=audit_paths,
+    if out_path.is_file():
+        _validate_existing_signoff(
+            out_path,
             plan_dir=plan_dir,
-            volley_status=SIGNED_OFF_VERDICT,
-            signoff_reason=(
-                f"no-paid finalize of signed_off feature {feature_id} "
-                f"(pre_merge cleared); F007 finalizer"
-            ),
+            plan_id=plan_id,
+            iteration=iteration,
+            auditor_path=auditor_path,
+            child_charter=child_charter,
+            commit_policy=commit_policy,
+            parent_plan_id=parent_plan_id,
         )
+    else:
+        # Thanos guard on the repair path: read the recorded return condition
+        # (the same memo write_signoff records) BEFORE any write so a blocked /
+        # unsuperseded child never gets a signoff written or passes flipped.
+        # A missing/malformed memo falls through to write_signoff, which
+        # raises the real ChildCharterViolation below.
+        if child_charter is not None:
+            try:
+                recorded = nested_orchestration.parse_return_condition_section(
+                    plan_dir / "evidence" / "closeout-memo.md"
+                )
+            except nested_orchestration.ReturnConditionError:
+                recorded = None
+            if recorded is not None:
+                _require_child_satisfied(
+                    plan_dir,
+                    plan_id=plan_id,
+                    status=recorded,
+                    child_charter=child_charter,
+                    parent_plan_id=parent_plan_id,
+                )
+        # A violation refuses finalization (no signoff, no passes flip)
+        # instead of writing an unchecked one.
+        try:
+            out_path = signoff_writer.write_signoff(
+                plan_id=plan_id,
+                tier=_read_plan_tier(plan_dir),
+                iteration=iteration,
+                agents_in_panel=_agents_in_panel(audit_paths),
+                audit_paths=audit_paths,
+                plan_dir=plan_dir,
+                volley_status=SIGNED_OFF_VERDICT,
+                signoff_reason=(
+                    f"no-paid finalize of signed_off feature {feature_id} "
+                    f"(pre_merge cleared); F007 finalizer"
+                ),
+                child_charter=child_charter,
+                commit_policy=commit_policy,
+                orchestration=orchestration,
+            )
+        except nested_orchestration.ChildCharterViolation as exc:
+            raise FinalizeError(
+                "child_charter_violation",
+                f"child charter compliance failed for {plan_id}; refusing to "
+                f"repair the signoff or flip passes: {exc}",
+            ) from exc
         signoff_repaired = True
 
     # Step 5 — flip only this feature, idempotently. The PRIMARY evidence ref
@@ -200,7 +761,6 @@ def finalize_signed_off_feature(
     # repaired/existing signoff envelope is recorded alongside it.
     memo_rel = signoff_writer._audit_relpath(out_path, plan_dir)
     extra_refs: list[dict[str, Any]] = []
-    auditor_path = _latest_auditor_path(audit_paths)
     if auditor_path is not None:
         extra_refs.append(
             {
@@ -235,6 +795,8 @@ def finalize_signed_off_feature(
 
 
 __all__ = [
+    "REFUSAL_EXIT_CODES",
+    "UNKNOWN_REFUSAL_EXIT_CODE",
     "FinalizeError",
     "FinalizeResult",
     "finalize_signed_off_feature",

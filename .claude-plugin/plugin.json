@@ -1,6 +1,6 @@
 {
   "name": "dontpanic",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Local MCP server to plan, dispatch, review, and gate AI coding work.",
   "author": {
     "name": "Silex Research"
@@ -18,7 +18,7 @@
     "dontpanic": {
       "command": "uvx",
       "args": [
-        "dontpanic-orchestrate==0.2.0"
+        "dontpanic-orchestrate==0.2.1"
       ]
     }
   }

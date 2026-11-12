@@ -442,10 +442,10 @@ def _approve_main(argv: list[str]) -> int:
     # semantics — pre-clearing a future on_escalation is still allowed.
     if gate_pause.is_lifecycle_gate(gate):
         compat = gate_pause.load_gate_state_compat(plan_dir)
+        # Sentinel r3b (A) — shared rule: a set pending_stage is the authority
+        # (only its gates are pending); pause_gates is consulted only when
+        # pending_stage is unset. Same helper as the writer / MCP / bridge.
         currently_pending = gate_pause.is_gate_currently_pending(plan_dir, gate)
-        stage_match = compat.pending_stage is not None and gate in {
-            *([compat.pending_stage] if compat.pending_stage in declared_strs else [])
-        }
         if gate in compat.cleared_gates:
             print(
                 f"[approve] REFUSED gate {gate!r} — already cleared "
@@ -454,7 +454,7 @@ def _approve_main(argv: list[str]) -> int:
                 file=sys.stderr,
             )
             return 2
-        if not (currently_pending or stage_match):
+        if not currently_pending:
             persisted_pause = (
                 gate_pause.load_gate_state_compat(plan_dir).raw.get("pause_gates") or []
             )
@@ -753,10 +753,8 @@ def _resume_main(argv: list[str]) -> int:
         # active breakers/defers keep their legacy relaxed semantics.
         if gate_pause.is_lifecycle_gate(gate):
             compat = gate_pause.load_gate_state_compat(plan_dir)
+            # Sentinel r3b (A) — same shared pending_stage-authority rule.
             currently_pending = gate_pause.is_gate_currently_pending(plan_dir, gate)
-            stage_match = compat.pending_stage is not None and gate in {
-                *([compat.pending_stage] if compat.pending_stage in declared_strs else [])
-            }
             if gate in compat.cleared_gates:
                 print(
                     f"[resume --gate] REFUSED gate {gate!r} — already cleared "
@@ -764,7 +762,7 @@ def _resume_main(argv: list[str]) -> int:
                     file=sys.stderr,
                 )
                 return 2
-            if not (currently_pending or stage_match):
+            if not currently_pending:
                 persisted_pause = compat.raw.get("pause_gates") or []
                 print(
                     f"[resume --gate] REFUSED lifecycle gate {gate!r} — not currently pending. "
@@ -861,13 +859,24 @@ def _finalize_main(argv: list[str]) -> int:
     feature: repairs the signoff envelope if the pre_merge pause skipped it and
     flips only that feature's ``passes: true``. Never re-runs a paid volley.
 
-    Exit codes (distinct per refusal so scripts/dashboard can branch):
-      0 — finalized (or idempotent no-op)
-      2 — usage error
-      3 — refused: latest auditor verdict is not signed_off
-      4 — refused: pre_merge gate not cleared
-      5 — refused: no auditor envelope for the feature
-      6 — refused: plan drifted since dispatch; reconcile before finalizing (F009)
+    Exit codes (distinct per refusal so scripts/dashboard can branch; the
+    refusal-code → exit-code map is ``signed_off_finalizer.REFUSAL_EXIT_CODES``):
+      0  — finalized (or idempotent no-op)
+      2  — usage error
+      3  — refused (not_signed_off): latest auditor verdict is not signed_off
+      4  — refused (pre_merge_uncleared): pre_merge gate not cleared
+      5  — refused (no_audit): no auditor envelope for the feature
+      6  — refused (plan_drift): plan drifted since dispatch; reconcile first (F009)
+      7  — refused (plan_unloadable): the plan cannot be loaded
+      8  — refused (child_charter_violation): child charter check failed on repair
+      9  — refused (signoff_unreadable): existing signoff empty/torn/invalid
+      10 — refused (signoff_wrong_plan): existing signoff is for another plan
+      11 — refused (signoff_not_success): existing signoff is not a success
+      12 — refused (signoff_stale): existing signoff stale or freshness unverifiable
+      13 — refused (child_signoff_missing): child compliance side-car missing/failing
+      14 — refused (child_signoff_stale): side-car not bound to this signoff/charter
+      15 — refused (child_not_satisfied): child blocked, or superseded w/o successor
+      1  — refused with an unmapped refusal code (should not occur)
     """
     parser = argparse.ArgumentParser(
         prog="dontpanic finalize",
@@ -885,10 +894,25 @@ def _finalize_main(argv: list[str]) -> int:
 
     from dontpanic_orchestrate import signed_off_finalizer
 
-    _refusal_exit = {"not_signed_off": 3, "pre_merge_uncleared": 4, "no_audit": 5}
+    def _refuse(exc: signed_off_finalizer.FinalizeError) -> int:
+        print(f"[finalize] REFUSED ({exc.code}): {exc}", file=sys.stderr)
+        return signed_off_finalizer.REFUSAL_EXIT_CODES.get(
+            exc.code, signed_off_finalizer.UNKNOWN_REFUSAL_EXIT_CODE
+        )
 
     plan_dir = _resolve_plan_dir(args.plan)
-    plan_id = plan_loader.load(plan_dir).plan_id
+    # Sentinel 5870049314 MED-4 — an unloadable plan is the documented
+    # ``plan_unloadable`` refusal (exit 7), never a raw loader traceback.
+    try:
+        plan_id = plan_loader.load(plan_dir).plan_id
+    except Exception as exc:  # noqa: BLE001 — any load failure refuses
+        return _refuse(
+            signed_off_finalizer.FinalizeError(
+                "plan_unloadable",
+                f"plan at {plan_dir} could not be loaded ({type(exc).__name__}: {exc}); "
+                f"refusing to finalize.",
+            )
+        )
 
     # F009 — no-paid finalization still MUTATES signoff + features.json state.
     # If the plan drifted since dispatch recorded its baseline, finalizing would
@@ -933,8 +957,7 @@ def _finalize_main(argv: list[str]) -> int:
             plan_dir, plan_id=plan_id, feature_id=args.feature
         )
     except signed_off_finalizer.FinalizeError as exc:
-        print(f"[finalize] REFUSED ({exc.code}): {exc}", file=sys.stderr)
-        return _refusal_exit.get(exc.code, 3)
+        return _refuse(exc)
 
     if result.already_finalized:
         print(f"[finalize] {args.feature} already finalized — no-op")
