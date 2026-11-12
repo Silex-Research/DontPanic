@@ -2,8 +2,8 @@
 
 DP-002: the shared approval writer must not clear a lifecycle gate for a
 stage other than the one the supervisor is currently paused on (pre_merge
-while paused at pre_impl). Legacy approvals with no pending stage, and the
-pre_impl no-pause compatibility, are preserved.
+while paused at pre_impl). F1: pre_merge is also refused when NO stage is
+pending; the pre_impl no-pause compatibility is preserved.
 
 DP-003: successful finalization (including signoff repair) of a CHILD plan
 requires a durable, charter-compliant signoff. Integrated path: real child
@@ -69,9 +69,44 @@ def test_dp002_pending_and_legacy_approvals_still_clear(repo: Path) -> None:
 
     legacy_id = "2026-11-07-403-infra-fresh-dp002-legacy"
     legacy_dir = _make_plan(repo, legacy_id, _GATES)
-    # No pause recorded at all: legacy/no-pause approvals keep working.
-    assert gate_pause.approve_gate(legacy_dir, "pre_merge", plan_id=legacy_id) is True
+    # No pause recorded at all: pre_merge is refused (F1 — pre_merge is not
+    # pending); the documented pre_impl no-pause compatibility keeps working.
+    assert gate_pause.approve_gate(legacy_dir, "pre_merge", plan_id=legacy_id) is False
     assert gate_pause.approve_gate(legacy_dir, "pre_impl", plan_id=legacy_id) is True
+
+
+def test_f1_pre_merge_refused_without_pending_stage_then_clears_once_pending(
+    repo: Path,
+) -> None:
+    plan_id = "2026-11-07-406-infra-fresh-f1-no-pending"
+    plan_dir = _make_plan(repo, plan_id, _GATES)
+    # pre_impl with no pending stage is still allowed (compatibility); after it
+    # clears there is no pending stage at all.
+    assert gate_pause.approve_gate(plan_dir, "pre_impl", plan_id=plan_id) is True
+    state_before = _state(plan_dir)
+    assert not state_before.get("pending_stage")
+    assert not state_before.get("pause_gates")
+    before = _tree_digest(plan_dir)
+
+    preview = mcp_server.dispatch_tool("approve_gate", {"plan": plan_id, "gate": "pre_merge"})
+    out = mcp_server.dispatch_tool(
+        "approve_gate", {"plan": plan_id, "gate": "pre_merge", "confirm": True}
+    )
+
+    assert preview["intent"]["would_clear"] is False, preview
+    assert out["result"]["changed"] is False, out
+    assert gate_pause.approve_gate(plan_dir, "pre_merge", plan_id=plan_id) is False
+    assert _tree_digest(plan_dir) == before
+    after = _state(plan_dir)
+    assert after.get("cleared_gates") == state_before.get("cleared_gates") == ["pre_impl"]
+    assert after.get("history") == state_before.get("history")
+
+    # Positive: once the real pre_merge pause is recorded, approval succeeds.
+    gate_pause.record_pause(plan_dir, plan_id=plan_id, pause_gates=["pre_merge"], stage="pre_merge")
+    assert gate_pause.approve_gate(plan_dir, "pre_merge", plan_id=plan_id) is True
+    assert "pre_merge" in _state(plan_dir)["cleared_gates"]
+    # Re-approving the cleared gate stays an idempotent no-op.
+    assert gate_pause.approve_gate(plan_dir, "pre_merge", plan_id=plan_id) is False
 
 
 def _child_through_real_pause_and_cli_approve(repo: Path, plan_id: str, memo: str | None) -> Path:
