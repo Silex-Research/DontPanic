@@ -120,6 +120,6 @@ is the MCP server entrypoint, equivalent to `dontpanic mcp serve`; the full
 CLI is `dontpanic`:
 
 ```bash
-uvx dontpanic-orchestrate==0.2.0
+uvx dontpanic-orchestrate==0.2.1
 pipx install dontpanic-orchestrate
 ```

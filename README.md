@@ -174,7 +174,7 @@ MCP server entrypoint, equivalent to `dontpanic mcp serve`; the full CLI is
 manifests in `.cursor-plugin/` and `.claude-plugin/` launch it with:
 
 ```bash
-uvx dontpanic-orchestrate==0.2.0
+uvx dontpanic-orchestrate==0.2.1
 ```
 
 You can also install the CLI with `pipx install dontpanic-orchestrate`. The

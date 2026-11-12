@@ -3,7 +3,7 @@
     "dontpanic": {
       "command": "uvx",
       "args": [
-        "dontpanic-orchestrate==0.2.0"
+        "dontpanic-orchestrate==0.2.1"
       ]
     }
   }
