@@ -234,10 +234,32 @@ def is_gate_currently_pending(plan_dir: Path, gate: str) -> bool:
     their existing relaxed semantics — see ``_approve_main`` for the wiring.
     """
     state = _read_state(plan_dir)
+    stage = _stage_for_gate(gate)
+    if stage is not None:
+        # Sentinel r3b (A) — for lifecycle gates the persisted pending_stage
+        # is the authority when set; pause_gates only matters when it is not.
+        return stage in _pending_lifecycle_stages(state)
     pause_gates = state.get("pause_gates") or []
     if not isinstance(pause_gates, list):
         return False
     return gate in pause_gates
+
+
+def _pending_lifecycle_stages(state: dict[str, Any]) -> set[str]:
+    """Sentinel r3b (A) — the lifecycle stage(s) currently pending.
+
+    When ``pending_stage`` names a lifecycle stage it is the single authority:
+    only that stage is pending, regardless of any (possibly stale or
+    contradictory) lifecycle entries in ``pause_gates``. ``pause_gates`` is
+    consulted only when ``pending_stage`` is unset (legacy / upfront pauses).
+    """
+    pending = state.get("pending_stage")
+    if pending in _STAGE_GATES:
+        return {str(pending)}
+    pause = state.get("pause_gates") or []
+    if not isinstance(pause, list):
+        return set()
+    return {s for s in (_stage_for_gate(str(g)) for g in pause) if s}
 
 
 def pending_stage(plan_dir: Path) -> str | None:
@@ -301,22 +323,21 @@ def _blocked_by_other_pending_stage(state: dict[str, Any], gate: str) -> bool:
       - ``gate`` belongs to a stage OTHER than the lifecycle stage the
         supervisor is currently paused on (DP-002); or
       - ``gate`` is a ``pre_merge`` stage gate and the ``pre_merge`` stage is
-        not pending (the gate is not in ``pause_gates`` and ``pending_stage``
-        is not ``"pre_merge"``) — including when NO stage is pending (F1,
-        matching ``cli.py approve``).
+        not pending — including when NO stage is pending (F1, matching
+        ``cli.py approve``).
+
+    "Pending" follows :func:`_pending_lifecycle_stages`: a set
+    ``pending_stage`` is the sole authority; ``pause_gates`` is consulted only
+    when ``pending_stage`` is unset.
 
     ``pre_impl`` with no pending stage stays approvable (documented pre_impl
     compatibility). Non-lifecycle gates are never blocked."""
     stage = _stage_for_gate(gate)
     if stage is None:
         return False
-    pending = state.get("pending_stage")
-    pause = state.get("pause_gates") or []
-    pending_stages: set[str] = set()
-    if pending in _STAGE_GATES:
-        pending_stages.add(str(pending))
-    if isinstance(pause, list):
-        pending_stages.update(s for s in (_stage_for_gate(str(g)) for g in pause) if s)
+    # Sentinel r3b (A) — pending_stage, when set, is the authority; stale
+    # lifecycle entries in pause_gates never widen eligibility.
+    pending_stages = _pending_lifecycle_stages(state)
     if stage == "pre_merge":
         return stage not in pending_stages
     return bool(pending_stages) and stage not in pending_stages
@@ -459,10 +480,14 @@ def resume_all(
     declared_set = set(declared_strs)
     pause_set = set(persisted_pause_gates) & declared_set
     if pending_stage_value in _STAGE_GATES:
-        # Stage active: also include the stage's canonical gates that are
-        # declared but somehow not in pause_gates (defensive — covers a stale
-        # pause_gates write). Excludes other-stage gates per D012.
-        pause_set |= set(_STAGE_GATES[pending_stage_value]) & declared_set
+        # Sentinel r3b (A) — pending_stage is the authority: drop every
+        # lifecycle gate of ANOTHER stage even if a stale/contradictory
+        # pause_gates names it, then include the stage's canonical gates that
+        # are declared but somehow not in pause_gates (defensive — covers a
+        # stale pause_gates write). Non-lifecycle pause gates are unaffected.
+        stage_gates = set(_STAGE_GATES[pending_stage_value])
+        pause_set = {g for g in pause_set if not is_lifecycle_gate(g) or g in stage_gates}
+        pause_set |= stage_gates & declared_set
     elif not persisted_pause_gates:
         # No pause active: legacy bulk-clear convenience for the case where
         # operator runs `resume --all` without an active pause (e.g. clearing

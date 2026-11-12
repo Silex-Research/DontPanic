@@ -18,16 +18,24 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 VERSION_SOURCE = Path("scripts/dontpanic_orchestrate/__init__.py")
+# Every file here MUST exist and MUST carry at least one version pin (a
+# ``dontpanic-orchestrate==<version>`` pin, or a top-level ``"version"`` field
+# for the JSON listings); ``--check`` fails naming any file that does not.
 PINNED_PATHS = (
     "README.md",
     "docs/DISCOVERABILITY.md",
-    "docs/USE_CASES.md",
     "docs/PUBLISHING.md",
-    "docs/roadmap-2026-05-19-install-ux-architecture-v0.md",
     "server.json",
     ".cursor-plugin/plugin.json",
     ".cursor-plugin/mcp.json",
     ".claude-plugin/plugin.json",
+)
+# Docs that mention the distribution but carry no version pin today. They are
+# still scanned (any pin added later is checked and synced like the others),
+# but a pin is not required and they may be absent.
+SCANNED_PATHS = (
+    "docs/USE_CASES.md",
+    "docs/roadmap-2026-05-19-install-ux-architecture-v0.md",
 )
 
 _SOURCE_VERSION = re.compile(r"^__version__\s*=\s*['\"]([^'\"]+)['\"]", re.MULTILINE)
@@ -91,6 +99,19 @@ def rewrite_listing_json(text: str, relative_path: str, version: str) -> str:
     return text
 
 
+def has_version_pin(relative_path: str, text: str) -> bool:
+    """True when ``text`` carries at least one version pin: a
+    ``dontpanic-orchestrate==`` distribution pin, or (JSON listings only) a
+    top-level string ``"version"`` field. Invalid JSON raises
+    ``json.JSONDecodeError`` for the caller to report."""
+    if _DISTRIBUTION_PIN.search(text):
+        return True
+    if relative_path in _JSON_PINNED_PATHS:
+        payload = json.loads(text)
+        return isinstance(payload, dict) and isinstance(payload.get("version"), str)
+    return False
+
+
 def desired_text(relative_path: str, original: str, version: str) -> str:
     if relative_path in _JSON_PINNED_PATHS:
         return rewrite_listing_json(original, relative_path, version)
@@ -118,8 +139,10 @@ def main(argv: list[str] | None = None) -> int:
             print(f"Missing required version-pinned file: {relative}", file=sys.stderr)
         return 2
 
+    scanned = [relative for relative in SCANNED_PATHS if (ROOT / relative).is_file()]
     changed: list[tuple[str, str]] = []
-    for relative_path in PINNED_PATHS:
+    unpinned: list[str] = []
+    for relative_path in (*PINNED_PATHS, *scanned):
         path = ROOT / relative_path
         try:
             original = path.read_text(encoding="utf-8")
@@ -130,6 +153,9 @@ def main(argv: list[str] | None = None) -> int:
             print(f"Could not read {relative_path}: {exc}", file=sys.stderr)
             return 2
         try:
+            if relative_path in PINNED_PATHS and not has_version_pin(relative_path, original):
+                unpinned.append(relative_path)
+                continue
             updated = desired_text(relative_path, original, version)
         except json.JSONDecodeError as exc:
             print(f"Invalid JSON in {relative_path}: {exc}", file=sys.stderr)
@@ -139,6 +165,13 @@ def main(argv: list[str] | None = None) -> int:
             return 2
         if updated != original:
             changed.append((relative_path, updated))
+
+    if unpinned:
+        # A required file with no pin cannot be synced (write mode never
+        # invents one) and must fail --check: report and write nothing.
+        for relative_path in unpinned:
+            print(f"No version pin found in required file: {relative_path}", file=sys.stderr)
+        return 2
 
     if args.check:
         if changed:

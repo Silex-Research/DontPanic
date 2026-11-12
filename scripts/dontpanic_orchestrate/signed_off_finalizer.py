@@ -20,8 +20,10 @@ Refusals (each a distinct ``FinalizeError.code`` for distinct CLI exit codes):
   - ``no_audit``            — no auditor envelope exists for the feature.
   - ``not_signed_off``      — latest auditor verdict is not ``signed_off``.
   - ``pre_merge_uncleared`` — the ``pre_merge`` gate has not been cleared.
-  - ``charter_unchecked`` / ``child_charter_violation`` — child plan whose
-    charter compliance cannot be checked / fails on repair.
+  - ``plan_unloadable``     — the plan cannot be loaded, so charter
+    compliance cannot be checked (fails closed; no writes).
+  - ``child_charter_violation`` — child plan whose charter compliance fails
+    on repair.
   - ``signoff_unreadable`` / ``signoff_wrong_plan`` / ``signoff_not_success`` /
     ``signoff_stale`` / ``child_signoff_missing`` — an EXISTING signoff envelope
     (or its required child compliance side-car) is not a durable successful
@@ -143,21 +145,19 @@ def _agents_in_panel(audit_paths: list[Path]) -> list[str]:
 def _load_charter_context(plan_dir: Path, plan_id: str) -> tuple[Any, Any, Any]:
     """Return ``(child_charter, commit_policy, orchestration)`` for the plan.
 
-    Tolerant for legacy top-level plans that fail to load (all None), but a
-    plan that DECLARES a ``child_charter`` and cannot be loaded refuses with
-    ``charter_unchecked`` — its compliance cannot be verified."""
+    Fails closed (Sentinel r3b / F4): if the plan cannot be loaded, its charter
+    compliance cannot be verified, so finalization is refused with
+    ``plan_unloadable`` — no signoff write, no ``passes`` flip. There is no
+    text-sniffing fallback: an unloadable plan is never treated as a legacy
+    top-level plan."""
     try:
         loaded = plan_loader.load(plan_dir)
-    except Exception as exc:  # noqa: BLE001 — legacy tolerant tier read
-        plan_md = plan_dir / "plan.md"
-        text = plan_md.read_text() if plan_md.is_file() else ""
-        if re.search(r"^child_charter\s*:", text, re.MULTILINE):
-            raise FinalizeError(
-                "charter_unchecked",
-                f"plan {plan_id} declares a child_charter but could not be "
-                f"loaded to check compliance; refusing to finalize: {exc}",
-            ) from exc
-        return None, None, None
+    except Exception as exc:  # noqa: BLE001 — any load failure refuses
+        raise FinalizeError(
+            "plan_unloadable",
+            f"plan {plan_id} could not be loaded ({type(exc).__name__}: {exc}); "
+            f"its charter compliance cannot be checked, refusing to finalize.",
+        ) from exc
     return loaded.child_charter, loaded.commit_policy, loaded.orchestration
 
 

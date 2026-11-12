@@ -442,10 +442,10 @@ def _approve_main(argv: list[str]) -> int:
     # semantics — pre-clearing a future on_escalation is still allowed.
     if gate_pause.is_lifecycle_gate(gate):
         compat = gate_pause.load_gate_state_compat(plan_dir)
+        # Sentinel r3b (A) — shared rule: a set pending_stage is the authority
+        # (only its gates are pending); pause_gates is consulted only when
+        # pending_stage is unset. Same helper as the writer / MCP / bridge.
         currently_pending = gate_pause.is_gate_currently_pending(plan_dir, gate)
-        stage_match = compat.pending_stage is not None and gate in {
-            *([compat.pending_stage] if compat.pending_stage in declared_strs else [])
-        }
         if gate in compat.cleared_gates:
             print(
                 f"[approve] REFUSED gate {gate!r} — already cleared "
@@ -454,7 +454,7 @@ def _approve_main(argv: list[str]) -> int:
                 file=sys.stderr,
             )
             return 2
-        if not (currently_pending or stage_match):
+        if not currently_pending:
             persisted_pause = (
                 gate_pause.load_gate_state_compat(plan_dir).raw.get("pause_gates") or []
             )
@@ -753,10 +753,8 @@ def _resume_main(argv: list[str]) -> int:
         # active breakers/defers keep their legacy relaxed semantics.
         if gate_pause.is_lifecycle_gate(gate):
             compat = gate_pause.load_gate_state_compat(plan_dir)
+            # Sentinel r3b (A) — same shared pending_stage-authority rule.
             currently_pending = gate_pause.is_gate_currently_pending(plan_dir, gate)
-            stage_match = compat.pending_stage is not None and gate in {
-                *([compat.pending_stage] if compat.pending_stage in declared_strs else [])
-            }
             if gate in compat.cleared_gates:
                 print(
                     f"[resume --gate] REFUSED gate {gate!r} — already cleared "
@@ -764,7 +762,7 @@ def _resume_main(argv: list[str]) -> int:
                     file=sys.stderr,
                 )
                 return 2
-            if not (currently_pending or stage_match):
+            if not currently_pending:
                 persisted_pause = compat.raw.get("pause_gates") or []
                 print(
                     f"[resume --gate] REFUSED lifecycle gate {gate!r} — not currently pending. "

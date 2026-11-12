@@ -64,10 +64,16 @@ Surfaces affected: <comma-separated list — see docs/RELEASE_IMPACT.md>
 
 ### Fixed
 
-- The MCP `approve_gate` tool and the shared approval writer no longer clear
-  `pre_merge` while the run is paused at another lifecycle stage, or when no
-  stage is pending at all (matching the CLI `approve`). The preview reports
+- `pre_merge` can no longer be approved ahead of time. The MCP `approve_gate`
+  tool and the shared approval writer refuse it until the `pre_merge` stage is
+  pending, including when the run is paused at another stage or no stage is
+  pending at all (matching the CLI `approve`). The preview reports
   `would_clear: false`, and a confirmed call changes nothing.
+- When a lifecycle stage is pending (`pending_stage`), it decides which gates
+  are eligible, even if a stale `pause_gates` names another stage. CLI
+  `approve`, `resume --gate`, `resume --all`, MCP `approve_gate` and the
+  shared writer all apply this one rule; breaker, defer and child-return gates
+  are unchanged.
 - A dispatch whose auditor signs off but whose required signoff cannot be
   written (a child charter violation or a signoff write error) now ends
   `blocked` instead of `signed_off`. The CLI exits 3, and MCP `dispatch`
@@ -75,6 +81,8 @@ Surfaces affected: <comma-separated list — see docs/RELEASE_IMPACT.md>
   `signoff` notification are sent only after `signoff.json` is written.
 - `dontpanic finalize` refuses to repair a child plan's signoff when its
   charter compliance fails, so `passes` is not set.
+- `dontpanic finalize` fails closed when the plan cannot be loaded
+  (`plan_unloadable`): nothing is written and `passes` is not set.
 - `dontpanic finalize` no longer trusts an existing signoff file blindly. It
   refuses, without writing anything or setting `passes`, when the file is
   empty or unreadable (`signoff_unreadable`), is for another plan
@@ -92,6 +100,9 @@ Surfaces affected: <comma-separated list — see docs/RELEASE_IMPACT.md>
 - When the patch-completeness or cross-feature gate stops a signoff, the
   INBOX and notification now record one `blocked` terminal naming the error
   before it propagates.
+- `scripts/sync_version.py --check` now fails, naming the file, when a
+  required pinned file is missing or has no version pin at all, not only when
+  a pin differs.
 
 Surfaces affected: cli, mcp, inbox, notify, root_changelog
 
