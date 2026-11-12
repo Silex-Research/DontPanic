@@ -2899,13 +2899,27 @@ def dispatch_volley(
                         # Plan 2026-06-01-001 F008: cross-feature-edit acknowledgement.
                         cross_feature_ack_reason=cross_feature_ack_reason,
                     )
-                    transcript.append_terminal(
-                        loaded.plan_dir,
-                        feature_id,
-                        _signed_off_final.final_status,
-                        _signed_off_final.rounds,
-                        reason=_signed_off_final.reason,
-                    )
+                    # Sentinel 5870049314 MED-3 — by now the terminal is
+                    # decided, persisted (durable signoff on success) and
+                    # announced exactly once. The transcript line is a
+                    # best-effort human trace: a failure to append it must
+                    # NOT reach the iter-loop backstop, which would record and
+                    # announce a contradicting ``blocked`` terminal over the
+                    # already-announced result. Log and return the verdict.
+                    try:
+                        transcript.append_terminal(
+                            loaded.plan_dir,
+                            feature_id,
+                            _signed_off_final.final_status,
+                            _signed_off_final.rounds,
+                            reason=_signed_off_final.reason,
+                        )
+                    except Exception as _transcript_exc:  # noqa: BLE001 — trace only
+                        print(
+                            "[volley] WARN: transcript terminal append failed after "
+                            f"the {_signed_off_final.final_status} terminal was "
+                            f"announced; verdict unchanged: {_transcript_exc!r}"
+                        )
                     return _signed_off_final
 
                 if aud_status == "blocked":

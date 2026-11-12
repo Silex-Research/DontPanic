@@ -245,17 +245,31 @@ def is_gate_currently_pending(plan_dir: Path, gate: str) -> bool:
     return gate in pause_gates
 
 
+def _pending_stage_invalid(state: dict[str, Any]) -> bool:
+    """Sentinel 5870049314 MED-2 — True when ``pending_stage`` is PRESENT (not
+    absent / null) but does not name a known lifecycle stage (e.g.
+    ``"garbage"``, ``""``, a number). Such a state is corrupt: no lifecycle
+    stage can be proven pending, so every lifecycle approval fails closed."""
+    pending = state.get("pending_stage")
+    return pending is not None and pending not in _STAGE_GATES
+
+
 def _pending_lifecycle_stages(state: dict[str, Any]) -> set[str]:
     """Sentinel r3b (A) — the lifecycle stage(s) currently pending.
 
     When ``pending_stage`` names a lifecycle stage it is the single authority:
     only that stage is pending, regardless of any (possibly stale or
     contradictory) lifecycle entries in ``pause_gates``. ``pause_gates`` is
-    consulted only when ``pending_stage`` is unset (legacy / upfront pauses).
+    consulted only when ``pending_stage`` is unset (absent / null — legacy /
+    upfront pauses). A present but INVALID ``pending_stage`` fails closed: no
+    stage is pending and ``pause_gates`` is NOT consulted (Sentinel
+    5870049314 MED-2).
     """
     pending = state.get("pending_stage")
     if pending in _STAGE_GATES:
         return {str(pending)}
+    if _pending_stage_invalid(state):
+        return set()
     pause = state.get("pause_gates") or []
     if not isinstance(pause, list):
         return set()
@@ -335,6 +349,10 @@ def _blocked_by_other_pending_stage(state: dict[str, Any], gate: str) -> bool:
     stage = _stage_for_gate(gate)
     if stage is None:
         return False
+    # Sentinel 5870049314 MED-2 — a present but invalid pending_stage blocks
+    # every lifecycle approval (pre_merge and any other unreached stage).
+    if _pending_stage_invalid(state):
+        return True
     # Sentinel r3b (A) — pending_stage, when set, is the authority; stale
     # lifecycle entries in pause_gates never widen eligibility.
     pending_stages = _pending_lifecycle_stages(state)
@@ -488,6 +506,11 @@ def resume_all(
         stage_gates = set(_STAGE_GATES[pending_stage_value])
         pause_set = {g for g in pause_set if not is_lifecycle_gate(g) or g in stage_gates}
         pause_set |= stage_gates & declared_set
+    elif _pending_stage_invalid(state):
+        # Sentinel 5870049314 MED-2 — invalid pending_stage: fail closed for
+        # lifecycle gates (never clear pre_merge / pre_impl from pause_gates);
+        # non-lifecycle pause gates and transients are unaffected.
+        pause_set = {g for g in pause_set if not is_lifecycle_gate(g)}
     elif not persisted_pause_gates:
         # No pause active: legacy bulk-clear convenience for the case where
         # operator runs `resume --all` without an active pause (e.g. clearing

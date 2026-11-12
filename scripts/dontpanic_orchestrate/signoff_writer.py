@@ -192,6 +192,74 @@ def _atomic_write_json(path: Path, obj: dict[str, Any]) -> None:
         raise
 
 
+def _atomic_write_bytes(path: Path, data: bytes) -> None:
+    """Byte-exact atomic restore helper (temp + ``os.replace``) used only by
+    :func:`_commit_signoff_pair` rollback."""
+    fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
+    try:
+        with os.fdopen(fd, "wb") as fh:
+            fh.write(data)
+        os.replace(tmp_name, path)
+    except BaseException:
+        with contextlib.suppress(FileNotFoundError):
+            os.unlink(tmp_name)
+        raise
+
+
+def _read_bytes_if_file(path: Path) -> bytes | None:
+    return path.read_bytes() if path.is_file() else None
+
+
+def _restore(path: Path, previous: bytes | None) -> None:
+    """Put ``path`` back to ``previous`` (``None`` = absent). Never raises; a
+    failed restore of a file falls back to removing it so no half-state
+    survives."""
+    try:
+        if previous is None:
+            with contextlib.suppress(FileNotFoundError):
+                path.unlink()
+        else:
+            _atomic_write_bytes(path, previous)
+    except OSError:
+        with contextlib.suppress(OSError):
+            path.unlink()
+
+
+def _commit_signoff_pair(
+    out: Path,
+    payload: dict[str, Any],
+    side_car: Path | None,
+    compliance: dict[str, Any] | None,
+) -> None:
+    """Write the signoff (and, for child plans, its compliance side-car) as one
+    all-or-nothing transaction (DP-003 + Sentinel 5870049314 HIGH-3).
+
+    Order: snapshot the previous signoff/side-car bytes, RETIRE the previous
+    signoff (unlink) so it can never be read as the new one, write the
+    side-car, then write the signoff LAST — each atomically (temp +
+    ``os.replace``). If any step fails, roll back to the exact previous pair
+    (or to absence when there was none) and re-raise the original error.
+
+    Outcomes therefore are exactly: the new signoff + its bound side-car, or
+    the previous state unchanged. Never a valid-looking new signoff without
+    its side-car, never a new side-car paired with the old signoff, never a
+    torn file. If a rollback restore itself fails, that file is removed
+    (absence is never treated as success by any consumer)."""
+    prev_signoff = _read_bytes_if_file(out)
+    prev_side_car = _read_bytes_if_file(side_car) if side_car is not None else None
+    try:
+        if prev_signoff is not None:
+            out.unlink()
+        if side_car is not None and compliance is not None:
+            _atomic_write_json(side_car, compliance)
+        _atomic_write_json(out, payload)
+    except BaseException:
+        if side_car is not None:
+            _restore(side_car, prev_side_car)
+        _restore(out, prev_signoff)
+        raise
+
+
 def signoff_path(plan_dir: Path, plan_id: str) -> Path:
     return plan_dir / "audit" / f"signoff-{plan_id}.json"
 
@@ -260,17 +328,14 @@ def write_signoff(
             modified_files=modified_files,
         )
 
-    # DP-003 ordering: the compliance side-car is written FIRST and the
-    # signoff envelope LAST, both atomically (temp + os.replace). A failure of
-    # the signoff write therefore leaves at most a side-car with no signoff —
-    # which no consumer treats as success (the finalizer requires a valid
-    # signoff) — never a valid-looking signoff missing its side-car, and never
-    # a torn signoff file.
     out = signoff_path(plan_dir, plan_id)
     out.parent.mkdir(parents=True, exist_ok=True)
-    if compliance is not None:
-        _atomic_write_json(charter_compliance_path(plan_dir, plan_id), compliance)
-    _atomic_write_json(out, payload)
+    _commit_signoff_pair(
+        out,
+        payload,
+        charter_compliance_path(plan_dir, plan_id) if compliance is not None else None,
+        compliance,
+    )
 
     # Plan 2026-05-02-003 F003: when this signoff is for a child plan,
     # record a best-effort volley.return_to_parent trace on the child's

@@ -46,6 +46,9 @@ _JSON_PINNED_PATHS = {
     ".cursor-plugin/mcp.json",
     ".claude-plugin/plugin.json",
 }
+# JSON listings whose pin requirement is the uvx MCP launch pin under
+# ``mcpServers.dontpanic.args`` (in addition to the top-level ``"version"``).
+_LAUNCH_PIN_PATHS = {".claude-plugin/plugin.json"}
 
 
 def read_source_version() -> str:
@@ -99,11 +102,39 @@ def rewrite_listing_json(text: str, relative_path: str, version: str) -> str:
     return text
 
 
+def _has_uvx_launch_pin(payload: object) -> bool:
+    """True when ``mcpServers.dontpanic`` launches via ``uvx`` with a
+    ``dontpanic-orchestrate==<version>`` entry in its ``args``."""
+    if not isinstance(payload, dict):
+        return False
+    servers = payload.get("mcpServers")
+    server = servers.get("dontpanic") if isinstance(servers, dict) else None
+    if not isinstance(server, dict) or server.get("command") != "uvx":
+        return False
+    args = server.get("args")
+    return isinstance(args, list) and any(
+        isinstance(arg, str) and _DISTRIBUTION_PIN.fullmatch(arg) for arg in args
+    )
+
+
 def has_version_pin(relative_path: str, text: str) -> bool:
     """True when ``text`` carries at least one version pin: a
     ``dontpanic-orchestrate==`` distribution pin, or (JSON listings only) a
     top-level string ``"version"`` field. Invalid JSON raises
-    ``json.JSONDecodeError`` for the caller to report."""
+    ``json.JSONDecodeError`` for the caller to report.
+
+    ``.claude-plugin/plugin.json`` is stricter: it MUST carry BOTH the
+    top-level ``"version"`` string AND the uvx launch pin
+    (``mcpServers.dontpanic`` = ``uvx dontpanic-orchestrate==<version>``); a
+    top-level version alone (or a pin mentioned elsewhere in the text) is
+    not a pin for this file."""
+    if relative_path in _LAUNCH_PIN_PATHS:
+        payload = json.loads(text)
+        return (
+            isinstance(payload, dict)
+            and isinstance(payload.get("version"), str)
+            and _has_uvx_launch_pin(payload)
+        )
     if _DISTRIBUTION_PIN.search(text):
         return True
     if relative_path in _JSON_PINNED_PATHS:

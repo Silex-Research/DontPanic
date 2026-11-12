@@ -103,6 +103,29 @@ Surfaces affected: <comma-separated list — see docs/RELEASE_IMPACT.md>
 - `scripts/sync_version.py --check` now fails, naming the file, when a
   required pinned file is missing or has no version pin at all, not only when
   a pin differs.
+- A child plan's charter-compliance record now names the signoff it belongs
+  to (iteration, signoff id, audits, charter digest). `dontpanic finalize`
+  refuses (`child_signoff_stale`) a record from another iteration or audit, or
+  one written before the charter changed.
+- `dontpanic finalize` refuses a child plan whose return condition is
+  `blocked`, or `superseded` with no satisfied successor
+  (`child_not_satisfied`). How the status is recorded is unchanged.
+- `dontpanic finalize` refuses an existing signoff as `signoff_stale` when
+  the audit's `completed_at` (or the signoff's `decided_at`) is missing or
+  unreadable, instead of skipping the freshness check.
+- Rewriting an existing signoff is all-or-nothing: if any write fails, the
+  previous signoff and compliance record are restored together.
+- An invalid `pending_stage` in the gate state blocks every lifecycle gate
+  approval (`pre_merge` included) in the shared writer, MCP `approve_gate` and
+  `resume --all`, instead of falling back to `pause_gates`.
+- If the transcript cannot be written after a signoff is saved and announced,
+  the result stays `signed_off` and no second `blocked` terminal is announced.
+- `dontpanic finalize` refuses an unloadable plan with `plan_unloadable`
+  instead of crashing. Each refusal code now has its own exit code (3–5, 7–15;
+  6 stays plan drift).
+- `scripts/sync_version.py --check` fails when `.claude-plugin/plugin.json`
+  has a top-level `version` but no `uvx dontpanic-orchestrate==<version>`
+  launch pin.
 
 Surfaces affected: cli, mcp, inbox, notify, root_changelog
 
