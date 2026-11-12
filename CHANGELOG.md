@@ -138,6 +138,19 @@ Surfaces affected: <comma-separated list — see docs/RELEASE_IMPACT.md>
   change the result. An auditor envelope with a missing or unparseable
   `completed_at` disqualifies the successor. Unreadable or truncated auditor
   files are still skipped when picking each feature's latest one.
+- A successor's signoff must also be at least as new as the latest auditor
+  envelope it lists for its own feature — the same rule `dontpanic finalize`
+  already applies to an existing signoff (`decided_at` not earlier than the
+  envelope's `completed_at`; either missing or unparseable disqualifies).
+  Signoffs now record an `audit_digests` entry (`sha256:<hex>` of each listed
+  envelope's bytes) next to `patch_completeness`; a successor whose listed
+  latest envelope was overwritten in place since the signoff — even within the
+  same second — no longer counts, and a signoff without `audit_digests` (written
+  before this release) no longer counts as a successor. When two different
+  auditor envelopes of a feature share its newest `completed_at` second, the
+  latest cannot be told apart and the successor does not count. Timestamps
+  without an explicit UTC offset or `Z` (including date-only values) are now
+  refused wherever the finalizer reads them, instead of being read as UTC.
 
 Surfaces affected: cli, mcp, inbox, notify, root_changelog
 
