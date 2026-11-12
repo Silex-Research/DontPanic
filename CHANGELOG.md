@@ -127,9 +127,12 @@ Surfaces affected: <comma-separated list — see docs/RELEASE_IMPACT.md>
   has a top-level `version` but no `uvx dontpanic-orchestrate==<version>`
   launch pin.
 - A sibling plan counts as the satisfied successor of a `superseded` child
-  only while its latest audit is `signed_off`, from the same iteration as its
-  signoff, and listed in that signoff. A stale success signoff left behind by
-  a later blocked volley no longer lets the superseded child finalize.
+  only while the newest auditor envelope in its whole `audit/` dir (any
+  feature, ranked like the finalizer's own selection) is `signed_off`, has its
+  signoff's iteration, and is listed in that signoff. A newer blocked or
+  unlisted audit for any feature therefore disqualifies a success signoff left
+  on disk. Unreadable or truncated auditor files are still skipped when picking
+  the newest one.
 
 Surfaces affected: cli, mcp, inbox, notify, root_changelog
 
