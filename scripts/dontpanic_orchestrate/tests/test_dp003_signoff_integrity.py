@@ -671,6 +671,59 @@ def test_item4b_dispatch_level_patch_gate_failure_announced_exactly_once(
     assert kinds.count("volley_terminal") == 1, kinds
     assert "signoff" not in kinds
     assert _transcript_terminals(plan_dir) == ["blocked"]
+    # Sentinel r3b LOW2: the F004 backstop still records its (non-terminal)
+    # crash entry exactly once, and adds no second terminal entry.
+    assert _crash_caught(plan_dir) == ["PatchCompletenessError"]
+
+
+def _crash_caught(plan_dir: Path) -> list[str | None]:
+    return [
+        e.headers.get("exception_class")
+        for e in inbox.read_events(plan_dir)
+        if e.event == "volley_crash_caught"
+    ]
+
+
+def test_r3b_dispatch_level_cross_feature_failure_announced_exactly_once(
+    repo: Path, captured: list[Any]
+) -> None:
+    """Sentinel r3b LOW2 — through dispatch_volley a CrossFeatureEditError
+    from the signed_off gates reaches the F004 backstop: exactly one terminal
+    INBOX entry + one terminal notification (the gate's blocked announcement;
+    the backstop passes announce=False), plus one volley_crash_caught."""
+    plan_dir = _make_plan(
+        repo,
+        TOP_ID,
+        features=[
+            _feature("F001", "Synthetic DP-003 feature."),
+            _feature("F002", "Foreign feature that owns src/foreign_module.py."),
+        ],
+    )
+    _clear_pre_merge(plan_dir, TOP_ID)
+    git = ["git", "-C", str(plan_dir), "-c", "user.name=t", "-c", "user.email=t@example.invalid"]
+    subprocess.run(["git", "init", "-q", str(plan_dir)], check=True)
+    (plan_dir / "src").mkdir()
+    (plan_dir / "src" / "foreign_module.py").write_text("X = 1\n")
+    subprocess.run([*git, "add", "src/foreign_module.py"], check=True)
+    subprocess.run([*git, "commit", "-q", "-m", "seed"], check=True)
+    (plan_dir / "src" / "foreign_module.py").write_text("X = 2\n")  # foreign bleed
+
+    result = supervisor.dispatch_volley(
+        plan_dir,
+        "F001",
+        max_iterations=1,
+        allow_incomplete_patch_reason="operator accepts patch shape for this test",
+    )
+
+    assert result.final_status == "blocked", result
+    terminals = _terminal_inbox(plan_dir)
+    assert [e.headers.get("final_status") for e in terminals] == ["blocked"], terminals
+    assert "CrossFeatureEditError" in terminals[0].body
+    kinds = [getattr(e, "kind", None) for e in captured]
+    assert kinds.count("volley_terminal") == 1, kinds
+    assert "signoff" not in kinds
+    assert _crash_caught(plan_dir) == ["CrossFeatureEditError"]
+    assert _transcript_terminals(plan_dir) == ["blocked"]
 
 
 def test_item4b_cross_feature_edit_error_announces_blocked_and_propagates(
@@ -699,3 +752,179 @@ def test_item4b_cross_feature_edit_error_announces_blocked_and_propagates(
         )
 
     _assert_one_blocked_terminal(plan_dir, captured, "CrossFeatureEditError")
+
+
+# ───────────────── Sentinel r3b (B) — finalizer fails closed on an unloadable plan ─────────────────
+
+
+def test_r3b_unloadable_top_level_plan_refused_without_writes(repo: Path) -> None:
+    """No ``child_charter:`` line and an unloadable plan: the old regex
+    fallback repaired the signoff with no compliance check; now refused with
+    ``plan_unloadable`` and nothing is written."""
+    plan_dir = _make_plan(repo, TOP_ID)
+    _write_envelopes(plan_dir, TOP_ID)
+    _clear_pre_merge(plan_dir, TOP_ID)
+    plan_md = plan_dir / "plan.md"
+    plan_md.write_text(plan_md.read_text().replace("title: DP-003 signoff integrity synthetic\n", ""))
+    assert "child_charter" not in plan_md.read_text()
+    with pytest.raises(Exception):
+        plan_loader.load(plan_dir)
+    _assert_refused(plan_dir, TOP_ID, "plan_unloadable")
+    assert not signoff_writer.signoff_path(plan_dir, TOP_ID).exists()
+
+
+def test_r3b_unloadable_plan_refused_even_with_valid_existing_signoff(repo: Path) -> None:
+    plan_dir = _make_plan(repo, TOP_ID)
+    auditor = _write_envelopes(plan_dir, TOP_ID)
+    _clear_pre_merge(plan_dir, TOP_ID)
+    _write_valid_signoff(plan_dir, TOP_ID, auditor)
+    features = plan_dir / "features.json"
+    features.write_text(features.read_text().replace('"category": "test",', ""))
+    _assert_refused(plan_dir, TOP_ID, "plan_unloadable")
+
+
+def test_r3b_unloadable_child_plan_refused_without_writes(repo: Path) -> None:
+    plan_dir = _make_child(repo, memo_status="satisfied")
+    _write_envelopes(plan_dir, CHILD_ID)
+    _clear_pre_merge(plan_dir, CHILD_ID)
+    plan_md = plan_dir / "plan.md"
+    plan_md.write_text(plan_md.read_text().replace("  kind: implementation\n", "  kind: bogus\n"))
+    _assert_refused(plan_dir, CHILD_ID, "plan_unloadable")
+    assert not signoff_writer.charter_compliance_path(plan_dir, CHILD_ID).exists()
+
+
+def test_r3b_noncompliant_child_repair_refused_without_writes(repo: Path) -> None:
+    """Repair path: a child with no close-out memo violates its charter, so
+    the finalizer refuses instead of writing an unchecked signoff."""
+    plan_dir = _make_child(repo, memo_status=None)
+    _write_envelopes(plan_dir, CHILD_ID)
+    _clear_pre_merge(plan_dir, CHILD_ID)
+    _assert_refused(plan_dir, CHILD_ID, "child_charter_violation")
+    assert not signoff_writer.signoff_path(plan_dir, CHILD_ID).exists()
+    assert not signoff_writer.charter_compliance_path(plan_dir, CHILD_ID).exists()
+
+
+# ───────────────── Sentinel r3b (A) — pending_stage is the authority ─────────────────
+
+
+_BOTH_GATES_ID = "2026-11-12-403-infra-dp003i-stage-authority"
+
+
+def _contradictory_plan(repo: Path) -> Path:
+    """Plan declaring pre_impl + pre_merge whose gate-state carries
+    contradictory markers: pending_stage ``pre_impl`` but pause_gates
+    ``["pre_merge"]`` (a stale write)."""
+    plan_dir = _make_plan(repo, _BOTH_GATES_ID)
+    plan_md = plan_dir / "plan.md"
+    plan_md.write_text(
+        plan_md.read_text().replace(
+            "human_gates:\n  - pre_merge\n", "human_gates:\n  - pre_impl\n  - pre_merge\n"
+        )
+    )
+    state_path = gate_pause.gate_state_path(plan_dir)
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    state = {
+        "plan_id": _BOTH_GATES_ID,
+        "cleared_gates": [],
+        "history": [],
+        "paused_at": "2026-11-12T00:00:00Z",
+        "pause_gates": ["pre_merge"],
+        "pending_stage": "pre_impl",
+    }
+    state_path.write_text(json.dumps(state, indent=2) + "\n")
+    return plan_dir
+
+
+def _state_bytes(plan_dir: Path) -> bytes:
+    return gate_pause.gate_state_path(plan_dir).read_bytes()
+
+
+def test_r3b_writer_refuses_pre_merge_under_contradictory_markers(repo: Path) -> None:
+    plan_dir = _contradictory_plan(repo)
+    before = _state_bytes(plan_dir)
+    assert gate_pause.is_gate_approval_eligible(plan_dir, "pre_merge") is False
+    assert gate_pause.is_gate_currently_pending(plan_dir, "pre_merge") is False
+    assert gate_pause.approve_gate(plan_dir, "pre_merge", plan_id=_BOTH_GATES_ID) is False
+    assert _state_bytes(plan_dir) == before
+    # The authoritative stage stays approvable.
+    assert gate_pause.is_gate_currently_pending(plan_dir, "pre_impl") is True
+    assert gate_pause.approve_gate(plan_dir, "pre_impl", plan_id=_BOTH_GATES_ID) is True
+    assert gate_pause.cleared_gates(plan_dir) == ["pre_impl"]
+
+
+def test_r3b_mcp_preview_and_confirm_refuse_pre_merge_under_contradictory_markers(
+    repo: Path,
+) -> None:
+    from dontpanic_orchestrate import mcp_server
+
+    plan_dir = _contradictory_plan(repo)
+    before = _state_bytes(plan_dir)
+
+    preview = mcp_server.dispatch_tool("approve_gate", {"plan": _BOTH_GATES_ID, "gate": "pre_merge"})
+    assert preview["dry_run"] is True
+    assert preview["intent"]["would_clear"] is False, preview
+
+    confirm = mcp_server.dispatch_tool(
+        "approve_gate", {"plan": _BOTH_GATES_ID, "gate": "pre_merge", "confirm": True}
+    )
+    assert confirm["result"]["changed"] is False, confirm
+    assert _state_bytes(plan_dir) == before
+
+
+def test_r3b_resume_all_clears_only_pending_stage_under_contradictory_markers(
+    repo: Path,
+) -> None:
+    plan_dir = _contradictory_plan(repo)
+    newly = gate_pause.resume_all(
+        plan_dir, plan_id=_BOTH_GATES_ID, declared_gates=["pre_impl", "pre_merge"]
+    )
+    assert newly == ["pre_impl"]
+    assert gate_pause.cleared_gates(plan_dir) == ["pre_impl"]
+    assert not gate_pause.is_gate_cleared(plan_dir, "pre_merge")
+
+
+def test_r3b_resume_all_still_clears_transient_gates_with_pending_stage(repo: Path) -> None:
+    plan_dir = _contradictory_plan(repo)
+    state_path = gate_pause.gate_state_path(plan_dir)
+    state = json.loads(state_path.read_text())
+    state["active_breakers"] = ["breaker:no_progress"]
+    state["pause_gates"] = ["pre_merge", "breaker:no_progress"]
+    state_path.write_text(json.dumps(state, indent=2) + "\n")
+
+    newly = gate_pause.resume_all(
+        plan_dir, plan_id=_BOTH_GATES_ID, declared_gates=["pre_impl", "pre_merge"]
+    )
+    assert newly == ["pre_impl", "breaker:no_progress"]
+    assert gate_pause.active_breakers(plan_dir) == []
+    assert not gate_pause.is_gate_cleared(plan_dir, "pre_merge")
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [["approve", _BOTH_GATES_ID, "pre_merge"], ["resume", _BOTH_GATES_ID, "--gate", "pre_merge"]],
+)
+def test_r3b_cli_refuses_pre_merge_under_contradictory_markers(
+    repo: Path, argv: list[str], capsys: pytest.CaptureFixture[str]
+) -> None:
+    from dontpanic_orchestrate import cli
+
+    plan_dir = _contradictory_plan(repo)
+    before = _state_bytes(plan_dir)
+    assert cli.main(argv) == 2
+    assert "not currently pending" in capsys.readouterr().err
+    assert _state_bytes(plan_dir) == before
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [["approve", _BOTH_GATES_ID, "pre_impl"], ["resume", _BOTH_GATES_ID, "--gate", "pre_impl"]],
+)
+def test_r3b_cli_clears_authoritative_stage_under_contradictory_markers(
+    repo: Path, argv: list[str]
+) -> None:
+    from dontpanic_orchestrate import cli
+
+    plan_dir = _contradictory_plan(repo)
+    assert cli.main(argv) == 0
+    assert gate_pause.cleared_gates(plan_dir) == ["pre_impl"]
+    assert not gate_pause.is_gate_cleared(plan_dir, "pre_merge")

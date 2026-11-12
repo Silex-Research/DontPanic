@@ -25,7 +25,43 @@ from pathlib import Path
 
 from dontpanic_orchestrate import closeout, gate_pause, signed_off_finalizer
 
-PLAN_ID = "2026-05-30-f002-demo"
+PLAN_ID = "2026-05-30-002-feat-f002-demo"
+
+def _loadable_plan_md(plan_id: str) -> str:
+    """Sentinel r3b (B) — the finalizer now fails closed on an unloadable plan
+    (``plan_unloadable``), so the fixture must be a real, loadable plan."""
+    return f"""---
+id: {plan_id}
+title: F002 freshness synthetic
+type: feat
+tier: cross-cutting
+status: active
+date: "2026-05-30"
+description: Synthetic loadable plan for the no-paid finalizer tests.
+agents_required:
+  - claude
+  - codex
+human_gates:
+  - pre_impl
+  - pre_merge
+loop_caps:
+  max_iterations: 1
+  hard_stop: false
+privacy_tier: internal
+links:
+  features: ./features.json
+---
+
+# Demo
+
+## Target
+
+```yaml
+target_env: dev
+target_project: none
+```
+"""
+
 
 
 def _write_auditor(
@@ -121,13 +157,11 @@ def test_finalize_uses_fresh_low_index_signed_off(tmp_path):
     signed_off. Pre-fix this refused with not_signed_off."""
     plan_dir = tmp_path / "docs" / "plans" / PLAN_ID
     plan_dir.mkdir(parents=True)
-    (plan_dir / "plan.md").write_text(
-        f"---\nid: {PLAN_ID}\ntier: cross-cutting\nstatus: active\n---\n# Demo\n"
-    )
+    (plan_dir / "plan.md").write_text(_loadable_plan_md(PLAN_ID))
     (plan_dir / "features.json").write_text(json.dumps({
         "task_id": PLAN_ID,
         "schema_version": "1.0",
-        "features": [{"id": "F001", "title": "Demo", "passes": False}],
+        "features": [{"id": "F001", "category": "test", "phase": 0, "description": "Demo F002 freshness feature.", "steps": ["scripted"], "acceptance": "Flips only after signed_off + pre_merge.", "passes": False, "depends_on": []}],
     }, indent=2) + "\n")
     audit_dir = plan_dir / "audit"
     (audit_dir / "claude-implementer-F001-i0.json").parent.mkdir(parents=True, exist_ok=True)

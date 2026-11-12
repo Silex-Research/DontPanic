@@ -16,7 +16,43 @@ import pytest
 
 from dontpanic_orchestrate import gate_pause, signed_off_finalizer, signoff_writer
 
-PLAN_ID = "2026-05-30-finalizer-demo"
+PLAN_ID = "2026-05-30-001-feat-finalizer-demo"
+
+def _loadable_plan_md(plan_id: str) -> str:
+    """Sentinel r3b (B) — the finalizer now fails closed on an unloadable plan
+    (``plan_unloadable``), so the fixture must be a real, loadable plan."""
+    return f"""---
+id: {plan_id}
+title: Signed-off finalizer synthetic
+type: feat
+tier: cross-cutting
+status: active
+date: "2026-05-30"
+description: Synthetic loadable plan for the no-paid finalizer tests.
+agents_required:
+  - claude
+  - codex
+human_gates:
+  - pre_impl
+  - pre_merge
+loop_caps:
+  max_iterations: 1
+  hard_stop: false
+privacy_tier: internal
+links:
+  features: ./features.json
+---
+
+# Demo
+
+## Target
+
+```yaml
+target_env: dev
+target_project: none
+```
+"""
+
 
 
 def _write(p: Path, obj) -> None:
@@ -27,15 +63,13 @@ def _write(p: Path, obj) -> None:
 def _plan_dir(tmp_path: Path, *, audit_status: str = "signed_off") -> Path:
     plan_dir = tmp_path / "docs" / "plans" / PLAN_ID
     plan_dir.mkdir(parents=True)
-    (plan_dir / "plan.md").write_text(
-        f"---\nid: {PLAN_ID}\ntier: cross-cutting\nstatus: active\n---\n# Demo\n"
-    )
+    (plan_dir / "plan.md").write_text(_loadable_plan_md(PLAN_ID))
     _write(
         plan_dir / "features.json",
         {
             "task_id": PLAN_ID,
             "schema_version": "1.0",
-            "features": [{"id": "F001", "title": "Demo brief", "passes": False}],
+            "features": [{"id": "F001", "category": "test", "phase": 0, "description": "Demo brief", "steps": ["scripted"], "acceptance": "Flips only after signed_off + pre_merge.", "passes": False, "depends_on": []}],
         },
     )
     # implementer + auditor envelopes (auditor carries the verdict).
@@ -59,10 +93,10 @@ def _plan_dir(tmp_path: Path, *, audit_status: str = "signed_off") -> Path:
 
 
 def _clear_pre_merge(plan_dir: Path) -> None:
-    gate_pause.approve_gate(plan_dir, "pre_impl", plan_id=PLAN_ID)
+    assert gate_pause.approve_gate(plan_dir, "pre_impl", plan_id=PLAN_ID)
     # F1: pre_merge is only approvable while the pre_merge stage is pending.
     gate_pause.record_pause(plan_dir, plan_id=PLAN_ID, pause_gates=["pre_merge"], stage="pre_merge")
-    gate_pause.approve_gate(plan_dir, "pre_merge", plan_id=PLAN_ID)
+    assert gate_pause.approve_gate(plan_dir, "pre_merge", plan_id=PLAN_ID)
 
 
 # ───────────────────────────── AC(9) success ─────────────────────────────
