@@ -527,46 +527,84 @@ def _is_satisfied_successor(sibling_dir: Path, *, parent_plan_id: str, acceptanc
     )
 
 
+def _latest_auditor_path_tie_stable(audit_paths: list[Path]) -> Path | None:
+    """Like :func:`_latest_auditor_path` (freshest by mtime, then iteration
+    index) but with a final deterministic tie-break on the file name, so the
+    choice never depends on the order of ``audit_paths``. Used only by
+    :func:`_successor_signoff_is_current`."""
+    best: Path | None = None
+    best_key: tuple[float, int, str] | None = None
+    for path in audit_paths:
+        if "auditor" not in path.name:
+            continue
+        try:
+            mtime = path.stat().st_mtime
+            data = json.loads(path.read_text())
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(data, dict):
+            continue
+        key = (mtime, closeout._auditor_iteration_of(path), path.name)
+        if best_key is None or key > best_key:
+            best_key = key
+            best = path
+    return best
+
+
+def _successor_feature_ids(sibling_dir: Path) -> list[str] | None:
+    """Every feature id in the successor's ``features.json``; None when it is
+    missing/unreadable/malformed or lists no features."""
+    try:
+        data = json.loads((sibling_dir / "features.json").read_text())
+    except Exception:  # noqa: BLE001 — unreadable features.json disqualifies
+        return None
+    features = data.get("features") if isinstance(data, dict) else None
+    if not isinstance(features, list) or not features:
+        return None
+    ids: list[str] = []
+    for f in features:
+        fid = f.get("id") if isinstance(f, dict) else None
+        if not isinstance(fid, str) or not fid:
+            return None
+        ids.append(fid)
+    return ids
+
+
 def _successor_signoff_is_current(sibling_dir: Path, signoff: dict[str, Any]) -> bool:
-    """True when the successor's success signoff is still backed by its LATEST
-    auditor verdict. The signoff is plan-level but volleys run per feature, so
-    the single NEWEST auditor envelope across the successor's whole ``audit/``
-    dir (every feature, ranked mtime-then-iteration exactly like the
-    finalizer's own selection) must be ``signed_off``, carry the signoff's
-    ``iteration`` and be listed in the signoff's ``audits``. A later blocked /
-    needs_changes audit for ANY feature (e.g. after the writer refused a
-    blocked rewrite and left the old pair on disk) therefore disqualifies the
-    successor. Read-only; fails closed."""
+    """True when the successor's success signoff is still backed by the LATEST
+    auditor verdict of EVERY feature. The signoff is plan-level but volleys run
+    per feature, so for each feature in the successor's ``features.json`` that
+    feature's latest auditor envelope (ranked mtime, then iteration index, then
+    file name — deterministic when timestamps tie, e.g. after a clone or copy)
+    must exist, be ``signed_off``, carry the signoff's ``iteration`` and be
+    listed in the signoff's ``audits``. A later blocked / needs_changes audit
+    for ANY feature (e.g. after the writer refused a blocked rewrite and left
+    the old pair on disk), or a feature with no auditor envelope, therefore
+    disqualifies the successor. Read-only; fails closed."""
     audits = signoff.get("audits")
     iteration = signoff.get("iteration")
     if not isinstance(audits, list) or not isinstance(iteration, int) or isinstance(iteration, bool):
         return False
-    audit_dir = sibling_dir / "audit"
-    try:
-        # Same envelope naming filter as closeout._audit_paths_for_feature
-        # (``<vendor>-<role>-<feature_id>-i<N>.json``), restricted to the
-        # auditor role, across every feature.
-        paths = [
-            p
-            for p in sorted(audit_dir.iterdir())
-            if p.name.endswith(".json")
-            and p.is_file()
-            and len(p.name[:-5].split("-")) >= 4
-            and "auditor" in p.name[:-5].split("-")
-        ]
-        latest_path = _latest_auditor_path(paths)
-        envelope = json.loads(latest_path.read_text()) if latest_path is not None else None
-    except Exception:  # noqa: BLE001 — missing/unreadable audit dir disqualifies
+    feature_ids = _successor_feature_ids(sibling_dir)
+    if feature_ids is None:
         return False
-    if latest_path is None or not isinstance(envelope, dict):
-        return False
-    if _verdict_of(envelope) != SIGNED_OFF_VERDICT:
-        return False
-    env_iter = envelope.get("iteration")
-    if isinstance(env_iter, bool) or env_iter != iteration:
-        return False
-    if not _signoff_lists_audit(audits, latest_path, sibling_dir):
-        return False
+    for fid in feature_ids:
+        try:
+            latest_path = _latest_auditor_path_tie_stable(
+                closeout._audit_paths_for_feature(sibling_dir, fid)
+            )
+            envelope = json.loads(latest_path.read_text()) if latest_path is not None else None
+        except Exception:  # noqa: BLE001 — missing/unreadable audit disqualifies
+            return False
+        if latest_path is None or not isinstance(envelope, dict):
+            return False
+        if _verdict_of(envelope) != SIGNED_OFF_VERDICT:
+            return False
+        env_iter = envelope.get("iteration")
+        if isinstance(env_iter, bool) or env_iter != iteration:
+            return False
+        if not _signoff_lists_audit(audits, latest_path, sibling_dir):
+            return False
     return True
 
 
