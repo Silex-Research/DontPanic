@@ -31,7 +31,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from dontpanic_orchestrate import closeout, gate_pause, signoff_writer
+from dontpanic_orchestrate import (
+    closeout,
+    gate_pause,
+    nested_orchestration,
+    plan_loader,
+    signoff_writer,
+)
 
 SIGNED_OFF_VERDICT = "signed_off"
 PRE_MERGE_GATE = "pre_merge"
@@ -180,19 +186,47 @@ def finalize_signed_off_feature(
     out_path = signoff_writer.signoff_path(plan_dir, plan_id)
     signoff_repaired = False
     if not out_path.is_file():
-        out_path = signoff_writer.write_signoff(
-            plan_id=plan_id,
-            tier=_read_plan_tier(plan_dir),
-            iteration=iteration,
-            agents_in_panel=_agents_in_panel(audit_paths),
-            audit_paths=audit_paths,
-            plan_dir=plan_dir,
-            volley_status=SIGNED_OFF_VERDICT,
-            signoff_reason=(
-                f"no-paid finalize of signed_off feature {feature_id} "
-                f"(pre_merge cleared); F007 finalizer"
-            ),
-        )
+        # DP-003 — a child plan's repaired signoff must pass the same charter
+        # compliance as the supervisor path; a violation refuses finalization
+        # (no signoff, no passes flip) instead of writing an unchecked one.
+        child_charter = commit_policy = orchestration = None
+        try:
+            loaded = plan_loader.load(plan_dir)
+            child_charter = loaded.child_charter
+            commit_policy = loaded.commit_policy
+            orchestration = loaded.orchestration
+        except Exception as exc:  # noqa: BLE001 — legacy tolerant tier read below
+            plan_md = plan_dir / "plan.md"
+            text = plan_md.read_text() if plan_md.is_file() else ""
+            if re.search(r"^child_charter\s*:", text, re.MULTILINE):
+                raise FinalizeError(
+                    "charter_unchecked",
+                    f"plan {plan_id} declares a child_charter but could not be "
+                    f"loaded to check compliance; refusing to repair: {exc}",
+                ) from exc
+        try:
+            out_path = signoff_writer.write_signoff(
+                plan_id=plan_id,
+                tier=_read_plan_tier(plan_dir),
+                iteration=iteration,
+                agents_in_panel=_agents_in_panel(audit_paths),
+                audit_paths=audit_paths,
+                plan_dir=plan_dir,
+                volley_status=SIGNED_OFF_VERDICT,
+                signoff_reason=(
+                    f"no-paid finalize of signed_off feature {feature_id} "
+                    f"(pre_merge cleared); F007 finalizer"
+                ),
+                child_charter=child_charter,
+                commit_policy=commit_policy,
+                orchestration=orchestration,
+            )
+        except nested_orchestration.ChildCharterViolation as exc:
+            raise FinalizeError(
+                "child_charter_violation",
+                f"child charter compliance failed for {plan_id}; refusing to "
+                f"repair the signoff or flip passes: {exc}",
+            ) from exc
         signoff_repaired = True
 
     # Step 5 — flip only this feature, idempotently. The PRIMARY evidence ref

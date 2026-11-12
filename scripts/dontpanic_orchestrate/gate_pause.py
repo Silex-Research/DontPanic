@@ -294,6 +294,30 @@ def _maybe_clear_pause_marker(state: dict[str, Any]) -> None:
         state.pop("pending_stage", None)
 
 
+def _blocked_by_other_pending_stage(state: dict[str, Any], gate: str) -> bool:
+    """DP-002 — True iff ``gate`` is a lifecycle gate for a stage OTHER than
+    the lifecycle stage the supervisor is currently paused on. Clearing it
+    would pre-clear an unreached stage. With no lifecycle pause recorded the
+    legacy (no-pause) approval semantics are preserved."""
+    stage = _stage_for_gate(gate)
+    if stage is None:
+        return False
+    pending = state.get("pending_stage")
+    pause = state.get("pause_gates") or []
+    pending_stages: set[str] = set()
+    if pending in _STAGE_GATES:
+        pending_stages.add(str(pending))
+    if isinstance(pause, list):
+        pending_stages.update(s for s in (_stage_for_gate(str(g)) for g in pause) if s)
+    return bool(pending_stages) and stage not in pending_stages
+
+
+def is_gate_approval_eligible(plan_dir: Path, gate: Any) -> bool:
+    """DP-002 — shared eligibility used by the writer and MCP preview."""
+    gate_str = _stringify_gates([gate])[0]
+    return not _blocked_by_other_pending_stage(_read_state(plan_dir), gate_str)
+
+
 def approve_gate(plan_dir: Path, gate: Any, *, plan_id: str, actor: str = "operator") -> bool:
     """Mark a single gate cleared. Idempotent — re-approving is a no-op
     (no INBOX append). Returns True if state changed.
@@ -330,6 +354,9 @@ def approve_gate(plan_dir: Path, gate: Any, *, plan_id: str, actor: str = "opera
             return False
     else:
         if gate_str in cleared:
+            return False
+        # DP-002 — never pre-clear an unreached lifecycle stage (no mutation).
+        if _blocked_by_other_pending_stage(state, gate_str):
             return False
 
     now = _now_iso()

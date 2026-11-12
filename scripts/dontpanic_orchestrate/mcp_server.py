@@ -449,12 +449,13 @@ def tool_approve_gate(args: dict[str, Any]) -> dict[str, Any]:
     plan_dir = _resolve_safe_path(inp.plan)
     loaded = plan_loader.load(plan_dir)
     is_cleared = gate_pause.is_gate_cleared(plan_dir, inp.gate)
+    eligible = gate_pause.is_gate_approval_eligible(plan_dir, inp.gate)
     intent = {
         "plan_id": loaded.plan_id,
         "plan_dir": str(plan_dir),
         "gate": inp.gate,
         "currently_cleared": is_cleared,
-        "would_clear": not is_cleared,
+        "would_clear": (not is_cleared) and eligible,
     }
     if not inp.confirm:
         return {

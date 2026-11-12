@@ -60,6 +60,23 @@ behavioral surface change with the date, a short summary, and a
 Surfaces affected: <comma-separated list — see docs/RELEASE_IMPACT.md>
 ```
 
+## 2026-11-12 — 0.2.1: Gate and signoff correctness fixes
+
+### Fixed
+
+- The MCP `approve_gate` tool and the shared approval writer no longer clear
+  `pre_merge` while the run is paused at another lifecycle stage. The preview
+  reports `would_clear: false`, and a confirmed call changes nothing.
+- A dispatch whose auditor signs off but whose required signoff cannot be
+  written (a child charter violation or a signoff write error) now ends
+  `blocked` instead of `signed_off`. The CLI exits 3, and MCP `dispatch`
+  returns `final_status: "blocked"`. The INBOX success event and the
+  `signoff` notification are sent only after `signoff.json` is written.
+- `dontpanic finalize` refuses to repair a child plan's signoff when its
+  charter compliance fails, so `passes` is not set.
+
+Surfaces affected: cli, mcp, inbox, notify, root_changelog
+
 ## 2026-11-03 — 0.2.0: Local MCP plugin listing
 
 ### Added

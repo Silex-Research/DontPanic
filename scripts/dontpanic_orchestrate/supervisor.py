@@ -1497,26 +1497,13 @@ class VolleyResult:
     audit_paths: list[Path]  # all audit JSONs produced, in order
 
 
-def _emit_volley_terminal(
+def _announce_volley_terminal(
     result: VolleyResult,
     *,
     loaded: plan_loader.LoadedPlan,
     feature_id: str,
-    agents_in_panel: list[str],
-    allow_incomplete_patch_reason: str | None = None,
-    unrelated_dirty_state_note: str | None = None,
-    cross_feature_ack_reason: str | None = None,
-) -> VolleyResult:
-    """F008 Items 1+3+4 — fire INBOX entry, terminal-notifier, signoff.json on
-    any volley terminal state. Returns the input result unchanged so callers
-    can `return _emit_volley_terminal(...)`.
-
-    Plan 2026-05-01-004 F003: between notify and signoff_writer we run the
-    patch-completeness gate. Block-tier findings without override raise
-    ``PatchCompletenessError`` and skip signoff persistence. The pass /
-    override path threads the resulting block into ``signoff.json`` via the
-    new ``patch_completeness`` kwarg.
-    """
+) -> None:
+    """F008 — INBOX ``volley_terminal`` entry + notify fan-out for a terminal."""
     plan_dir = loaded.plan_dir
     inbox.append_event(
         plan_dir,
@@ -1570,6 +1557,39 @@ def _emit_volley_terminal(
         ),
         plan_dir=plan_dir,
     )
+
+
+def _emit_volley_terminal(
+    result: VolleyResult,
+    *,
+    loaded: plan_loader.LoadedPlan,
+    feature_id: str,
+    agents_in_panel: list[str],
+    allow_incomplete_patch_reason: str | None = None,
+    unrelated_dirty_state_note: str | None = None,
+    cross_feature_ack_reason: str | None = None,
+) -> VolleyResult:
+    """F008 Items 1+3+4 — fire INBOX entry, terminal-notifier, signoff.json on
+    any volley terminal state. Returns the result so callers can
+    `return _emit_volley_terminal(...)`.
+
+    Plan 2026-05-01-004 F003: before signoff_writer we run the
+    patch-completeness gate. Block-tier findings without override raise
+    ``PatchCompletenessError`` and skip signoff persistence. The pass /
+    override path threads the resulting block into ``signoff.json`` via the
+    new ``patch_completeness`` kwarg.
+
+    DP-003: a ``signed_off`` terminal is announced (INBOX success event +
+    ``signoff`` notification) only AFTER ``signoff.json`` is durably written.
+    If the writer raises ``SignoffWriteError`` / ``ChildCharterViolation`` the
+    result is downgraded to the existing ``blocked`` terminal (CLI exit 3)
+    and announced as such; a raw ``OSError`` propagates with no success
+    announcement. Non-success terminals keep the announce-first order.
+    """
+    plan_dir = loaded.plan_dir
+    defer_announce = result.final_status == "signed_off" and bool(result.audit_paths)
+    if not defer_announce:
+        _announce_volley_terminal(result, loaded=loaded, feature_id=feature_id)
     if result.audit_paths:
         iteration = max(0, result.rounds - 1)
         # Plan 2026-05-01-004 F003: pre-signoff patch-completeness gate.
@@ -1660,6 +1680,18 @@ def _emit_volley_terminal(
             nested_orchestration.ChildCharterViolation,
         ) as exc:
             print(f"[volley] signoff_writer skipped: {exc}")
+            # DP-003 — a required signoff that was not durably written (or a
+            # child charter violation) is never presented as success.
+            if result.final_status == "signed_off":
+                result = VolleyResult(
+                    "blocked",
+                    result.rounds,
+                    f"auditor signed off but signoff was not written "
+                    f"({type(exc).__name__}): {exc}",
+                    result.audit_paths,
+                )
+    if defer_announce:
+        _announce_volley_terminal(result, loaded=loaded, feature_id=feature_id)
     return result
 
 
