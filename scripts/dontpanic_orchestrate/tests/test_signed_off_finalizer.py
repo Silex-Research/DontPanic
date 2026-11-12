@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from dontpanic_orchestrate import gate_pause, signed_off_finalizer
+from dontpanic_orchestrate import gate_pause, signed_off_finalizer, signoff_writer
 
 PLAN_ID = "2026-05-30-finalizer-demo"
 
@@ -95,8 +95,20 @@ def test_finalize_flips_passes_and_repairs_signoff(tmp_path):
 def test_finalize_uses_existing_signoff_without_clobber(tmp_path):
     plan_dir = _plan_dir(tmp_path)
     _clear_pre_merge(plan_dir)
-    existing = plan_dir / "audit" / f"signoff-{PLAN_ID}.json"
-    _write(existing, {"sentinel": "preexisting"})
+    # DP-003: an existing signoff must be a VALID success signoff for the
+    # selected verdict (an arbitrary stub is now refused — see
+    # test_dp003_signoff_integrity.py); a valid one is still never clobbered.
+    existing = signoff_writer.write_signoff(
+        plan_id=PLAN_ID,
+        tier="cross-cutting",
+        iteration=0,
+        agents_in_panel=["claude", "codex"],
+        audit_paths=[plan_dir / "audit" / "codex-auditor-F001-i0.json"],
+        plan_dir=plan_dir,
+        volley_status="signed_off",
+        signoff_reason="sentinel: preexisting",
+    )
+    before = existing.read_bytes()
 
     result = signed_off_finalizer.finalize_signed_off_feature(
         plan_dir, plan_id=PLAN_ID, feature_id="F001"
@@ -104,7 +116,7 @@ def test_finalize_uses_existing_signoff_without_clobber(tmp_path):
 
     assert result.signoff_repaired is False
     # Existing envelope left byte-for-byte (sentinel preserved).
-    assert json.loads(existing.read_text()) == {"sentinel": "preexisting"}
+    assert existing.read_bytes() == before
     assert result.features_passes_flipped is True
 
 
