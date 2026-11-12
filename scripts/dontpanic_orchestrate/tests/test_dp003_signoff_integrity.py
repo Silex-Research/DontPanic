@@ -1121,6 +1121,105 @@ def test_r4_superseded_child_repair_with_satisfied_successor_accepted(repo: Path
     assert _passes(plan_dir) is True
 
 
+# ───────── r5 — a successor counts only while its LATEST audit backs its signoff ─────────
+
+
+def _superseded_child_with_signoff(repo: Path) -> Path:
+    plan_dir = _make_child(repo, memo_status="superseded")
+    auditor = _write_envelopes(plan_dir, CHILD_ID)
+    _clear_pre_merge(plan_dir, CHILD_ID)
+    _write_valid_signoff(plan_dir, CHILD_ID, auditor, child=True)
+    return plan_dir
+
+
+def _blocked_auditor_envelope(plan_dir: Path, plan_id: str, *, iteration: int, newer_than: Path) -> Path:
+    """A later auditor envelope for F001 whose verdict is not signed_off."""
+    auditor = _write_envelopes(plan_dir, plan_id, iteration=iteration)
+    env = json.loads(auditor.read_text())
+    env["audit_status"] = "blocked"
+    env["summary"] = "Blocked on a later volley."
+    auditor.write_text(json.dumps(env))
+    _newer(auditor, newer_than)
+    return auditor
+
+
+def test_r5_stale_successor_after_refused_blocked_rewrite_not_accepted(repo: Path) -> None:
+    """Successor (requires tests_pass) signs off satisfied at i0; a later i1
+    volley ends blocked and the REAL writer refuses the blocked rewrite
+    (ChildCharterViolation), leaving the i0 pair on disk. That stale pair must
+    not let a superseded sibling finalize."""
+    from dontpanic_orchestrate import nested_orchestration
+
+    succ = _make_child(repo, _SUCCESSOR_ID, memo_status="satisfied")
+    plan_md = succ / "plan.md"
+    plan_md.write_text(
+        plan_md.read_text().replace(
+            "links:\n", "commit_policy:\n  mode: evidence_only\n  requires:\n    - tests_pass\nlinks:\n"
+        )
+    )
+    assert plan_loader.load(succ).commit_policy.requires == ["tests_pass"]
+    i0 = _write_envelopes(succ, _SUCCESSOR_ID, iteration=0)
+    _write_valid_signoff(succ, _SUCCESSOR_ID, i0, iteration=0, child=True)
+    i0_signoff = signoff_writer.signoff_path(succ, _SUCCESSOR_ID).read_bytes()
+    i0_side = _side_car(succ, _SUCCESSOR_ID).read_bytes()
+
+    i1 = _blocked_auditor_envelope(succ, _SUCCESSOR_ID, iteration=1, newer_than=i0)
+    (succ / "evidence" / "closeout-memo.md").write_text(
+        "# Close-out\n\n## Return Condition\n\nstatus: blocked\n"
+    )
+    with pytest.raises(nested_orchestration.ChildCharterViolation):
+        _write_valid_signoff(succ, _SUCCESSOR_ID, i1, iteration=1, volley_status="blocked", child=True)
+    # The writer refused, so the stale i0 success pair is still on disk.
+    assert signoff_writer.signoff_path(succ, _SUCCESSOR_ID).read_bytes() == i0_signoff
+    assert _side_car(succ, _SUCCESSOR_ID).read_bytes() == i0_side
+
+    plan_dir = _superseded_child_with_signoff(repo)
+    _assert_refused(plan_dir, CHILD_ID, "child_not_satisfied")
+
+
+def test_r5_successor_whose_latest_audit_is_blocked_not_accepted(repo: Path) -> None:
+    """Successor's i0 success pair is untouched, but its latest (i1) auditor
+    envelope is blocked: it is not a satisfied successor."""
+    succ = _successor(repo, "satisfied")
+    i0 = succ / "audit" / "codex-auditor-F001-i0.json"
+    _blocked_auditor_envelope(succ, _SUCCESSOR_ID, iteration=1, newer_than=i0)
+
+    plan_dir = _superseded_child_with_signoff(repo)
+    _assert_refused(plan_dir, CHILD_ID, "child_not_satisfied")
+
+
+@pytest.mark.parametrize(
+    ("acceptance_item", "accepted"),
+    [("parent acceptance #1", True), ("parent acceptance #2", False)],
+)
+def test_r5_successor_must_share_parent_acceptance_item(
+    repo: Path, acceptance_item: str, accepted: bool
+) -> None:
+    """A fully satisfied, current sibling of the same parent counts as a
+    successor only for the SAME parent_acceptance_item (Sentinel L3 / M10)."""
+    succ = _make_child(repo, _SUCCESSOR_ID, memo_status="satisfied")
+    plan_md = succ / "plan.md"
+    plan_md.write_text(
+        plan_md.read_text().replace(
+            "parent_acceptance_item: 'parent acceptance #1'",
+            f"parent_acceptance_item: '{acceptance_item}'",
+        )
+    )
+    assert plan_loader.load(succ).child_charter.parent_acceptance_item == acceptance_item
+    auditor = _write_envelopes(succ, _SUCCESSOR_ID)
+    _write_valid_signoff(succ, _SUCCESSOR_ID, auditor, child=True)
+
+    plan_dir = _superseded_child_with_signoff(repo)
+    if accepted:
+        fin = signed_off_finalizer.finalize_signed_off_feature(
+            plan_dir, plan_id=CHILD_ID, feature_id="F001"
+        )
+        assert fin.features_passes_flipped is True
+        assert _passes(plan_dir) is True
+    else:
+        _assert_refused(plan_dir, CHILD_ID, "child_not_satisfied")
+
+
 # ───────── HIGH-3 — transactional overwrite of an existing signoff/side-car pair ─────────
 
 
