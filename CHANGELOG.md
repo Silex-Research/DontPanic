@@ -65,8 +65,9 @@ Surfaces affected: <comma-separated list — see docs/RELEASE_IMPACT.md>
 ### Fixed
 
 - The MCP `approve_gate` tool and the shared approval writer no longer clear
-  `pre_merge` while the run is paused at another lifecycle stage. The preview
-  reports `would_clear: false`, and a confirmed call changes nothing.
+  `pre_merge` while the run is paused at another lifecycle stage, or when no
+  stage is pending at all (matching the CLI `approve`). The preview reports
+  `would_clear: false`, and a confirmed call changes nothing.
 - A dispatch whose auditor signs off but whose required signoff cannot be
   written (a child charter violation or a signoff write error) now ends
   `blocked` instead of `signed_off`. The CLI exits 3, and MCP `dispatch`

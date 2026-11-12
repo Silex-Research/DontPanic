@@ -295,10 +295,18 @@ def _maybe_clear_pause_marker(state: dict[str, Any]) -> None:
 
 
 def _blocked_by_other_pending_stage(state: dict[str, Any], gate: str) -> bool:
-    """DP-002 — True iff ``gate`` is a lifecycle gate for a stage OTHER than
-    the lifecycle stage the supervisor is currently paused on. Clearing it
-    would pre-clear an unreached stage. With no lifecycle pause recorded the
-    legacy (no-pause) approval semantics are preserved."""
+    """DP-002 / F1 — True iff approving lifecycle ``gate`` would pre-clear a
+    stage that is not currently pending:
+
+      - ``gate`` belongs to a stage OTHER than the lifecycle stage the
+        supervisor is currently paused on (DP-002); or
+      - ``gate`` is a ``pre_merge`` stage gate and the ``pre_merge`` stage is
+        not pending (the gate is not in ``pause_gates`` and ``pending_stage``
+        is not ``"pre_merge"``) — including when NO stage is pending (F1,
+        matching ``cli.py approve``).
+
+    ``pre_impl`` with no pending stage stays approvable (documented pre_impl
+    compatibility). Non-lifecycle gates are never blocked."""
     stage = _stage_for_gate(gate)
     if stage is None:
         return False
@@ -309,11 +317,16 @@ def _blocked_by_other_pending_stage(state: dict[str, Any], gate: str) -> bool:
         pending_stages.add(str(pending))
     if isinstance(pause, list):
         pending_stages.update(s for s in (_stage_for_gate(str(g)) for g in pause) if s)
+    if stage == "pre_merge":
+        return stage not in pending_stages
     return bool(pending_stages) and stage not in pending_stages
 
 
 def is_gate_approval_eligible(plan_dir: Path, gate: Any) -> bool:
-    """DP-002 — shared eligibility used by the writer and MCP preview."""
+    """DP-002 / F1 — shared eligibility used by the writer and MCP preview:
+    False when the gate would pre-clear a stage that is not pending (see
+    :func:`_blocked_by_other_pending_stage`; ``pre_merge`` needs a pending
+    ``pre_merge`` stage)."""
     gate_str = _stringify_gates([gate])[0]
     return not _blocked_by_other_pending_stage(_read_state(plan_dir), gate_str)
 
