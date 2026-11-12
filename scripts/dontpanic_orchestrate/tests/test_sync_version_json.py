@@ -146,3 +146,48 @@ def test_check_still_detects_pin_drift_in_scanned_doc(
 
     assert sync_version.main(["--check"]) == 1
     assert "docs/USE_CASES.md" in capsys.readouterr().err
+
+
+# ── Sentinel 5870049314 — .claude-plugin/plugin.json needs the uvx launch pin ──
+
+
+def _claude_plugin(root: Path) -> Path:
+    return root / ".claude-plugin" / "plugin.json"
+
+
+def test_has_version_pin_requires_claude_plugin_uvx_launch_pin(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    sync_version = _load_sync_version(tmp_path, monkeypatch)
+    payload = json.loads(_claude_plugin(tmp_path).read_text(encoding="utf-8"))
+    assert sync_version.has_version_pin(".claude-plugin/plugin.json", json.dumps(payload))
+
+    only_version = {k: v for k, v in payload.items() if k != "mcpServers"}
+    assert isinstance(only_version.get("version"), str)
+    assert not sync_version.has_version_pin(".claude-plugin/plugin.json", json.dumps(only_version))
+
+    # A pin mentioned elsewhere (not the uvx launch args) does not count.
+    elsewhere = dict(only_version, description="pip install dontpanic-orchestrate==0.2.1")
+    assert not sync_version.has_version_pin(".claude-plugin/plugin.json", json.dumps(elsewhere))
+
+    unpinned_args = json.loads(json.dumps(payload))
+    unpinned_args["mcpServers"]["dontpanic"]["args"] = ["dontpanic-orchestrate"]
+    assert not sync_version.has_version_pin(".claude-plugin/plugin.json", json.dumps(unpinned_args))
+
+
+def test_check_fails_when_claude_plugin_has_only_top_level_version(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+):
+    sync_version = _load_sync_version(tmp_path, monkeypatch)
+    plugin = _claude_plugin(tmp_path)
+    payload = json.loads(plugin.read_text(encoding="utf-8"))
+    payload.pop("mcpServers")
+    plugin.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    before = _snapshot(tmp_path)
+
+    assert sync_version.main(["--check"]) == 2
+    assert ".claude-plugin/plugin.json" in capsys.readouterr().err
+    # Write mode never invents the launch pin and writes nothing.
+    assert sync_version.main([]) == 2
+    assert ".claude-plugin/plugin.json" in capsys.readouterr().err
+    assert _snapshot(tmp_path) == before

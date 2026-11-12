@@ -532,8 +532,10 @@ def test_item3b_signoff_write_failure_after_sidecar_leaves_no_signoff(
     with pytest.raises(OSError):
         _write_valid_signoff(plan_dir, CHILD_ID, auditor, child=True)
 
-    # Side-car was written first; the signoff (and any temp file) is absent.
-    assert signoff_writer.charter_compliance_path(plan_dir, CHILD_ID).is_file()
+    # Side-car was written first, then rolled back with the failed signoff
+    # (Sentinel 5870049314 HIGH-3 — all-or-nothing): neither artifact (nor
+    # any temp file) remains.
+    assert not signoff_writer.charter_compliance_path(plan_dir, CHILD_ID).exists()
     assert not sp.exists()
     assert not [p for p in (plan_dir / "audit").iterdir() if p.name.endswith(".tmp")]
 
@@ -928,3 +930,467 @@ def test_r3b_cli_clears_authoritative_stage_under_contradictory_markers(
     assert cli.main(argv) == 0
     assert gate_pause.cleared_gates(plan_dir) == ["pre_impl"]
     assert not gate_pause.is_gate_cleared(plan_dir, "pre_merge")
+
+
+# ═════════════════════ Sentinel 5870049314 (r4) + Thanos correction ═════════════════════
+
+
+def _side_car(plan_dir: Path, plan_id: str) -> Path:
+    return signoff_writer.charter_compliance_path(plan_dir, plan_id)
+
+
+def _newer(path: Path, than: Path) -> None:
+    later = than.stat().st_mtime + 10
+    os.utime(path, (later, later))
+
+
+# ───────── HIGH-1 — side-car bound to iteration, selected audit and charter ─────────
+
+
+def test_r4_stale_sidecar_from_older_iteration_refused(repo: Path) -> None:
+    """An i0 side-car must not authorize the i1 signoff."""
+    plan_dir = _make_child(repo, memo_status="satisfied")
+    old_auditor = _write_envelopes(plan_dir, CHILD_ID, iteration=0)
+    _clear_pre_merge(plan_dir, CHILD_ID)
+    _write_valid_signoff(plan_dir, CHILD_ID, old_auditor, iteration=0, child=True)
+    old_side_car = _side_car(plan_dir, CHILD_ID).read_bytes()
+
+    new_auditor = _write_envelopes(plan_dir, CHILD_ID, iteration=1)
+    _newer(new_auditor, old_auditor)
+    _write_valid_signoff(plan_dir, CHILD_ID, new_auditor, iteration=1, child=True)
+    _side_car(plan_dir, CHILD_ID).write_bytes(old_side_car)  # stale i0 side-car
+
+    _assert_refused(plan_dir, CHILD_ID, "child_signoff_stale")
+
+
+def test_r4_sidecar_not_listing_selected_audit_refused(repo: Path) -> None:
+    plan_dir = _make_child(repo, memo_status="satisfied")
+    auditor = _write_envelopes(plan_dir, CHILD_ID)
+    _clear_pre_merge(plan_dir, CHILD_ID)
+    _write_valid_signoff(plan_dir, CHILD_ID, auditor, child=True)
+    side = _side_car(plan_dir, CHILD_ID)
+    data = json.loads(side.read_text())
+    data["audits"] = ["audit/codex-auditor-F001-i9.json"]
+    side.write_text(json.dumps(data, indent=2) + "\n")
+    _assert_refused(plan_dir, CHILD_ID, "child_signoff_stale")
+
+
+def test_r4_sidecar_from_changed_charter_refused(repo: Path) -> None:
+    """The charter changed after the side-car was written: digest mismatch."""
+    plan_dir = _make_child(repo, memo_status="satisfied")
+    auditor = _write_envelopes(plan_dir, CHILD_ID)
+    _clear_pre_merge(plan_dir, CHILD_ID)
+    _write_valid_signoff(plan_dir, CHILD_ID, auditor, child=True)
+    plan_md = plan_dir / "plan.md"
+    plan_md.write_text(
+        plan_md.read_text().replace(
+            "return_condition_summary: 'synthetic finding closed'",
+            "return_condition_summary: 'a different, widened return condition'",
+        )
+    )
+    plan_loader.load(plan_dir)  # still loadable — only the charter changed
+    _assert_refused(plan_dir, CHILD_ID, "child_signoff_stale")
+
+
+def test_r4_legacy_sidecar_without_binding_refused(repo: Path) -> None:
+    plan_dir = _make_child(repo, memo_status="satisfied")
+    auditor = _write_envelopes(plan_dir, CHILD_ID)
+    _clear_pre_merge(plan_dir, CHILD_ID)
+    _write_valid_signoff(plan_dir, CHILD_ID, auditor, child=True)
+    side = _side_car(plan_dir, CHILD_ID)
+    data = json.loads(side.read_text())
+    for key in ("iteration", "signoff_id", "audits", "charter_digest"):
+        data.pop(key)
+    side.write_text(json.dumps(data, indent=2) + "\n")
+    _assert_refused(plan_dir, CHILD_ID, "child_signoff_stale")
+
+
+def test_r4_sidecar_records_binding_fields(repo: Path) -> None:
+    from dontpanic_orchestrate import nested_orchestration
+
+    plan_dir = _make_child(repo, memo_status="satisfied")
+    auditor = _write_envelopes(plan_dir, CHILD_ID, iteration=2)
+    sp = _write_valid_signoff(plan_dir, CHILD_ID, auditor, iteration=2, child=True)
+    signoff = json.loads(sp.read_text())
+    side = json.loads(_side_car(plan_dir, CHILD_ID).read_text())
+    loaded = plan_loader.load(plan_dir)
+    assert side["iteration"] == 2 == signoff["iteration"]
+    assert side["signoff_id"] == signoff["signoff_id"]
+    assert side["audits"] == signoff["audits"]
+    assert side["charter_digest"] == nested_orchestration.charter_digest(
+        loaded.child_charter, loaded.commit_policy
+    )
+    assert side["return_condition_status"] == "satisfied"  # recording unchanged
+
+
+# ───────── HIGH-2 — fail closed on missing / unparseable completed_at ─────────
+
+
+@pytest.mark.parametrize("completed_at", [None, "", "not-a-timestamp", 12345])
+def test_r4_missing_or_unparseable_completed_at_fails_closed(
+    repo: Path, completed_at: Any
+) -> None:
+    plan_dir = _make_plan(repo, TOP_ID)
+    auditor = _write_envelopes(plan_dir, TOP_ID)
+    _clear_pre_merge(plan_dir, TOP_ID)
+    _write_valid_signoff(plan_dir, TOP_ID, auditor)
+    env = json.loads(auditor.read_text())
+    if completed_at is None:
+        env.pop("completed_at")
+    else:
+        env["completed_at"] = completed_at
+    auditor.write_text(json.dumps(env))
+    _assert_refused(plan_dir, TOP_ID, "signoff_stale")
+
+
+# ───────── Thanos guard — only a satisfied child finalizes ─────────
+
+
+def test_r4_blocked_child_existing_signoff_not_success(repo: Path) -> None:
+    plan_dir = _make_child(repo, memo_status="blocked")
+    auditor = _write_envelopes(plan_dir, CHILD_ID)
+    _clear_pre_merge(plan_dir, CHILD_ID)
+    _write_valid_signoff(plan_dir, CHILD_ID, auditor, child=True)
+    # Recording is unchanged: the writer still records ``blocked``.
+    assert json.loads(_side_car(plan_dir, CHILD_ID).read_text())["return_condition_status"] == "blocked"
+    _assert_refused(plan_dir, CHILD_ID, "child_not_satisfied")
+
+
+def test_r4_blocked_child_repair_path_not_success_and_writes_nothing(repo: Path) -> None:
+    plan_dir = _make_child(repo, memo_status="blocked")
+    _write_envelopes(plan_dir, CHILD_ID)
+    _clear_pre_merge(plan_dir, CHILD_ID)
+    _assert_refused(plan_dir, CHILD_ID, "child_not_satisfied")
+    assert not signoff_writer.signoff_path(plan_dir, CHILD_ID).exists()
+    assert not _side_car(plan_dir, CHILD_ID).exists()
+
+
+def test_r4_superseded_child_without_successor_not_success(repo: Path) -> None:
+    plan_dir = _make_child(repo, memo_status="superseded")
+    auditor = _write_envelopes(plan_dir, CHILD_ID)
+    _clear_pre_merge(plan_dir, CHILD_ID)
+    _write_valid_signoff(plan_dir, CHILD_ID, auditor, child=True)
+    _assert_refused(plan_dir, CHILD_ID, "child_not_satisfied")
+
+
+_SUCCESSOR_ID = "2026-11-12-404-infra-dp003i-successor"
+
+
+def _successor(repo: Path, memo_status: str) -> Path:
+    """Sibling child of the same parent for the same parent_acceptance_item,
+    with a durable signoff + side-car."""
+    succ = _make_child(repo, _SUCCESSOR_ID, memo_status=memo_status)
+    auditor = _write_envelopes(succ, _SUCCESSOR_ID)
+    _write_valid_signoff(succ, _SUCCESSOR_ID, auditor, child=True)
+    return succ
+
+
+def test_r4_superseded_child_with_blocked_successor_not_success(repo: Path) -> None:
+    _successor(repo, "blocked")
+    plan_dir = _make_child(repo, memo_status="superseded")
+    auditor = _write_envelopes(plan_dir, CHILD_ID)
+    _clear_pre_merge(plan_dir, CHILD_ID)
+    _write_valid_signoff(plan_dir, CHILD_ID, auditor, child=True)
+    _assert_refused(plan_dir, CHILD_ID, "child_not_satisfied")
+
+
+def test_r4_superseded_child_with_satisfied_successor_accepted(repo: Path) -> None:
+    _successor(repo, "satisfied")
+    plan_dir = _make_child(repo, memo_status="superseded")
+    auditor = _write_envelopes(plan_dir, CHILD_ID)
+    _clear_pre_merge(plan_dir, CHILD_ID)
+    sp = _write_valid_signoff(plan_dir, CHILD_ID, auditor, child=True)
+    before = sp.read_bytes()
+
+    fin = signed_off_finalizer.finalize_signed_off_feature(plan_dir, plan_id=CHILD_ID, feature_id="F001")
+
+    assert fin.features_passes_flipped is True
+    assert _passes(plan_dir) is True
+    assert sp.read_bytes() == before
+
+
+def test_r4_superseded_child_repair_with_satisfied_successor_accepted(repo: Path) -> None:
+    _successor(repo, "satisfied")
+    plan_dir = _make_child(repo, memo_status="superseded")
+    _write_envelopes(plan_dir, CHILD_ID)
+    _clear_pre_merge(plan_dir, CHILD_ID)
+
+    fin = signed_off_finalizer.finalize_signed_off_feature(plan_dir, plan_id=CHILD_ID, feature_id="F001")
+
+    assert fin.signoff_repaired is True
+    assert _passes(plan_dir) is True
+
+
+# ───────── HIGH-3 — transactional overwrite of an existing signoff/side-car pair ─────────
+
+
+def _tmp_files(plan_dir: Path) -> list[str]:
+    return [p.name for p in (plan_dir / "audit").iterdir() if p.name.endswith(".tmp")]
+
+
+def test_r4_failed_overwrite_of_existing_pair_restores_previous_pair(
+    repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan_dir = _make_child(repo, memo_status="satisfied")
+    old_auditor = _write_envelopes(plan_dir, CHILD_ID, iteration=0)
+    _clear_pre_merge(plan_dir, CHILD_ID)
+    sp = _write_valid_signoff(plan_dir, CHILD_ID, old_auditor, iteration=0, child=True)
+    side = _side_car(plan_dir, CHILD_ID)
+    old_signoff, old_side = sp.read_bytes(), side.read_bytes()
+
+    from dontpanic_orchestrate import nested_orchestration
+
+    new_auditor = _write_envelopes(plan_dir, CHILD_ID, iteration=1)
+    _newer(new_auditor, old_auditor)
+    # The replacement is computed at a later clock tick, so a clobbered
+    # side-car is observable even where it carries no iteration.
+    monkeypatch.setattr(nested_orchestration, "_now_iso", lambda: "2099-01-01T00:00:00Z")
+    _fail_writes_to(monkeypatch, sp)  # replacement signoff write fails
+
+    with pytest.raises(OSError):
+        _write_valid_signoff(plan_dir, CHILD_ID, new_auditor, iteration=1, child=True)
+
+    # All-or-nothing: the previous consistent pair is intact (no new side-car
+    # paired with the old signoff), and no temp files remain.
+    assert sp.read_bytes() == old_signoff
+    assert side.read_bytes() == old_side
+    assert _tmp_files(plan_dir) == []
+    # The leftover old signoff is never accepted as the i1 signoff.
+    monkeypatch.undo()
+    _assert_refused(plan_dir, CHILD_ID, "signoff_stale")
+
+
+def test_r4_failed_sidecar_overwrite_of_existing_pair_restores_previous_pair(
+    repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan_dir = _make_child(repo, memo_status="satisfied")
+    old_auditor = _write_envelopes(plan_dir, CHILD_ID, iteration=0)
+    sp = _write_valid_signoff(plan_dir, CHILD_ID, old_auditor, iteration=0, child=True)
+    side = _side_car(plan_dir, CHILD_ID)
+    old_signoff, old_side = sp.read_bytes(), side.read_bytes()
+    new_auditor = _write_envelopes(plan_dir, CHILD_ID, iteration=1)
+    _fail_writes_to(monkeypatch, side)
+
+    with pytest.raises(OSError):
+        _write_valid_signoff(plan_dir, CHILD_ID, new_auditor, iteration=1, child=True)
+
+    assert sp.read_bytes() == old_signoff
+    assert side.read_bytes() == old_side
+    assert _tmp_files(plan_dir) == []
+
+
+# ───────── MED-2 — present but invalid pending_stage fails closed ─────────
+
+
+def _garbage_stage_plan(repo: Path) -> Path:
+    plan_dir = _contradictory_plan(repo)
+    state_path = gate_pause.gate_state_path(plan_dir)
+    state = json.loads(state_path.read_text())
+    state["pending_stage"] = "garbage"
+    state["pause_gates"] = ["pre_merge"]
+    state_path.write_text(json.dumps(state, indent=2) + "\n")
+    return plan_dir
+
+
+def test_r4_invalid_pending_stage_blocks_lifecycle_approval_in_shared_writer(repo: Path) -> None:
+    plan_dir = _garbage_stage_plan(repo)
+    before = _state_bytes(plan_dir)
+    for gate in ("pre_merge", "pre_impl"):
+        assert gate_pause.is_gate_approval_eligible(plan_dir, gate) is False, gate
+        assert gate_pause.is_gate_currently_pending(plan_dir, gate) is False, gate
+        assert gate_pause.approve_gate(plan_dir, gate, plan_id=_BOTH_GATES_ID) is False, gate
+    assert _state_bytes(plan_dir) == before
+    assert gate_pause.cleared_gates(plan_dir) == []
+
+
+def test_r4_invalid_pending_stage_mcp_preview_and_confirm_refuse_pre_merge(repo: Path) -> None:
+    from dontpanic_orchestrate import mcp_server
+
+    plan_dir = _garbage_stage_plan(repo)
+    before = _state_bytes(plan_dir)
+    preview = mcp_server.dispatch_tool("approve_gate", {"plan": _BOTH_GATES_ID, "gate": "pre_merge"})
+    assert preview["intent"]["would_clear"] is False, preview
+    confirm = mcp_server.dispatch_tool(
+        "approve_gate", {"plan": _BOTH_GATES_ID, "gate": "pre_merge", "confirm": True}
+    )
+    assert confirm["result"]["changed"] is False, confirm
+    assert _state_bytes(plan_dir) == before
+
+
+def test_r4_invalid_pending_stage_resume_all_does_not_clear_lifecycle_gates(repo: Path) -> None:
+    plan_dir = _garbage_stage_plan(repo)
+    state_path = gate_pause.gate_state_path(plan_dir)
+    state = json.loads(state_path.read_text())
+    state["active_breakers"] = ["breaker:no_progress"]
+    state["pause_gates"] = ["pre_merge", "pre_impl", "breaker:no_progress"]
+    state_path.write_text(json.dumps(state, indent=2) + "\n")
+
+    newly = gate_pause.resume_all(
+        plan_dir, plan_id=_BOTH_GATES_ID, declared_gates=["pre_impl", "pre_merge"]
+    )
+
+    assert newly == ["breaker:no_progress"]  # transients still clear
+    assert not gate_pause.is_gate_cleared(plan_dir, "pre_merge")
+    assert not gate_pause.is_gate_cleared(plan_dir, "pre_impl")
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [["approve", _BOTH_GATES_ID, "pre_merge"], ["resume", _BOTH_GATES_ID, "--gate", "pre_merge"]],
+)
+def test_r4_invalid_pending_stage_cli_refuses_pre_merge(
+    repo: Path, argv: list[str], capsys: pytest.CaptureFixture[str]
+) -> None:
+    from dontpanic_orchestrate import cli
+
+    plan_dir = _garbage_stage_plan(repo)
+    before = _state_bytes(plan_dir)
+    assert cli.main(argv) == 2
+    # Refused either by the shared pending-stage rule or by the CLI's
+    # gate-state reconciliation (incompatible_pending_stage) — never cleared.
+    assert "REFUSED" in capsys.readouterr().err
+    assert _state_bytes(plan_dir) == before
+    assert not gate_pause.is_gate_cleared(plan_dir, "pre_merge")
+
+
+# ───────── MED-3 — transcript failure after a durable signoff ─────────
+
+
+def test_r4_transcript_failure_after_durable_signoff_keeps_one_success_terminal(
+    repo: Path, captured: list[Any], monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    plan_dir = _make_plan(repo, TOP_ID)
+    _clear_pre_merge(plan_dir, TOP_ID)
+    real_append = supervisor.transcript.append_terminal
+
+    def _failing_terminal(plan_dir_arg: Path, feature_id: str, status: str, *a: Any, **kw: Any) -> Any:
+        if status == "signed_off":
+            raise OSError(28, "No space left on device (injected transcript fault)")
+        return real_append(plan_dir_arg, feature_id, status, *a, **kw)
+
+    monkeypatch.setattr(supervisor.transcript, "append_terminal", _failing_terminal)
+
+    result = supervisor.dispatch_volley(plan_dir, "F001", max_iterations=1)
+
+    assert result.final_status == "signed_off", result
+    signoff = json.loads(signoff_writer.signoff_path(plan_dir, TOP_ID).read_text())
+    assert signoff["signoff"] is True
+    # Exactly one terminal INBOX entry (the success), no crash entry, no
+    # blocked transcript terminal, exactly one terminal notification.
+    assert [e.headers.get("final_status") for e in _terminal_inbox(plan_dir)] == ["signed_off"]
+    assert _crash_caught(plan_dir) == []
+    assert _transcript_terminals(plan_dir) == []
+    kinds = [getattr(e, "kind", None) for e in captured]
+    terminal_statuses = [
+        e.technical_metadata.get("final_status")
+        for e in captured
+        if getattr(e, "kind", None) == "volley_terminal"
+    ]
+    assert "blocked" not in terminal_statuses, kinds
+    assert kinds.count("signoff") == 1, kinds
+    assert "transcript terminal append failed" in capsys.readouterr().out
+
+
+# ───────── MED-4 — CLI finalize: plan_unloadable + distinct exit codes ─────────
+
+
+def test_r4_cli_finalize_unloadable_plan_refuses_plan_unloadable(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from dontpanic_orchestrate import cli
+
+    plan_dir = _make_plan(repo, TOP_ID)
+    _write_envelopes(plan_dir, TOP_ID)
+    plan_md = plan_dir / "plan.md"
+    plan_md.write_text(plan_md.read_text().replace("title: DP-003 signoff integrity synthetic\n", ""))
+    before_features = (plan_dir / "features.json").read_bytes()
+
+    rc = cli.main(["finalize", str(plan_dir), "--feature", "F001"])
+
+    assert rc == signed_off_finalizer.REFUSAL_EXIT_CODES["plan_unloadable"] == 7
+    assert "REFUSED (plan_unloadable)" in capsys.readouterr().err
+    assert (plan_dir / "features.json").read_bytes() == before_features
+    assert not signoff_writer.signoff_path(plan_dir, TOP_ID).exists()
+
+
+def test_r4_every_refusal_code_has_a_distinct_documented_exit_code() -> None:
+    import inspect
+    import re
+
+    from dontpanic_orchestrate import cli
+
+    codes = signed_off_finalizer.REFUSAL_EXIT_CODES
+    raised = set(
+        re.findall(r'FinalizeError\(\s*"([a-z_]+)"', inspect.getsource(signed_off_finalizer))
+    )
+    assert raised, "no refusal codes found"
+    assert raised <= set(codes), sorted(raised - set(codes))
+    exits = list(codes.values())
+    assert len(exits) == len(set(exits)), codes
+    # 0 success, 2 usage, 6 plan drift and the unmapped fallback are reserved.
+    reserved = {0, 2, 6, signed_off_finalizer.UNKNOWN_REFUSAL_EXIT_CODE}
+    assert not reserved & set(exits), codes
+    doc = cli._finalize_main.__doc__ or ""
+    for code, exit_code in codes.items():
+        assert re.search(rf"\b{exit_code}\s+— refused \({code}\)", doc), (code, exit_code)
+
+
+@pytest.mark.parametrize(
+    ("corrupt", "code"),
+    [
+        ("empty", "signoff_unreadable"),
+        ("stale", "signoff_stale"),
+        ("not_success", "signoff_not_success"),
+    ],
+)
+def test_r4_cli_finalize_refusals_exit_with_their_distinct_code(
+    repo: Path,
+    captured: list[Any],
+    capsys: pytest.CaptureFixture[str],
+    corrupt: str,
+    code: str,
+) -> None:
+    """Real dispatch (records the drift baseline + durable signoff), then a
+    real refusal through ``dontpanic finalize`` exits with its own code."""
+    from dontpanic_orchestrate import cli
+
+    plan_dir = _make_plan(repo, TOP_ID)
+    _clear_pre_merge(plan_dir, TOP_ID)
+    assert supervisor.dispatch_volley(plan_dir, "F001", max_iterations=1).final_status == "signed_off"
+    sp = signoff_writer.signoff_path(plan_dir, TOP_ID)
+    data = json.loads(sp.read_text())
+    if corrupt == "empty":
+        sp.write_text("")
+    elif corrupt == "stale":
+        data["decided_at"] = "2020-01-01T00:00:00Z"
+        sp.write_text(json.dumps(data, indent=2) + "\n")
+    else:
+        data["signoff"] = False
+        data["next_action"] = "remediate"
+        sp.write_text(json.dumps(data, indent=2) + "\n")
+    capsys.readouterr()
+
+    rc = cli.main(["finalize", str(plan_dir), "--feature", "F001"])
+
+    err = capsys.readouterr().err
+    assert rc == signed_off_finalizer.REFUSAL_EXIT_CODES[code], (rc, err[-400:])
+    assert f"REFUSED ({code})" in err
+    assert _passes(plan_dir) is False
+
+
+def test_r4_cli_finalize_blocked_child_exits_child_not_satisfied(
+    repo: Path, captured: list[Any], capsys: pytest.CaptureFixture[str]
+) -> None:
+    from dontpanic_orchestrate import cli
+
+    plan_dir = _make_child(repo, memo_status="blocked")
+    _clear_pre_merge(plan_dir, CHILD_ID)
+    supervisor.dispatch_volley(plan_dir, "F001", max_iterations=1)
+    assert json.loads(_side_car(plan_dir, CHILD_ID).read_text())["return_condition_status"] == "blocked"
+    capsys.readouterr()
+
+    rc = cli.main(["finalize", str(plan_dir), "--feature", "F001"])
+
+    err = capsys.readouterr().err
+    assert rc == signed_off_finalizer.REFUSAL_EXIT_CODES["child_not_satisfied"] == 15, err[-400:]
+    assert _passes(plan_dir) is False

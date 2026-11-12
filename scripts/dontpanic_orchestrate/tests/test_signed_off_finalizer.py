@@ -84,6 +84,9 @@ def _plan_dir(tmp_path: Path, *, audit_status: str = "signed_off") -> Path:
             "agent": "codex",
             "agent_role": "auditor",
             "iteration": 0,
+            # Real envelopes always carry completed_at (Audit schema); the
+            # finalizer fails closed without it (Sentinel 5870049314 HIGH-2).
+            "completed_at": "2026-01-01T00:00:00Z",
             "audit_status": audit_status,
             "findings": [],
             "summary": "Looks good.",
