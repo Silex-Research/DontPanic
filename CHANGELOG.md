@@ -75,6 +75,23 @@ Surfaces affected: <comma-separated list — see docs/RELEASE_IMPACT.md>
   `signoff` notification are sent only after `signoff.json` is written.
 - `dontpanic finalize` refuses to repair a child plan's signoff when its
   charter compliance fails, so `passes` is not set.
+- `dontpanic finalize` no longer trusts an existing signoff file blindly. It
+  refuses, without writing anything or setting `passes`, when the file is
+  empty or unreadable (`signoff_unreadable`), is for another plan
+  (`signoff_wrong_plan`), is not a success signoff (`signoff_not_success`),
+  does not match the signed_off audit being finalized (`signoff_stale`), or,
+  for a child plan, lacks a passing charter-compliance record
+  (`child_signoff_missing`). A valid existing signoff is still left untouched.
+- The volley transcript records the final terminal status, so a signoff that
+  ends `blocked` is never logged as `signed_off`.
+- The child charter-compliance record is written before the signoff, and both
+  are written atomically, so a failed write cannot leave a valid-looking
+  signoff behind.
+- A `signed_off` result with no audit envelopes ends `blocked` (no signoff is
+  possible) instead of being announced as success.
+- When the patch-completeness or cross-feature gate stops a signoff, the
+  INBOX and notification now record one `blocked` terminal naming the error
+  before it propagates.
 
 Surfaces affected: cli, mcp, inbox, notify, root_changelog
 

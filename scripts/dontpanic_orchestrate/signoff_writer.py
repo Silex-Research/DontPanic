@@ -14,8 +14,11 @@ of the volley regardless of outcome.
 
 from __future__ import annotations
 
+import contextlib
 import datetime as dt
 import json
+import os
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -172,6 +175,23 @@ def build_signoff_dict(
     return payload
 
 
+def _atomic_write_json(path: Path, obj: dict[str, Any]) -> None:
+    """Write ``obj`` as JSON to ``path`` atomically: a same-directory temp file
+    is fully written then ``os.replace``d over the target, so readers never
+    see a torn file. The temp file is removed if any step fails; the original
+    error (e.g. ``IsADirectoryError`` when a directory occupies ``path``)
+    propagates unchanged."""
+    fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            fh.write(json.dumps(obj, indent=2, ensure_ascii=False) + "\n")
+        os.replace(tmp_name, path)
+    except BaseException:
+        with contextlib.suppress(FileNotFoundError):
+            os.unlink(tmp_name)
+        raise
+
+
 def signoff_path(plan_dir: Path, plan_id: str) -> Path:
     return plan_dir / "audit" / f"signoff-{plan_id}.json"
 
@@ -240,13 +260,17 @@ def write_signoff(
             modified_files=modified_files,
         )
 
+    # DP-003 ordering: the compliance side-car is written FIRST and the
+    # signoff envelope LAST, both atomically (temp + os.replace). A failure of
+    # the signoff write therefore leaves at most a side-car with no signoff —
+    # which no consumer treats as success (the finalizer requires a valid
+    # signoff) — never a valid-looking signoff missing its side-car, and never
+    # a torn signoff file.
     out = signoff_path(plan_dir, plan_id)
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n")
-
     if compliance is not None:
-        side_car = charter_compliance_path(plan_dir, plan_id)
-        side_car.write_text(json.dumps(compliance, indent=2, ensure_ascii=False) + "\n")
+        _atomic_write_json(charter_compliance_path(plan_dir, plan_id), compliance)
+    _atomic_write_json(out, payload)
 
     # Plan 2026-05-02-003 F003: when this signoff is for a child plan,
     # record a best-effort volley.return_to_parent trace on the child's
