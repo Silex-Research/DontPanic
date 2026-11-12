@@ -126,6 +126,10 @@ Surfaces affected: <comma-separated list — see docs/RELEASE_IMPACT.md>
 - `scripts/sync_version.py --check` fails when `.claude-plugin/plugin.json`
   has a top-level `version` but no `uvx dontpanic-orchestrate==<version>`
   launch pin.
+- A sibling plan counts as the satisfied successor of a `superseded` child
+  only while its latest audit is `signed_off`, from the same iteration as its
+  signoff, and listed in that signoff. A stale success signoff left behind by
+  a later blocked volley no longer lets the superseded child finalize.
 
 Surfaces affected: cli, mcp, inbox, notify, root_changelog
 

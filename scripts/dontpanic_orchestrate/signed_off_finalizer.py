@@ -523,7 +523,52 @@ def _is_satisfied_successor(sibling_dir: Path, *, parent_plan_id: str, acceptanc
         and side.get("iteration") == signoff.get("iteration")
         and side.get("signoff_id") == signoff.get("signoff_id")
         and side.get("charter_digest") == nested_orchestration.charter_digest(sib_charter, sib_policy)
+        and _successor_signoff_is_current(sibling_dir, signoff)
     )
+
+
+def _successor_signoff_is_current(sibling_dir: Path, signoff: dict[str, Any]) -> bool:
+    """True when the successor's success signoff is still backed by its LATEST
+    auditor verdict. For every feature whose auditor envelope the signoff lists,
+    the freshest auditor envelope on disk (ranked like the finalizer's own
+    selection) must be ``signed_off``, carry the signoff's ``iteration`` and be
+    listed in the signoff's ``audits``. A later blocked / needs_changes audit
+    (e.g. after the writer refused a blocked rewrite and left the old pair on
+    disk) therefore disqualifies the successor. Read-only; fails closed."""
+    audits = signoff.get("audits")
+    iteration = signoff.get("iteration")
+    if not isinstance(audits, list) or not isinstance(iteration, int) or isinstance(iteration, bool):
+        return False
+    feature_ids: set[str] = set()
+    for entry in audits:
+        if not isinstance(entry, str) or not entry.endswith(".json"):
+            continue
+        parts = Path(entry).name[:-5].split("-")
+        if "auditor" not in parts:
+            continue
+        idx = parts.index("auditor")
+        fid = "-".join(parts[idx + 1 : -1])
+        if fid:
+            feature_ids.add(fid)
+    if not feature_ids:
+        return False
+    for fid in sorted(feature_ids):
+        try:
+            paths = closeout._audit_paths_for_feature(sibling_dir, fid)
+            envelope = closeout._latest_auditor_envelope(paths)
+            latest_path = _latest_auditor_path(paths)
+        except Exception:  # noqa: BLE001 — unreadable audit dir disqualifies
+            return False
+        if envelope is None or latest_path is None:
+            return False
+        if _verdict_of(envelope) != SIGNED_OFF_VERDICT:
+            return False
+        env_iter = envelope.get("iteration")
+        if isinstance(env_iter, bool) or env_iter != iteration:
+            return False
+        if not _signoff_lists_audit(audits, latest_path, sibling_dir):
+            return False
+    return True
 
 
 def _satisfied_successor(
