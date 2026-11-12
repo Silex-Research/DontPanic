@@ -1220,6 +1220,135 @@ def test_r5_successor_must_share_parent_acceptance_item(
         _assert_refused(plan_dir, CHILD_ID, "child_not_satisfied")
 
 
+# ───────── r6 — the NEWEST auditor envelope across ALL features backs the signoff ─────────
+
+
+def _auditor_envelope_for(
+    plan_dir: Path, plan_id: str, fid: str, *, iteration: int, audit_status: str, newer_than: Path
+) -> Path:
+    """An auditor envelope for feature ``fid`` at ``iteration``, made strictly
+    newer (mtime) than ``newer_than``."""
+    auditor = plan_dir / "audit" / f"codex-auditor-{fid}-i{iteration}.json"
+    ts = _iso(dt.datetime.now(dt.timezone.utc))
+    auditor.write_text(
+        json.dumps(
+            {
+                "task_id": plan_id,
+                "audit_id": f"{plan_id}#codex#{fid}#{iteration}",
+                "agent": "codex",
+                "agent_role": "auditor",
+                "iteration": iteration,
+                "started_at": ts,
+                "completed_at": ts,
+                "audit_status": audit_status,
+                "findings": [],
+                "summary": f"{fid} {audit_status}.",
+            }
+        )
+    )
+    _newer(auditor, newer_than)
+    return auditor
+
+
+def _two_feature_successor(repo: Path) -> tuple[Path, Path]:
+    """Satisfied successor with features F001 + F002 and ``requires:
+    [tests_pass]``; F001 signed off at i0 (bound pair). Returns
+    ``(successor_dir, f001_i0_auditor)``."""
+    if not (repo / "docs" / "plans" / PARENT_ID).is_dir():
+        _make_plan(repo, PARENT_ID)
+    succ = _make_plan(
+        repo,
+        _SUCCESSOR_ID,
+        child=True,
+        features=[_feature("F001", "Successor feature one."), _feature("F002", "Successor feature two.")],
+    )
+    (succ / "evidence").mkdir(parents=True, exist_ok=True)
+    (succ / "evidence" / "closeout-memo.md").write_text(
+        "# Close-out\n\n## Return Condition\n\nstatus: satisfied\n"
+    )
+    plan_md = succ / "plan.md"
+    plan_md.write_text(
+        plan_md.read_text().replace(
+            "links:\n", "commit_policy:\n  mode: evidence_only\n  requires:\n    - tests_pass\nlinks:\n"
+        )
+    )
+    loaded = plan_loader.load(succ)
+    assert loaded.commit_policy.requires == ["tests_pass"]
+    assert [f["id"] for f in json.loads((succ / "features.json").read_text())["features"]] == ["F001", "F002"]
+    i0 = _write_envelopes(succ, _SUCCESSOR_ID, iteration=0)
+    _write_valid_signoff(succ, _SUCCESSOR_ID, i0, iteration=0, child=True)
+    side = json.loads(_side_car(succ, _SUCCESSOR_ID).read_text())
+    assert side["return_condition_status"] == "satisfied"
+    return succ, i0
+
+
+def test_r6_sp8_stale_successor_after_newer_blocked_f002_volley_not_accepted(repo: Path) -> None:
+    """SP8: successor signs off F001 satisfied at i0; a later, newer F002
+    volley ends blocked and the REAL writer refuses the blocked rewrite,
+    leaving the F001 pair on disk. The successor's newest audit is blocked, so
+    the superseded sibling must not finalize."""
+    from dontpanic_orchestrate import nested_orchestration
+
+    succ, i0 = _two_feature_successor(repo)
+    i0_signoff = signoff_writer.signoff_path(succ, _SUCCESSOR_ID).read_bytes()
+    i0_side = _side_car(succ, _SUCCESSOR_ID).read_bytes()
+
+    f002 = _auditor_envelope_for(
+        succ, _SUCCESSOR_ID, "F002", iteration=0, audit_status="blocked", newer_than=i0
+    )
+    with pytest.raises(nested_orchestration.ChildCharterViolation):
+        _write_valid_signoff(succ, _SUCCESSOR_ID, f002, iteration=0, volley_status="blocked", child=True)
+    # The writer refused, so the stale F001 success pair is still on disk.
+    assert signoff_writer.signoff_path(succ, _SUCCESSOR_ID).read_bytes() == i0_signoff
+    assert _side_car(succ, _SUCCESSOR_ID).read_bytes() == i0_side
+
+    plan_dir = _superseded_child_with_signoff(repo)
+    _assert_refused(plan_dir, CHILD_ID, "child_not_satisfied")
+
+
+def test_r6_successor_newest_audit_iteration_mismatch_not_accepted(repo: Path) -> None:
+    """The newest auditor envelope is signed_off AND listed in the signoff's
+    audits, but its iteration differs from the signoff's: not a successor
+    (only the iteration-equality check refuses this)."""
+    succ, i0 = _two_feature_successor(repo)
+    signoff = json.loads(signoff_writer.signoff_path(succ, _SUCCESSOR_ID).read_text())
+    assert signoff["iteration"] == 0
+    assert any(Path(a).name == i0.name for a in signoff["audits"])
+    env = json.loads(i0.read_text())
+    env["iteration"] = 1
+    i0.write_text(json.dumps(env))
+    assert env["audit_status"] == "signed_off"
+
+    plan_dir = _superseded_child_with_signoff(repo)
+    _assert_refused(plan_dir, CHILD_ID, "child_not_satisfied")
+
+
+def test_r6_successor_newest_audit_not_listed_in_signoff_not_accepted(repo: Path) -> None:
+    """A later, newer F002 auditor envelope is signed_off at the signoff's
+    iteration but the (F001) signoff does not list it: the signoff is not
+    backed by the newest audit (only the listed check refuses this)."""
+    succ, i0 = _two_feature_successor(repo)
+    f002 = _auditor_envelope_for(
+        succ, _SUCCESSOR_ID, "F002", iteration=0, audit_status="signed_off", newer_than=i0
+    )
+    signoff = json.loads(signoff_writer.signoff_path(succ, _SUCCESSOR_ID).read_text())
+    assert signoff["iteration"] == 0
+    assert not any(Path(a).name == f002.name for a in signoff["audits"])
+
+    plan_dir = _superseded_child_with_signoff(repo)
+    _assert_refused(plan_dir, CHILD_ID, "child_not_satisfied")
+
+
+def test_r6_two_feature_successor_current_signoff_accepted(repo: Path) -> None:
+    """Positive control: the two-feature successor whose newest audit is the
+    signed_off F001 envelope its signoff lists is a satisfied successor."""
+    _two_feature_successor(repo)
+    plan_dir = _superseded_child_with_signoff(repo)
+    fin = signed_off_finalizer.finalize_signed_off_feature(plan_dir, plan_id=CHILD_ID, feature_id="F001")
+    assert fin.features_passes_flipped is True
+    assert _passes(plan_dir) is True
+
+
 # ───────── HIGH-3 — transactional overwrite of an existing signoff/side-car pair ─────────
 
 
