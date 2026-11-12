@@ -1648,7 +1648,10 @@ _TESTS_PASS_POLICY = "commit_policy:\n  mode: evidence_only\n  requires:\n    - 
 
 
 def _base_time() -> dt.datetime:
-    return dt.datetime.now(dt.timezone.utc).replace(microsecond=0)
+    """Base completed_at for scripted volleys, far enough in the PAST that
+    every offset volley (up to +100s) completed before the real writer stamps
+    ``decided_at`` (DPN-011: a signoff must not predate its listed envelope)."""
+    return dt.datetime.now(dt.timezone.utc).replace(microsecond=0) - dt.timedelta(seconds=600)
 
 
 def _child_successor(repo: Path, features: list[dict[str, Any]]) -> Path:
@@ -1882,6 +1885,370 @@ def test_r8_redispatch_later_signed_off_i0_beats_stale_i2_accepted(repo: Path) -
     fin = signed_off_finalizer.finalize_signed_off_feature(plan_dir, plan_id=CHILD_ID, feature_id="F001")
     assert fin.features_passes_flipped is True
     assert _passes(plan_dir) is True
+
+
+# ───────── r9 (DPN-011) — successor freshness, digest binding, newest tie, zone-less timestamps ─────────
+
+
+def _sha256(path: Path) -> str:
+    import hashlib
+
+    return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _signoff_json(succ: Path) -> dict[str, Any]:
+    return json.loads(signoff_writer.signoff_path(succ, _SUCCESSOR_ID).read_text())
+
+
+def _rewrite_signoff(succ: Path, data: dict[str, Any]) -> None:
+    signoff_writer.signoff_path(succ, _SUCCESSOR_ID).write_text(json.dumps(data, indent=2) + "\n")
+
+
+def _set_completed_at(path: Path, value: Any) -> None:
+    env = json.loads(path.read_text())
+    env["completed_at"] = value
+    env["started_at"] = value
+    path.write_text(json.dumps(env))
+
+
+def _signed_single_feature_successor(
+    repo: Path, *, completed_at: dt.datetime | None = None
+) -> tuple[Path, Path]:
+    """Single-feature successor: F001 i0 signed_off (``completed_at`` defaults
+    to a minute in the past) and a REAL-writer signoff listing that volley at
+    iteration 0. Returns ``(successor_dir, i0_auditor)``."""
+    succ = _child_successor(repo, [_feature("F001", "Successor feature one.")])
+    when = completed_at or (dt.datetime.now(dt.timezone.utc).replace(microsecond=0) - dt.timedelta(seconds=60))
+    i0 = _volley(succ, "F001", 0, "signed_off", when)
+    _write_successor_signoff(succ, list(i0), iteration=0)
+    return succ, i0[1]
+
+
+def _overwrite_in_place(auditor: Path, completed_at: str, *, tag: str) -> None:
+    """Redispatch overwrite of the SAME ``-iN`` auditor path: a different
+    ``signed_off`` envelope (new audit_id/summary/findings) at ``completed_at``."""
+    env = json.loads(auditor.read_text())
+    env.update(
+        {
+            "audit_id": f"{env['audit_id']}#redispatch-{tag}",
+            "started_at": completed_at,
+            "completed_at": completed_at,
+            "audit_status": "signed_off",
+            "summary": f"Redispatched verdict ({tag}).",
+            "findings": [{"severity": "low", "summary": f"redispatch {tag}"}],
+        }
+    )
+    auditor.write_text(json.dumps(env))
+
+
+def _overwrite_with_failed_signoff_rewrite(
+    succ: Path, auditor: Path, completed_at: str, monkeypatch: pytest.MonkeyPatch, *, tag: str
+) -> None:
+    """Overwrite ``auditor`` in place, then make the real writer's rewrite of
+    the signoff fail (injected ENOSPC on the signoff file) so the OLD signoff +
+    side-car pair stays on disk unchanged."""
+    sp = signoff_writer.signoff_path(succ, _SUCCESSOR_ID)
+    before_signoff, before_side = sp.read_bytes(), _side_car(succ, _SUCCESSOR_ID).read_bytes()
+    _overwrite_in_place(auditor, completed_at, tag=tag)
+    with monkeypatch.context() as m:
+        _fail_writes_to(m, sp)
+        with pytest.raises(OSError):
+            _write_successor_signoff(succ, [succ / "audit" / "claude-implementer-F001-i0.json", auditor])
+    assert sp.read_bytes() == before_signoff
+    assert _side_car(succ, _SUCCESSOR_ID).read_bytes() == before_side
+
+
+def _assert_superseded_sibling_finalizes(repo: Path) -> None:
+    plan_dir = _superseded_child_with_signoff(repo)
+    fin = signed_off_finalizer.finalize_signed_off_feature(plan_dir, plan_id=CHILD_ID, feature_id="F001")
+    assert fin.features_passes_flipped is True
+    assert _passes(plan_dir) is True
+
+
+def _assert_superseded_sibling_refused(repo: Path) -> None:
+    plan_dir = _superseded_child_with_signoff(repo)
+    _assert_refused(plan_dir, CHILD_ID, "child_not_satisfied")
+
+
+# ── (1) freshness: decided_at must not predate the listed latest envelope ──
+
+
+def test_r9_redispatch_overwrite_later_than_signoff_refused(
+    repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """i0 signed off and listed; a redispatch overwrites the SAME i0 path with
+    a signed_off envelope completed AFTER the signoff's decided_at and the
+    signoff rewrite fails, leaving the old signoff: not a successor."""
+    succ, i0 = _signed_single_feature_successor(repo)
+    decided = signed_off_finalizer._parse_iso(_signoff_json(succ)["decided_at"])
+    assert decided is not None
+    later = _iso(decided + dt.timedelta(seconds=60))
+    _overwrite_with_failed_signoff_rewrite(succ, i0, later, monkeypatch, tag="later")
+    assert json.loads(i0.read_text())["completed_at"] == later
+    _assert_superseded_sibling_refused(repo)
+
+
+def test_r9_successor_signoff_predating_listed_envelope_refused(repo: Path) -> None:
+    """Digest-bound (nothing overwritten) but the listed latest envelope's
+    completed_at is later than the signoff's decided_at (the real writer ran
+    while the envelope was stamped in the future): the freshness rule alone
+    refuses it."""
+    future = dt.datetime.now(dt.timezone.utc).replace(microsecond=0) + dt.timedelta(seconds=120)
+    succ, i0 = _signed_single_feature_successor(repo, completed_at=future)
+    signoff = _signoff_json(succ)
+    decided = signed_off_finalizer._parse_iso(signoff["decided_at"])
+    assert decided is not None and decided < future
+    assert json.loads(i0.read_text())["completed_at"] == _iso(future)  # never overwritten
+    _assert_superseded_sibling_refused(repo)
+
+
+@pytest.mark.parametrize("bad", ["missing", "", "not-a-timestamp", 12345])
+def test_r9_successor_missing_or_unparseable_decided_at_refused(repo: Path, bad: Any) -> None:
+    succ, _i0 = _signed_single_feature_successor(repo)
+    signoff = _signoff_json(succ)
+    if bad == "missing":
+        signoff.pop("decided_at")
+    else:
+        signoff["decided_at"] = bad
+    _rewrite_signoff(succ, signoff)
+    _assert_superseded_sibling_refused(repo)
+
+
+# ── (1b) digest binding: an in-place overwrite in the SAME second is caught ──
+
+
+def test_r9_same_second_same_path_overwrite_refused(
+    repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """As above, but the overwriting envelope's completed_at is the SAME second
+    as the signoff's decided_at (so ``decided < completed`` cannot see it) and
+    its bytes differ while it is still signed_off: refused by the digest."""
+    succ, i0 = _signed_single_feature_successor(repo)
+    signoff = _signoff_json(succ)
+    before = _sha256(i0)
+    _overwrite_with_failed_signoff_rewrite(succ, i0, signoff["decided_at"], monkeypatch, tag="same-second")
+    env = json.loads(i0.read_text())
+    assert env["completed_at"] == signoff["decided_at"]
+    assert env["audit_status"] == "signed_off"
+    assert _sha256(i0) != before
+    _assert_superseded_sibling_refused(repo)
+
+
+def test_r9_legacy_successor_signoff_without_audit_digests_refused(repo: Path) -> None:
+    succ, _i0 = _signed_single_feature_successor(repo)
+    signoff = _signoff_json(succ)
+    signoff.pop("audit_digests")
+    _rewrite_signoff(succ, signoff)
+    _assert_superseded_sibling_refused(repo)
+
+
+@pytest.mark.parametrize(
+    "tamper",
+    ["wrong_hex", "no_prefix", "not_a_string", "null", "entry_missing", "not_a_mapping"],
+)
+def test_r9_successor_tampered_or_malformed_digest_refused(repo: Path, tamper: str) -> None:
+    succ, i0 = _signed_single_feature_successor(repo)
+    signoff = _signoff_json(succ)
+    key = "audit/" + i0.name
+    good = signoff["audit_digests"][key]
+    assert good == _sha256(i0)
+    if tamper == "wrong_hex":
+        signoff["audit_digests"][key] = "sha256:" + "0" * 64
+    elif tamper == "no_prefix":
+        signoff["audit_digests"][key] = good.removeprefix("sha256:")
+    elif tamper == "not_a_string":
+        signoff["audit_digests"][key] = 12345
+    elif tamper == "null":
+        signoff["audit_digests"][key] = None
+    elif tamper == "entry_missing":
+        signoff["audit_digests"].pop(key)
+    else:
+        signoff["audit_digests"] = [good]
+    _rewrite_signoff(succ, signoff)
+    _assert_superseded_sibling_refused(repo)
+
+
+def test_r9_real_writer_successor_with_digests_accepted(repo: Path) -> None:
+    """Positive control: a legitimate per-volley successor written by the real
+    writer records a sha256 digest for every listed audit and backs the
+    superseded sibling, which finalizes SUCCESS."""
+    succ, i0 = _signed_single_feature_successor(repo)
+    signoff = _signoff_json(succ)
+    impl = succ / "audit" / "claude-implementer-F001-i0.json"
+    assert signoff["audit_digests"] == {
+        "audit/" + impl.name: _sha256(impl),
+        "audit/" + i0.name: _sha256(i0),
+    }
+    assert sorted(signoff["audit_digests"]) == sorted(signoff["audits"])
+    _assert_superseded_sibling_finalizes(repo)
+
+
+def test_r9_ordinary_finalize_accepts_signoff_carrying_audit_digests(repo: Path) -> None:
+    """The ordinary (non-successor) finalize of an existing real-writer signoff
+    that carries ``audit_digests`` still succeeds without clobbering it."""
+    plan_dir = _make_plan(repo, TOP_ID)
+    auditor = _write_envelopes(plan_dir, TOP_ID)
+    _clear_pre_merge(plan_dir, TOP_ID)
+    sp = _write_valid_signoff(plan_dir, TOP_ID, auditor)
+    assert json.loads(sp.read_text())["audit_digests"]["audit/" + auditor.name] == _sha256(auditor)
+    before = sp.read_bytes()
+    fin = signed_off_finalizer.finalize_signed_off_feature(plan_dir, plan_id=TOP_ID, feature_id="F001")
+    assert fin.features_passes_flipped is True
+    assert fin.signoff_repaired is False
+    assert sp.read_bytes() == before
+
+
+def test_r9_plan_validator_accepts_signoff_carrying_audit_digests(repo: Path) -> None:
+    """``claude/shared/schemas/v1.0/validate.py`` (doctor / CI / plan-lock)
+    schema-checks every ``audit/signoff*.json``; a real-writer signoff that
+    carries ``audit_digests`` still validates there."""
+    plan_dir = _make_plan(repo, TOP_ID)
+    auditor = _write_envelopes(plan_dir, TOP_ID)
+    sp = _write_valid_signoff(plan_dir, TOP_ID, auditor)
+    assert "audit_digests" in json.loads(sp.read_text())
+    validator = HERE.parents[3] / "claude" / "shared" / "schemas" / "v1.0" / "validate.py"
+    out = subprocess.run(
+        [sys.executable, str(validator), str(plan_dir)], capture_output=True, text=True, check=False
+    ).stdout
+    assert f"✓ audit/{sp.name}" in out, out
+
+
+def test_r9_repair_path_writes_audit_digests(repo: Path) -> None:
+    """The finalizer's repair path goes through the real writer and so records
+    digests too (and the repaired signoff then validates)."""
+    plan_dir = _make_plan(repo, TOP_ID)
+    auditor = _write_envelopes(plan_dir, TOP_ID)
+    _clear_pre_merge(plan_dir, TOP_ID)
+    fin = signed_off_finalizer.finalize_signed_off_feature(plan_dir, plan_id=TOP_ID, feature_id="F001")
+    assert fin.signoff_repaired is True
+    data = json.loads(fin.signoff_path.read_text())
+    assert data["audit_digests"]["audit/" + auditor.name] == _sha256(auditor)
+
+
+# ── (2) newest-tie fail-closed ──
+
+
+def test_r9_newest_completed_at_tie_refused(repo: Path) -> None:
+    """i2 signed_off (listed, signoff iteration 2), then a redispatched i0
+    ends blocked with the SAME completed_at second as i2 and the real writer
+    refuses the blocked rewrite. Iteration/name must not break the newest tie:
+    the latest cannot be determined, refused."""
+    from dontpanic_orchestrate import nested_orchestration
+
+    succ = _child_successor(repo, [_feature("F001", "Successor feature one.")])
+    t = _base_time() - dt.timedelta(seconds=120)
+    paths: list[Path] = []
+    for i, status in enumerate(["needs_changes", "needs_changes", "signed_off"]):
+        paths.extend(_volley(succ, "F001", i, status, t + dt.timedelta(seconds=10 * i)))
+    _write_successor_signoff(succ, paths, iteration=2)
+    i2 = paths[-1]
+    _impl, i0 = _volley(succ, "F001", 0, "blocked", t + dt.timedelta(seconds=20))
+    assert json.loads(i0.read_text())["completed_at"] == json.loads(i2.read_text())["completed_at"]
+    (succ / "evidence" / "closeout-memo.md").write_text(
+        "# Close-out\n\n## Return Condition\n\nstatus: blocked\n"
+    )
+    with pytest.raises(nested_orchestration.ChildCharterViolation):
+        _write_valid_signoff(succ, _SUCCESSOR_ID, i0, iteration=0, volley_status="blocked", child=True)
+    _assert_superseded_sibling_refused(repo)
+
+
+def test_r9_older_completed_at_tie_with_unique_newest_accepted(repo: Path) -> None:
+    """Older-tie control: i0 and i1 (needs_changes) share one completed_at
+    second, but the newest (i2 signed_off, listed, fresh, digest-bound) is
+    unique: accepted."""
+    succ = _child_successor(repo, [_feature("F001", "Successor feature one.")])
+    t = _base_time() - dt.timedelta(seconds=120)
+    paths: list[Path] = []
+    for i, (status, offset) in enumerate([("needs_changes", 0), ("needs_changes", 0), ("signed_off", 20)]):
+        paths.extend(_volley(succ, "F001", i, status, t + dt.timedelta(seconds=offset)))
+    stamps = [json.loads(p.read_text())["completed_at"] for p in paths[1::2]]
+    assert stamps[0] == stamps[1] != stamps[2]
+    _write_successor_signoff(succ, paths, iteration=2)
+    _assert_superseded_sibling_finalizes(repo)
+
+
+# ── (3) zone-less / date-only timestamps are refused ──
+
+
+@pytest.mark.parametrize(
+    ("value", "aware"),
+    [
+        ("2026-05-23T01:50:14Z", True),
+        ("2026-05-23T01:50:14+00:00", True),
+        ("2026-05-23T01:50:14-05:00", True),
+        ("2026-05-23T01:50:14", False),
+        ("2026-05-23", False),
+        ("2026-05-23 01:50:14", False),
+    ],
+)
+def test_r9_parse_iso_requires_explicit_offset(value: str, aware: bool) -> None:
+    parsed = signed_off_finalizer._parse_iso(value)
+    if aware:
+        assert parsed is not None and parsed.utcoffset() is not None
+    else:
+        assert parsed is None
+
+
+def test_r9_parse_iso_offset_is_honoured() -> None:
+    assert signed_off_finalizer._parse_iso("2026-05-23T01:50:14-05:00") == dt.datetime(
+        2026, 5, 23, 6, 50, 14, tzinfo=dt.timezone.utc
+    )
+
+
+def _past_naive(seconds: int = 300) -> dt.datetime:
+    return dt.datetime.now(dt.timezone.utc).replace(microsecond=0) - dt.timedelta(seconds=seconds)
+
+
+@pytest.mark.parametrize("form", ["naive", "date_only"])
+def test_r9_successor_zone_less_completed_at_refused(repo: Path, form: str) -> None:
+    """The listed latest envelope's completed_at has no offset (naive date-time
+    or date only), the signoff is written AFTER by the real writer (digests
+    match): refused, never read as UTC."""
+    succ = _child_successor(repo, [_feature("F001", "Successor feature one.")])
+    when = _past_naive()
+    impl, aud = _volley(succ, "F001", 0, "signed_off", when)
+    value = when.strftime("%Y-%m-%dT%H:%M:%S") if form == "naive" else (when - dt.timedelta(days=1)).date().isoformat()
+    _set_completed_at(aud, value)
+    _write_successor_signoff(succ, [impl, aud], iteration=0)
+    assert json.loads(aud.read_text())["completed_at"] == value  # signed after; not overwritten
+    _assert_superseded_sibling_refused(repo)
+
+
+def test_r9_successor_naive_decided_at_refused(repo: Path) -> None:
+    succ, _i0 = _signed_single_feature_successor(repo)
+    signoff = _signoff_json(succ)
+    signoff["decided_at"] = signoff["decided_at"].removesuffix("Z")
+    assert "Z" not in signoff["decided_at"] and "+" not in signoff["decided_at"]
+    _rewrite_signoff(succ, signoff)
+    _assert_superseded_sibling_refused(repo)
+
+
+@pytest.mark.parametrize("form", ["naive", "date_only"])
+def test_r9_ordinary_zone_less_completed_at_signoff_stale(repo: Path, form: str) -> None:
+    plan_dir = _make_plan(repo, TOP_ID)
+    when = _past_naive()
+    auditor = _write_envelopes(plan_dir, TOP_ID, completed_at=when)
+    _set_completed_at(
+        auditor,
+        when.strftime("%Y-%m-%dT%H:%M:%S") if form == "naive" else (when - dt.timedelta(days=1)).date().isoformat(),
+    )
+    _clear_pre_merge(plan_dir, TOP_ID)
+    _write_valid_signoff(plan_dir, TOP_ID, auditor)
+    _assert_refused(plan_dir, TOP_ID, "signoff_stale")
+
+
+def test_r9_ordinary_naive_decided_at_refused(repo: Path) -> None:
+    """Ordinary path: a naive ``decided_at`` never reaches the freshness rule
+    -- the vendored Signoff schema (``decided_at: AwareDatetime``) already
+    refuses it as ``signoff_unreadable`` (unchanged; the check order is kept)."""
+    plan_dir = _make_plan(repo, TOP_ID)
+    auditor = _write_envelopes(plan_dir, TOP_ID, completed_at=_past_naive())
+    _clear_pre_merge(plan_dir, TOP_ID)
+    sp = _write_valid_signoff(plan_dir, TOP_ID, auditor)
+    data = json.loads(sp.read_text())
+    data["decided_at"] = data["decided_at"].removesuffix("Z")
+    sp.write_text(json.dumps(data, indent=2) + "\n")
+    _assert_refused(plan_dir, TOP_ID, "signoff_unreadable")
 
 
 # ───────── HIGH-3 — transactional overwrite of an existing signoff/side-car pair ─────────
