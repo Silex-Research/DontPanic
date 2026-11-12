@@ -191,21 +191,67 @@ def _load_charter_context(plan_dir: Path, plan_id: str) -> tuple[Any, Any, Any]:
 
 
 def _parse_iso(value: Any) -> dt.datetime | None:
+    """Parse an ISO-8601 timestamp that carries an explicit UTC offset or
+    ``Z``. Returns None (unparseable) for anything else — including a naive
+    date-time and a date-only value — so a zone-less timestamp is never
+    silently read as UTC (the audit/signoff schemas require aware values)."""
     if not isinstance(value, str) or not value:
         return None
     try:
         parsed = dt.datetime.fromisoformat(value.replace("Z", "+00:00"))
     except ValueError:
         return None
-    if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=dt.timezone.utc)
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        return None
     return parsed
 
 
-def _signoff_lists_audit(audits: list[Any], auditor_path: Path, plan_dir: Path) -> bool:
-    """True when one of the signoff's ``audits`` entries (plan-relative or
-    absolute) resolves to ``auditor_path``."""
+def _freshness_problem(
+    envelope: dict[str, Any], signoff: dict[str, Any], auditor_path: Path | None
+) -> str | None:
+    """The single freshness rule shared by the ordinary finalizer
+    (:func:`_validate_existing_signoff`) and the successor path
+    (:func:`_successor_signoff_is_current`). Returns a human-readable reason
+    when ``signoff`` is not at least as new as ``envelope``, else None:
+
+      * the envelope's ``completed_at`` is missing / unparseable / zone-less;
+      * the signoff's ``decided_at`` is missing / unparseable / zone-less;
+      * ``decided_at`` is earlier than ``completed_at`` (second granularity).
+
+    Sentinel 5870049314 HIGH-2 — freshness is never skipped: a missing or
+    unparseable timestamp on either side means freshness cannot be proven
+    (fail closed)."""
+    completed = _parse_iso(envelope.get("completed_at"))
+    decided = _parse_iso(signoff.get("decided_at"))
+    if completed is None:
+        return (
+            f"signed_off auditor envelope {auditor_path} has a missing or "
+            f"unparseable completed_at ({envelope.get('completed_at')!r}); "
+            f"signoff freshness cannot be verified"
+        )
+    if decided is None:
+        return (
+            f"signoff decided_at {signoff.get('decided_at')!r} is missing or "
+            f"unparseable; signoff freshness cannot be verified"
+        )
+    if decided < completed.replace(microsecond=0):
+        return (
+            f"signoff decided_at {signoff.get('decided_at')} predates the "
+            f"signed_off auditor envelope completed_at {envelope.get('completed_at')}"
+        )
+    return None
+
+
+# Post-validation sibling keys the signoff writer attaches outside the
+# vendored Signoff schema (ignored for the schema check only).
+_SIGNOFF_SIBLING_KEYS = frozenset({"patch_completeness", "audit_digests"})
+
+
+def _listed_entries(audits: list[Any], auditor_path: Path, plan_dir: Path) -> list[str]:
+    """The signoff ``audits`` entries (plan-relative or absolute) that
+    resolve to ``auditor_path``."""
     target = auditor_path.resolve()
+    found: list[str] = []
     for entry in audits:
         if not isinstance(entry, str) or not entry:
             continue
@@ -213,8 +259,14 @@ def _signoff_lists_audit(audits: list[Any], auditor_path: Path, plan_dir: Path) 
         if not p.is_absolute():
             p = plan_dir / p
         if p.resolve() == target:
-            return True
-    return False
+            found.append(entry)
+    return found
+
+
+def _signoff_lists_audit(audits: list[Any], auditor_path: Path, plan_dir: Path) -> bool:
+    """True when one of the signoff's ``audits`` entries (plan-relative or
+    absolute) resolves to ``auditor_path``."""
+    return bool(_listed_entries(audits, auditor_path, plan_dir))
 
 
 def _validate_existing_signoff(
@@ -235,7 +287,8 @@ def _validate_existing_signoff(
 
       * ``signoff_unreadable``  — empty, torn/unparseable JSON, not an object,
         or fails the agent-conventions ``Signoff`` schema (the post-validation
-        ``patch_completeness`` sibling key is ignored for the schema check).
+        ``patch_completeness`` / ``audit_digests`` sibling keys are ignored for
+        the schema check).
       * ``signoff_wrong_plan``  — ``task_id`` != the plan being finalized.
       * ``signoff_not_success`` — ``signoff`` is not ``true`` or
         ``next_action`` != ``merge`` (a non-success terminal record).
@@ -244,7 +297,8 @@ def _validate_existing_signoff(
           - ``signoff.iteration`` != the selected envelope's ``iteration``;
           - the selected auditor envelope is not listed in ``signoff.audits``;
           - the envelope's ``completed_at`` or the signoff's ``decided_at`` is
-            missing or unparseable (freshness unverifiable — fail closed);
+            missing, unparseable or zone-less (freshness unverifiable — fail
+            closed);
           - ``signoff.decided_at`` is earlier than the envelope's
             ``completed_at`` (second granularity) — the signoff predates the
             verdict, e.g. a re-dispatch rewrote the same ``-iN`` filename.
@@ -280,7 +334,7 @@ def _validate_existing_signoff(
             f"existing signoff {out_path} is not a JSON object; refusing to finalize.",
         )
     try:
-        Signoff.model_validate({k: v for k, v in data.items() if k != "patch_completeness"})
+        Signoff.model_validate({k: v for k, v in data.items() if k not in _SIGNOFF_SIBLING_KEYS})
     except ValidationError as exc:
         raise FinalizeError(
             "signoff_unreadable",
@@ -323,27 +377,7 @@ def _validate_existing_signoff(
             envelope = {}
         if not isinstance(envelope, dict):
             envelope = {}
-        completed = _parse_iso(envelope.get("completed_at"))
-        decided = _parse_iso(data.get("decided_at"))
-        # Sentinel 5870049314 HIGH-2 — freshness is never skipped: a missing or
-        # unparseable timestamp on either side means freshness cannot be
-        # proven, so the existing signoff is refused as stale (fail closed).
-        if completed is None:
-            stale_reason = (
-                f"signed_off auditor envelope {auditor_path} has a missing or "
-                f"unparseable completed_at ({envelope.get('completed_at')!r}); "
-                f"signoff freshness cannot be verified"
-            )
-        elif decided is None:
-            stale_reason = (
-                f"signoff decided_at {data.get('decided_at')!r} is missing or "
-                f"unparseable; signoff freshness cannot be verified"
-            )
-        elif decided < completed.replace(microsecond=0):
-            stale_reason = (
-                f"signoff decided_at {data.get('decided_at')} predates the "
-                f"signed_off auditor envelope completed_at {envelope.get('completed_at')}"
-            )
+        stale_reason = _freshness_problem(envelope, data, auditor_path)
     if stale_reason is not None:
         raise FinalizeError(
             "signoff_stale",
@@ -529,7 +563,12 @@ def _is_satisfied_successor(sibling_dir: Path, *, parent_plan_id: str, acceptanc
 
 class _NoLatestAuditor(Exception):
     """A feature's latest auditor envelope cannot be determined (an auditor
-    envelope with a missing/unparseable ``completed_at``)."""
+    envelope with a missing/unparseable/zone-less ``completed_at``, or two
+    different envelopes sharing the newest ``completed_at`` second)."""
+
+
+def _utc_second(t: dt.datetime) -> dt.datetime:
+    return t.astimezone(dt.timezone.utc).replace(microsecond=0)
 
 
 def _latest_auditor_by_completed_at(audit_paths: list[Path]) -> tuple[Path, dict[str, Any]] | None:
@@ -541,11 +580,15 @@ def _latest_auditor_by_completed_at(audit_paths: list[Path]) -> tuple[Path, dict
     redispatch that reuses an ``-iN`` filename is ordered by when the verdict
     was actually made. Returns None when there is no readable auditor
     envelope; raises :class:`_NoLatestAuditor` when ANY readable auditor
-    envelope has a missing or unparseable ``completed_at`` (fail closed).
-    Unreadable / non-object files are skipped. Used only by
-    :func:`_successor_signoff_is_current`."""
+    envelope has a missing or unparseable ``completed_at`` (fail closed), or
+    when the highest ``completed_at`` (whole second, UTC) is shared by two or
+    more DIFFERENT auditor envelope paths — the latest verdict is then
+    ambiguous, so iteration / name never break a tie at the newest second
+    (ties among older envelopes are harmless). Unreadable / non-object files
+    are skipped. Used only by :func:`_successor_signoff_is_current`."""
     best: tuple[Path, dict[str, Any]] | None = None
     best_key: tuple[dt.datetime, int, str] | None = None
+    at_second: dict[dt.datetime, set[Path]] = {}
     for path in audit_paths:
         if "auditor" not in path.name:
             continue
@@ -558,11 +601,34 @@ def _latest_auditor_by_completed_at(audit_paths: list[Path]) -> tuple[Path, dict
         completed = _parse_iso(data.get("completed_at"))
         if completed is None:
             raise _NoLatestAuditor(f"{path} has a missing or unparseable completed_at")
+        at_second.setdefault(_utc_second(completed), set()).add(path.resolve())
         key = (completed, closeout._auditor_iteration_of(path), path.name)
         if best_key is None or key > best_key:
             best_key = key
             best = (path, data)
+    if at_second:
+        newest = max(at_second)
+        if len(at_second[newest]) > 1:
+            raise _NoLatestAuditor(
+                f"{len(at_second[newest])} auditor envelopes share the newest "
+                f"completed_at second {newest.isoformat()}; latest is ambiguous"
+            )
     return best
+
+
+def _digest_binds(signoff: dict[str, Any], entries: list[str], path: Path) -> bool:
+    """True when the signoff's ``audit_digests`` records, for every
+    ``audits`` entry in ``entries`` (at least one), the sha256 of ``path``'s
+    CURRENT bytes. Missing ``audit_digests``, a missing entry, a malformed
+    value, an unreadable file or a mismatch → False (fail closed)."""
+    digests = signoff.get("audit_digests")
+    if not isinstance(digests, dict) or not entries:
+        return False
+    try:
+        current = signoff_writer._audit_digest(path)
+    except OSError:
+        return False
+    return all(isinstance(digests.get(e), str) and digests.get(e) == current for e in entries)
 
 
 def _successor_feature_ids(sibling_dir: Path) -> list[str] | None:
@@ -596,10 +662,20 @@ def _successor_signoff_is_current(sibling_dir: Path, signoff: dict[str, Any]) ->
         successor) — must each have their LATEST auditor envelope listed, and
         that envelope's ``iteration`` must equal the signoff's ``iteration``.
 
+    For each own feature's latest (listed) envelope the signoff must also be
+    FRESH (:func:`_freshness_problem` — the same rule as the ordinary
+    finalizer: ``decided_at`` not earlier than ``completed_at``, both present,
+    parseable and zone-aware) and DIGEST-BOUND (:func:`_digest_binds` — its
+    ``audit_digests`` entry for that listed path equals the sha256 of the
+    file's current bytes, so an in-place overwrite of the same ``-iN`` path is
+    caught even within the same second; a legacy signoff without
+    ``audit_digests`` is not a successor).
+
     "Latest" is ranked by the envelope's ``completed_at``, then iteration
     index, then file name (:func:`_latest_auditor_by_completed_at`); file
-    timestamps are never used, and a missing/unparseable ``completed_at`` on
-    any auditor envelope disqualifies. A later blocked / needs_changes audit
+    timestamps are never used, a missing/unparseable/zone-less
+    ``completed_at`` on any auditor envelope disqualifies, and a tie at the
+    newest ``completed_at`` second disqualifies. A later blocked / needs_changes audit
     for ANY feature (e.g. after the writer refused a blocked rewrite and left
     the old pair on disk), or a feature with no auditor envelope, therefore
     disqualifies the successor. Read-only; fails closed."""
@@ -628,10 +704,15 @@ def _successor_signoff_is_current(sibling_dir: Path, signoff: dict[str, Any]) ->
         if not listed_any:
             continue
         own_features += 1
-        if not _signoff_lists_audit(audits, latest_path, sibling_dir):
+        entries = _listed_entries(audits, latest_path, sibling_dir)
+        if not entries:
             return False
         env_iter = envelope.get("iteration")
         if isinstance(env_iter, bool) or env_iter != iteration:
+            return False
+        if _freshness_problem(envelope, signoff, latest_path) is not None:
+            return False
+        if not _digest_binds(signoff, entries, latest_path):
             return False
     return own_features > 0
 

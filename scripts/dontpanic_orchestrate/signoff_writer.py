@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import contextlib
 import datetime as dt
+import hashlib
 import json
 import os
 import tempfile
@@ -172,7 +173,30 @@ def build_signoff_dict(
         raise SignoffWriteError(f"signoff payload failed validation: {exc}") from exc
     if patch_completeness is not None:
         payload["patch_completeness"] = patch_completeness
+    # DPN-011 — bind the signoff to the exact bytes of every envelope it
+    # lists (same post-validation sibling-key pattern as patch_completeness;
+    # the vendored Signoff schema is unchanged). An in-place overwrite of a
+    # listed ``-iN`` envelope changes its digest even within the same second.
+    payload["audit_digests"] = _audit_digests(audit_paths, audits_rel)
     return payload
+
+
+def _audit_digest(path: Path) -> str:
+    """``"sha256:<hex>"`` of ``path``'s bytes."""
+    return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _audit_digests(audit_paths: list[Path], audits_rel: list[str]) -> dict[str, str]:
+    """Map each ``audits`` entry to the sha256 digest of its file's bytes at
+    signoff time. An unreadable file gets no entry (a consumer that requires
+    the entry then fails closed)."""
+    digests: dict[str, str] = {}
+    for path, rel in zip(audit_paths, audits_rel, strict=True):
+        try:
+            digests[rel] = _audit_digest(path)
+        except OSError:
+            continue
+    return digests
 
 
 def _atomic_write_json(path: Path, obj: dict[str, Any]) -> None:

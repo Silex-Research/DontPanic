@@ -46,6 +46,11 @@ from models.plan_model import GoalType as PlanGoalType  # noqa: E402
 from models.plan_model import Plan  # noqa: E402
 from models.signoff_model import Signoff  # noqa: E402
 
+# Sibling keys the DontPanic signoff writer attaches to signoff JSON after
+# schema validation (``patch_completeness``, DPN-011 ``audit_digests``); they
+# are not part of the Signoff schema and are ignored for the schema check.
+_SIGNOFF_SIBLING_KEYS = frozenset({"patch_completeness", "audit_digests"})
+
 # Goal types that require an ObjectiveContract per Goal Governance V1 §4
 # applicability rule. Plans with goal_type in this set MUST declare
 # links.objective_contract; mechanical/infra/refactor (and absent goal_type)
@@ -311,6 +316,11 @@ def validate_plan_dir(plan_dir: Path) -> int:
                 print(f"  ⚠ audit/{f.name} — unknown audit artifact, skipped")
                 continue
             data = json.loads(f.read_text())
+            if kind == "signoff" and isinstance(data, dict):
+                # The DontPanic signoff writer attaches these post-validation
+                # sibling keys outside the Signoff schema (same rule as the
+                # finalizer's schema check); validate the canonical envelope.
+                data = {k: v for k, v in data.items() if k not in _SIGNOFF_SIBLING_KEYS}
             model = Signoff if kind == "signoff" else Audit
             ok, line = _check(f"audit/{f.name}", model, data)
             print(line)
