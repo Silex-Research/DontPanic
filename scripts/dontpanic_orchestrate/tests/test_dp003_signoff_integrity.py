@@ -1224,10 +1224,17 @@ def test_r5_successor_must_share_parent_acceptance_item(
 
 
 def _auditor_envelope_for(
-    plan_dir: Path, plan_id: str, fid: str, *, iteration: int, audit_status: str, newer_than: Path
+    plan_dir: Path,
+    plan_id: str,
+    fid: str,
+    *,
+    iteration: int,
+    audit_status: str,
+    newer_than: Path | None,
 ) -> Path:
     """An auditor envelope for feature ``fid`` at ``iteration``, made strictly
-    newer (mtime) than ``newer_than``."""
+    newer (mtime) than ``newer_than`` (``None``: natural write mtime, no
+    forced ordering)."""
     auditor = plan_dir / "audit" / f"codex-auditor-{fid}-i{iteration}.json"
     ts = _iso(dt.datetime.now(dt.timezone.utc))
     auditor.write_text(
@@ -1246,7 +1253,8 @@ def _auditor_envelope_for(
             }
         )
     )
-    _newer(auditor, newer_than)
+    if newer_than is not None:
+        _newer(auditor, newer_than)
     return auditor
 
 
@@ -1307,13 +1315,13 @@ def test_r6_sp8_stale_successor_after_newer_blocked_f002_volley_not_accepted(rep
 
 
 def test_r6_successor_newest_audit_iteration_mismatch_not_accepted(repo: Path) -> None:
-    """The newest auditor envelope is signed_off AND listed in the signoff's
-    audits, but its iteration differs from the signoff's: not a successor
-    (only the iteration-equality check refuses this)."""
-    succ, i0 = _two_feature_successor(repo)
+    """Every feature's latest auditor envelope is signed_off AND listed in the
+    signoff's audits, but F001's iteration differs from the signoff's: not a
+    successor (only the iteration-equality check refuses this)."""
+    succ, i0, f002 = _current_two_feature_successor(repo)
     signoff = json.loads(signoff_writer.signoff_path(succ, _SUCCESSOR_ID).read_text())
     assert signoff["iteration"] == 0
-    assert any(Path(a).name == i0.name for a in signoff["audits"])
+    assert {Path(a).name for a in signoff["audits"]} == {i0.name, f002.name}
     env = json.loads(i0.read_text())
     env["iteration"] = 1
     i0.write_text(json.dumps(env))
@@ -1340,13 +1348,241 @@ def test_r6_successor_newest_audit_not_listed_in_signoff_not_accepted(repo: Path
 
 
 def test_r6_two_feature_successor_current_signoff_accepted(repo: Path) -> None:
-    """Positive control: the two-feature successor whose newest audit is the
-    signed_off F001 envelope its signoff lists is a satisfied successor."""
-    _two_feature_successor(repo)
+    """Positive control: the two-feature successor whose F001 AND F002 latest
+    auditor envelopes are signed_off at the signoff's iteration and both listed
+    in its (real writer) signoff is a satisfied successor."""
+    _current_two_feature_successor(repo)
     plan_dir = _superseded_child_with_signoff(repo)
     fin = signed_off_finalizer.finalize_signed_off_feature(plan_dir, plan_id=CHILD_ID, feature_id="F001")
     assert fin.features_passes_flipped is True
     assert _passes(plan_dir) is True
+
+
+# ───────── r7 (DPN-010) — per-feature successor currency, deterministic under mtime ties ─────────
+
+
+def _write_successor_signoff(succ: Path, audit_paths: list[Path], *, iteration: int = 0) -> Path:
+    """Real ``signoff_writer.write_signoff`` for the successor listing exactly
+    ``audit_paths``."""
+    loaded = plan_loader.load(succ)
+    return signoff_writer.write_signoff(
+        plan_id=_SUCCESSOR_ID,
+        tier="trivial",
+        iteration=iteration,
+        agents_in_panel=["claude", "codex"],
+        audit_paths=audit_paths,
+        plan_dir=succ,
+        volley_status="signed_off",
+        child_charter=loaded.child_charter,
+        commit_policy=loaded.commit_policy,
+    )
+
+
+def _current_two_feature_successor(repo: Path) -> tuple[Path, Path, Path]:
+    """Two-feature successor with F001 AND F002 auditor envelopes signed_off at
+    i0 and a real signoff (+ bound side-car) listing both. Returns
+    ``(successor_dir, f001_auditor, f002_auditor)``."""
+    succ, f001 = _two_feature_successor(repo)
+    f002 = _auditor_envelope_for(
+        succ, _SUCCESSOR_ID, "F002", iteration=0, audit_status="signed_off", newer_than=None
+    )
+    _write_successor_signoff(succ, [f001, f002])
+    signoff = json.loads(signoff_writer.signoff_path(succ, _SUCCESSOR_ID).read_text())
+    assert {Path(a).name for a in signoff["audits"]} == {f001.name, f002.name}
+    side = json.loads(_side_car(succ, _SUCCESSOR_ID).read_text())
+    assert side["return_condition_status"] == "satisfied"
+    assert side["signoff_id"] == signoff["signoff_id"]
+    return succ, f001, f002
+
+
+def _sp8_successor(repo: Path, *, force_newer: bool) -> tuple[Path, Path, Path]:
+    """SP8 state: F001 signed off satisfied at i0 (bound pair); a later F002
+    auditor envelope is blocked and the REAL writer refuses the blocked
+    rewrite (ChildCharterViolation), leaving the F001 pair on disk. With
+    ``force_newer=False`` the F002 envelope keeps its natural write mtime."""
+    from dontpanic_orchestrate import nested_orchestration
+
+    succ, f001 = _two_feature_successor(repo)
+    signoff_bytes = signoff_writer.signoff_path(succ, _SUCCESSOR_ID).read_bytes()
+    side_bytes = _side_car(succ, _SUCCESSOR_ID).read_bytes()
+    f002 = _auditor_envelope_for(
+        succ,
+        _SUCCESSOR_ID,
+        "F002",
+        iteration=0,
+        audit_status="blocked",
+        newer_than=f001 if force_newer else None,
+    )
+    with pytest.raises(nested_orchestration.ChildCharterViolation):
+        _write_valid_signoff(succ, _SUCCESSOR_ID, f002, iteration=0, volley_status="blocked", child=True)
+    assert signoff_writer.signoff_path(succ, _SUCCESSOR_ID).read_bytes() == signoff_bytes
+    assert _side_car(succ, _SUCCESSOR_ID).read_bytes() == side_bytes
+    return succ, f001, f002
+
+
+def _equalize_audit_mtimes(plan_dir: Path) -> None:
+    """Force the SAME atime/mtime on every audit envelope (as after a clone /
+    copy that lands every file in the same timestamp tick)."""
+    files = sorted(p for p in (plan_dir / "audit").iterdir() if p.is_file())
+    assert files
+    stamp = max(p.stat().st_mtime for p in files)
+    for p in files:
+        os.utime(p, (stamp, stamp))
+    assert len({p.stat().st_mtime for p in files}) == 1
+
+
+def _git(cwd: Path, *args: str) -> None:
+    """Hermetic git for fixture repos: no host config, no signing."""
+    env = {
+        k: v
+        for k, v in os.environ.items()
+        if not k.startswith("GIT_")
+    }
+    env.update(
+        {
+            "GIT_CONFIG_NOSYSTEM": "1",
+            "GIT_CONFIG_GLOBAL": os.devnull,
+            "GIT_AUTHOR_NAME": "t",
+            "GIT_AUTHOR_EMAIL": "t@example.invalid",
+            "GIT_COMMITTER_NAME": "t",
+            "GIT_COMMITTER_EMAIL": "t@example.invalid",
+        }
+    )
+    subprocess.run(
+        ["git", "-c", "commit.gpgsign=false", "-c", "init.defaultBranch=main", *args],
+        cwd=str(cwd),
+        env=env,
+        check=True,
+        capture_output=True,
+    )
+
+
+def _real_copy(repo: Path, how: str) -> Path:
+    """Copy the fixture repo with a REAL tool (no forced mtimes); returns the
+    copy's root."""
+    dest = repo.parent / f"copy-{how}"
+    if how == "cp_R":
+        subprocess.run(["cp", "-R", str(repo), str(dest)], check=True)
+    elif how == "git_clone":
+        _git(repo, "init", "-q")
+        _git(repo, "add", "-A")
+        _git(repo, "commit", "-q", "-m", "sp8 state")
+        _git(repo.parent, "clone", "-q", str(repo), str(dest))
+    else:  # pragma: no cover — guarded by parametrize
+        raise AssertionError(how)
+    assert (dest / "docs" / "plans" / _SUCCESSOR_ID / "audit" / "codex-auditor-F002-i0.json").is_file()
+    return dest
+
+
+@pytest.mark.parametrize("how", ["cp_R", "git_clone"])
+def test_r7_sp8_after_real_copy_not_accepted(repo: Path, how: str) -> None:
+    """SP8 state copied with a real tool (``cp -R`` / ``git clone``): the copy's
+    audit envelopes get new, possibly tied or reordered mtimes. Finalizing the
+    superseded child IN THE COPY must still refuse: F002's latest audit is
+    blocked regardless of timestamps."""
+    _sp8_successor(repo, force_newer=False)
+    _superseded_child_with_signoff(repo)
+    copy_root = _real_copy(repo, how)
+    child_copy = copy_root / "docs" / "plans" / CHILD_ID
+    _assert_refused(child_copy, CHILD_ID, "child_not_satisfied")
+
+
+def test_r7_sp8_equal_mtimes_not_accepted(repo: Path) -> None:
+    """SP8 with every successor audit envelope forced to the same atime/mtime:
+    the blocked F002 latest audit still disqualifies the successor."""
+    succ, _f001, _f002 = _sp8_successor(repo, force_newer=True)
+    _equalize_audit_mtimes(succ)
+    plan_dir = _superseded_child_with_signoff(repo)
+    _assert_refused(plan_dir, CHILD_ID, "child_not_satisfied")
+
+
+def test_r7_sp8_older_f001_touched_after_blocked_f002_not_accepted(repo: Path) -> None:
+    """SP8 where the older signed_off F001 file is touched AFTER the blocked
+    F002 file (mtime no longer tracks volley order): still refused."""
+    succ, f001, f002 = _sp8_successor(repo, force_newer=True)
+    _newer(f001, f002)
+    assert f001.stat().st_mtime > f002.stat().st_mtime
+    plan_dir = _superseded_child_with_signoff(repo)
+    _assert_refused(plan_dir, CHILD_ID, "child_not_satisfied")
+
+
+def test_r7_equal_mtimes_f001_higher_iteration_cannot_mask_blocked_f002(repo: Path) -> None:
+    """Equal mtimes: a signed_off, listed F001 i2 (higher iteration index) must
+    not outrank F002's own latest audit (i0, blocked)."""
+    succ, _f001_i0 = _two_feature_successor(repo)
+    f001_i2 = _write_envelopes(succ, _SUCCESSOR_ID, iteration=2)
+    _write_successor_signoff(succ, [f001_i2], iteration=2)
+    _auditor_envelope_for(succ, _SUCCESSOR_ID, "F002", iteration=0, audit_status="blocked", newer_than=None)
+    _equalize_audit_mtimes(succ)
+    plan_dir = _superseded_child_with_signoff(repo)
+    _assert_refused(plan_dir, CHILD_ID, "child_not_satisfied")
+
+
+@pytest.mark.parametrize("bad_status", ["needs_changes", "blocked"])
+def test_r7_successor_feature_latest_audit_not_signed_off_not_accepted(
+    repo: Path, bad_status: str
+) -> None:
+    """Every feature's latest auditor envelope is at the signoff's iteration
+    AND listed in the signoff, but F002's verdict is not signed_off: refused
+    (only the verdict check refuses this)."""
+    succ, _f001, f002 = _current_two_feature_successor(repo)
+    env = json.loads(f002.read_text())
+    env["audit_status"] = bad_status
+    f002.write_text(json.dumps(env))
+    signoff = json.loads(signoff_writer.signoff_path(succ, _SUCCESSOR_ID).read_text())
+    assert env["iteration"] == signoff["iteration"] == 0
+    assert any(Path(a).name == f002.name for a in signoff["audits"])
+
+    plan_dir = _superseded_child_with_signoff(repo)
+    _assert_refused(plan_dir, CHILD_ID, "child_not_satisfied")
+
+
+@pytest.mark.parametrize("listed", ["F001", "F002"])
+def test_r7_equal_mtimes_every_feature_latest_must_be_listed(repo: Path, listed: str) -> None:
+    """Both features' latest audits are signed_off at the signoff's iteration
+    and all mtimes are equal, but the signoff lists only ONE of them: refused,
+    whichever one it is (the listed rule does not depend on tie order)."""
+    succ, f001, f002 = _current_two_feature_successor(repo)
+    only = f001 if listed == "F001" else f002
+    _write_successor_signoff(succ, [only])
+    signoff = json.loads(signoff_writer.signoff_path(succ, _SUCCESSOR_ID).read_text())
+    assert [Path(a).name for a in signoff["audits"]] == [only.name]
+    _equalize_audit_mtimes(succ)
+
+    plan_dir = _superseded_child_with_signoff(repo)
+    _assert_refused(plan_dir, CHILD_ID, "child_not_satisfied")
+
+
+def test_r7_successor_feature_without_auditor_envelope_not_accepted(repo: Path) -> None:
+    """A feature in the successor's features.json with no auditor envelope at
+    all: the plan-level signoff is not backed for that feature."""
+    _two_feature_successor(repo)  # F001 signed off; F002 never audited
+    plan_dir = _superseded_child_with_signoff(repo)
+    _assert_refused(plan_dir, CHILD_ID, "child_not_satisfied")
+
+
+def test_r7_two_feature_successor_accepted_with_equal_mtimes(repo: Path) -> None:
+    """Tie-stable positive control: the current two-feature successor is still
+    accepted when every audit envelope shares one atime/mtime."""
+    succ, _f001, _f002 = _current_two_feature_successor(repo)
+    _equalize_audit_mtimes(succ)
+    plan_dir = _superseded_child_with_signoff(repo)
+    fin = signed_off_finalizer.finalize_signed_off_feature(plan_dir, plan_id=CHILD_ID, feature_id="F001")
+    assert fin.features_passes_flipped is True
+    assert _passes(plan_dir) is True
+
+
+@pytest.mark.parametrize("how", ["cp_R", "git_clone"])
+def test_r7_two_feature_successor_accepted_after_real_copy(repo: Path, how: str) -> None:
+    """Positive control after a real copy: the current two-feature successor
+    still backs the superseded child in the copy."""
+    _current_two_feature_successor(repo)
+    _superseded_child_with_signoff(repo)
+    copy_root = _real_copy(repo, how)
+    child_copy = copy_root / "docs" / "plans" / CHILD_ID
+    fin = signed_off_finalizer.finalize_signed_off_feature(child_copy, plan_id=CHILD_ID, feature_id="F001")
+    assert fin.features_passes_flipped is True
+    assert _passes(child_copy) is True
 
 
 # ───────── HIGH-3 — transactional overwrite of an existing signoff/side-car pair ─────────
