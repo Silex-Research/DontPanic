@@ -527,27 +527,41 @@ def _is_satisfied_successor(sibling_dir: Path, *, parent_plan_id: str, acceptanc
     )
 
 
-def _latest_auditor_path_tie_stable(audit_paths: list[Path]) -> Path | None:
-    """Like :func:`_latest_auditor_path` (freshest by mtime, then iteration
-    index) but with a final deterministic tie-break on the file name, so the
-    choice never depends on the order of ``audit_paths``. Used only by
+class _NoLatestAuditor(Exception):
+    """A feature's latest auditor envelope cannot be determined (an auditor
+    envelope with a missing/unparseable ``completed_at``)."""
+
+
+def _latest_auditor_by_completed_at(audit_paths: list[Path]) -> tuple[Path, dict[str, Any]] | None:
+    """The latest auditor envelope among ``audit_paths`` and its parsed JSON,
+    ranked by the envelope's own ``completed_at`` (:func:`_parse_iso`), then
+    the iteration index from the file name, then the file name — highest
+    wins. File timestamps (mtime) are never consulted, so a touch, same-bytes
+    rewrite, copy, clone or branch switch cannot reorder envelopes, and a
+    redispatch that reuses an ``-iN`` filename is ordered by when the verdict
+    was actually made. Returns None when there is no readable auditor
+    envelope; raises :class:`_NoLatestAuditor` when ANY readable auditor
+    envelope has a missing or unparseable ``completed_at`` (fail closed).
+    Unreadable / non-object files are skipped. Used only by
     :func:`_successor_signoff_is_current`."""
-    best: Path | None = None
-    best_key: tuple[float, int, str] | None = None
+    best: tuple[Path, dict[str, Any]] | None = None
+    best_key: tuple[dt.datetime, int, str] | None = None
     for path in audit_paths:
         if "auditor" not in path.name:
             continue
         try:
-            mtime = path.stat().st_mtime
             data = json.loads(path.read_text())
-        except (OSError, json.JSONDecodeError):
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
             continue
         if not isinstance(data, dict):
             continue
-        key = (mtime, closeout._auditor_iteration_of(path), path.name)
+        completed = _parse_iso(data.get("completed_at"))
+        if completed is None:
+            raise _NoLatestAuditor(f"{path} has a missing or unparseable completed_at")
+        key = (completed, closeout._auditor_iteration_of(path), path.name)
         if best_key is None or key > best_key:
             best_key = key
-            best = path
+            best = (path, data)
     return best
 
 
@@ -571,13 +585,21 @@ def _successor_feature_ids(sibling_dir: Path) -> list[str] | None:
 
 
 def _successor_signoff_is_current(sibling_dir: Path, signoff: dict[str, Any]) -> bool:
-    """True when the successor's success signoff is still backed by the LATEST
-    auditor verdict of EVERY feature. The signoff is plan-level but volleys run
-    per feature, so for each feature in the successor's ``features.json`` that
-    feature's latest auditor envelope (ranked mtime, then iteration index, then
-    file name — deterministic when timestamps tie, e.g. after a clone or copy)
-    must exist, be ``signed_off``, carry the signoff's ``iteration`` and be
-    listed in the signoff's ``audits``. A later blocked / needs_changes audit
+    """True when the successor's success signoff is still backed by current
+    auditor verdicts. Volleys run per feature and each volley's signoff lists
+    only its OWN feature's envelopes, so:
+
+      * for EVERY feature in the successor's ``features.json``, that feature's
+        latest auditor envelope must exist and be ``signed_off``;
+      * the signoff's own feature(s) — the feature(s) with an auditor envelope
+        listed in the signoff's ``audits`` (at least one, else not a
+        successor) — must each have their LATEST auditor envelope listed, and
+        that envelope's ``iteration`` must equal the signoff's ``iteration``.
+
+    "Latest" is ranked by the envelope's ``completed_at``, then iteration
+    index, then file name (:func:`_latest_auditor_by_completed_at`); file
+    timestamps are never used, and a missing/unparseable ``completed_at`` on
+    any auditor envelope disqualifies. A later blocked / needs_changes audit
     for ANY feature (e.g. after the writer refused a blocked rewrite and left
     the old pair on disk), or a feature with no auditor envelope, therefore
     disqualifies the successor. Read-only; fails closed."""
@@ -588,24 +610,30 @@ def _successor_signoff_is_current(sibling_dir: Path, signoff: dict[str, Any]) ->
     feature_ids = _successor_feature_ids(sibling_dir)
     if feature_ids is None:
         return False
+    own_features = 0
     for fid in feature_ids:
         try:
-            latest_path = _latest_auditor_path_tie_stable(
-                closeout._audit_paths_for_feature(sibling_dir, fid)
+            paths = closeout._audit_paths_for_feature(sibling_dir, fid)
+            latest = _latest_auditor_by_completed_at(paths)
+            listed_any = any(
+                "auditor" in p.name and _signoff_lists_audit(audits, p, sibling_dir) for p in paths
             )
-            envelope = json.loads(latest_path.read_text()) if latest_path is not None else None
-        except Exception:  # noqa: BLE001 — missing/unreadable audit disqualifies
+        except Exception:  # noqa: BLE001 — missing/unreadable/undatable audit disqualifies
             return False
-        if latest_path is None or not isinstance(envelope, dict):
+        if latest is None:
             return False
+        latest_path, envelope = latest
         if _verdict_of(envelope) != SIGNED_OFF_VERDICT:
+            return False
+        if not listed_any:
+            continue
+        own_features += 1
+        if not _signoff_lists_audit(audits, latest_path, sibling_dir):
             return False
         env_iter = envelope.get("iteration")
         if isinstance(env_iter, bool) or env_iter != iteration:
             return False
-        if not _signoff_lists_audit(audits, latest_path, sibling_dir):
-            return False
-    return True
+    return own_features > 0
 
 
 def _satisfied_successor(
