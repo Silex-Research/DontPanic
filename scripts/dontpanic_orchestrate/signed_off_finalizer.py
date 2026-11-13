@@ -226,27 +226,34 @@ def _parse_iso(value: Any) -> dt.datetime | None:
 
 
 def _require_datable_auditor_envelope(
-    envelope: dict[str, Any], auditor_path: Path | None, feature_id: str
+    envelope: dict[str, Any] | None, auditor_path: Path | None, feature_id: str
 ) -> None:
     """DPN-012b item 6 — before branch (d) repairs a signoff from scratch, the
-    selected signed_off auditor envelope must be locatable and datable: a
-    repaired signoff could never be shown fresh against an envelope whose
-    ``completed_at`` is missing / unparseable / zone-less (the same
-    :func:`_parse_iso` rule :func:`_freshness_problem` applies). Refuses with
-    ``signoff_stale`` so nothing is written and nothing is flipped."""
+    selected signed_off auditor envelope must be locatable and datable under
+    the SAME rule branch (c) applies: :func:`_freshness_problem` against a
+    prospective ``decided_at`` from the writer clock. That refuses a missing /
+    unparseable / zone-less / date-only ``completed_at`` AND one later than
+    the finalizer's clock (a repair the next run would reject as stale).
+    Refuses with ``signoff_stale`` so nothing is written and nothing is
+    flipped."""
     if auditor_path is None:
         raise FinalizeError(
             "signoff_stale",
             f"no signed_off auditor envelope path could be selected for {feature_id}; "
             f"a repaired signoff could not be bound to it, refusing to finalize.",
         )
-    if _parse_iso(envelope.get("completed_at")) is None:
+    prospective = {"decided_at": signoff_writer._now_iso()}
+    stale = (
+        "no signed_off auditor envelope"
+        if envelope is None
+        else _freshness_problem(envelope, prospective, auditor_path)
+    )
+    if stale is not None:
         raise FinalizeError(
             "signoff_stale",
-            f"signed_off auditor envelope {auditor_path} for {feature_id} has a "
-            f"missing or unparseable completed_at "
-            f"({envelope.get('completed_at')!r}); a repaired signoff's freshness "
-            f"could not be verified, refusing to finalize.",
+            f"signed_off auditor envelope {auditor_path} for {feature_id}: {stale}; "
+            f"a repaired signoff's freshness could not be verified, refusing to "
+            f"finalize.",
         )
 
 

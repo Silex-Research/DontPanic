@@ -3198,7 +3198,7 @@ def _r11_non_success_plan_level_listing(plan_dir: Path, plan_id: str, entry: str
     assert not signoff_writer.feature_signoff_dir(plan_dir).exists()
 
 
-def test_r11_canonical_name_non_success_plan_level_baseline(repo: Path) -> None:
+def test_dpn012b_canonical_name_non_success_plan_level_baseline(repo: Path) -> None:
     """Baseline the alias cases must match: the canonical (unresolvable) name
     is this feature's (rule b) → ``signoff_not_success``, no repair."""
     plan_dir, plan_id = _r10_plan(repo, child=False)
@@ -3210,7 +3210,7 @@ def test_r11_canonical_name_non_success_plan_level_baseline(repo: Path) -> None:
     assert not signoff_writer.feature_signoff_dir(plan_dir).exists()
 
 
-def test_r11_lower_cased_name_listing_this_feature_is_rule_b(repo: Path) -> None:
+def test_dpn012b_lower_cased_name_listing_this_feature_is_rule_b(repo: Path) -> None:
     """Fix 1(a): a lower-cased envelope name names F001. The path does NOT
     exist (moved absolute prefix), so neither ``resolve()`` nor ``samefile``
     can match it on any volume — only the case-insensitive name match does."""
@@ -3223,7 +3223,7 @@ def test_r11_lower_cased_name_listing_this_feature_is_rule_b(repo: Path) -> None
     assert not signoff_writer.feature_signoff_dir(plan_dir).exists()
 
 
-def test_r11_entry_names_feature_is_case_insensitive() -> None:
+def test_dpn012b_entry_names_feature_is_case_insensitive() -> None:
     names = signed_off_finalizer._entry_names_feature
     assert names("audit/codex-auditor-f001-i0.json", "F001")
     assert names("audit/CODEX-AUDITOR-F001-I0.JSON", "F001")
@@ -3231,7 +3231,7 @@ def test_r11_entry_names_feature_is_case_insensitive() -> None:
     assert not names("audit/codex-auditor-f0010-i0.json", "F001")
 
 
-def test_r11_hard_link_alias_listing_this_feature_is_rule_b(repo: Path) -> None:
+def test_dpn012b_hard_link_alias_listing_this_feature_is_rule_b(repo: Path) -> None:
     """Fix 1(b): a hard link to F001's auditor envelope under a neutral name
     (``audit/alias.json``) is matched by ``samefile`` → this feature's."""
     plan_dir, plan_id = _r10_plan(repo, child=False)
@@ -3256,7 +3256,7 @@ def _r11_stray_file(plan_dir: Path) -> Path:
 
 
 @pytest.mark.parametrize("feature_id", ["F001", None], ids=["per_feature", "plan_level_only"])
-def test_r11_writer_stray_file_raises_signoff_write_error_writes_nothing(
+def test_dpn012b_writer_stray_file_raises_signoff_write_error_writes_nothing(
     repo: Path, feature_id: str | None
 ) -> None:
     plan_dir, plan_id = _r10_plan(repo, child=True)
@@ -3270,7 +3270,7 @@ def test_r11_writer_stray_file_raises_signoff_write_error_writes_nothing(
     assert not signoff_writer.charter_compliance_path(plan_dir, plan_id).exists()
 
 
-def test_r11_supervisor_stray_file_is_caught_signoff_not_written(
+def test_dpn012b_supervisor_stray_file_is_caught_signoff_not_written(
     repo: Path, captured: list[Any]
 ) -> None:
     """The writer's refusal is the exception type the supervisor catches
@@ -3286,7 +3286,7 @@ def test_r11_supervisor_stray_file_is_caught_signoff_not_written(
 
 
 @pytest.mark.parametrize("state", ["no_signoff", "valid_plan_level"])
-def test_r11_finalizer_stray_file_refused_signoff_unreadable(repo: Path, state: str) -> None:
+def test_dpn012b_finalizer_stray_file_refused_signoff_unreadable(repo: Path, state: str) -> None:
     plan_dir, plan_id = _r10_plan(repo, child=False)
     a1 = _r10_volley(plan_dir, plan_id, "F001")
     if state == "valid_plan_level":
@@ -3297,7 +3297,7 @@ def test_r11_finalizer_stray_file_refused_signoff_unreadable(repo: Path, state: 
     assert stray.read_bytes() == b"stray, not a directory\n"
 
 
-def test_r11_repair_writer_error_becomes_signoff_unreadable(
+def test_dpn012b_repair_writer_error_becomes_signoff_unreadable(
     repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """No ``SignoffWriteError`` from the writer escapes the finalizer."""
@@ -3320,7 +3320,7 @@ def _r11_dir_bytes(d: Path) -> dict[str, bytes]:
 
 
 @pytest.mark.parametrize("target", ["dir_with_valid_evidence", "dangling"])
-def test_r11_finalizer_symlinked_feature_dir_refused(repo: Path, target: str) -> None:
+def test_dpn012b_finalizer_symlinked_feature_dir_refused(repo: Path, target: str) -> None:
     plan_dir, plan_id = _r10_plan(repo, child=False)
     a1 = _r10_volley(plan_dir, plan_id, "F001")
     _r10_sign(plan_dir, plan_id, a1, feature_id="F001")
@@ -3340,7 +3340,7 @@ def test_r11_finalizer_symlinked_feature_dir_refused(repo: Path, target: str) ->
 
 
 @pytest.mark.parametrize("target", ["dir", "dangling"])
-def test_r11_writer_symlinked_feature_dir_refused_target_unchanged(repo: Path, target: str) -> None:
+def test_dpn012b_writer_symlinked_feature_dir_refused_target_unchanged(repo: Path, target: str) -> None:
     plan_dir, plan_id = _r10_plan(repo, child=True)
     a1 = _r10_volley(plan_dir, plan_id, "F001")
     outside = repo.parent / "outside-feature-signoffs"
@@ -3364,7 +3364,7 @@ def test_r11_writer_symlinked_feature_dir_refused_target_unchanged(repo: Path, t
 
 
 @pytest.mark.parametrize("child", [False, True], ids=["top", "child"])
-def test_r11_writer_case_colliding_feature_id_refused(repo: Path, child: bool) -> None:
+def test_dpn012b_writer_case_colliding_feature_id_refused(repo: Path, child: bool) -> None:
     plan_dir, plan_id = _r10_plan(repo, child=child)
     a1 = _r10_volley(plan_dir, plan_id, "F001")
     _r10_sign(plan_dir, plan_id, a1, feature_id="F1", child=child)
@@ -3378,7 +3378,7 @@ def test_r11_writer_case_colliding_feature_id_refused(repo: Path, child: bool) -
     assert _r10_fsig(plan_dir, plan_id, "f1").name not in os.listdir(f1.parent)
 
 
-def test_r11_finalizer_case_colliding_feature_evidence_refused(repo: Path) -> None:
+def test_dpn012b_finalizer_case_colliding_feature_evidence_refused(repo: Path) -> None:
     """Finalizing ``F001`` while only the case-colliding ``f001`` per-feature
     evidence exists is refused ``signoff_unreadable`` naming the collision —
     never accepted as F001's (case-insensitive volume: rule a would read it)
@@ -3407,25 +3407,31 @@ def test_r11_finalizer_case_colliding_feature_evidence_refused(repo: Path) -> No
 
 # Item 6 (Thanos ruling) — branch (d) refuses an undatable auditor envelope ─
 
+_DPN012B_FUTURE = object()
+
 
 @pytest.mark.parametrize("child", [False, True], ids=["top", "child"])
 @pytest.mark.parametrize(
     "completed_at",
-    [None, "2026-11-12T10:00:00", "2026-11-12", "not-a-timestamp"],
-    ids=["missing", "zone_less", "date_only", "unparseable"],
+    [None, "2026-11-12T10:00:00", "2026-11-12", "not-a-timestamp", _DPN012B_FUTURE],
+    ids=["missing", "zone_less", "date_only", "unparseable", "future"],
 )
-def test_r11_branch_d_undatable_auditor_envelope_refused_nothing_written(
-    repo: Path, child: bool, completed_at: str | None
+def test_dpn012b_branch_d_undatable_auditor_envelope_refused_nothing_written(
+    repo: Path, child: bool, completed_at: Any
 ) -> None:
     """No signoff anywhere (rule d) + a signed_off auditor envelope whose
-    ``completed_at`` cannot be dated: refused ``signoff_stale`` before any
-    repair — no plan-level or per-feature signoff / side-car written, no
+    ``completed_at`` cannot be dated — or is later than the finalizer's clock
+    (branch (c)'s full rule): refused ``signoff_stale`` before any repair — no
+    plan-level or per-feature signoff / side-car written, no
     ``feature-signoffs/`` created, no ``passes`` flipped."""
     plan_dir, plan_id = _r10_plan(repo, child=child)
     a1 = _r10_volley(plan_dir, plan_id, "F001")
     data = json.loads(a1.read_text())
     if completed_at is None:
         del data["completed_at"]
+    elif completed_at is _DPN012B_FUTURE:
+        future = dt.datetime.now(dt.timezone.utc).replace(microsecond=0) + dt.timedelta(hours=1)
+        data["completed_at"] = future.isoformat().replace("+00:00", "Z")
     else:
         data["completed_at"] = completed_at
     a1.write_text(json.dumps(data))
@@ -3444,3 +3450,26 @@ def test_r11_branch_d_undatable_auditor_envelope_refused_nothing_written(
     assert not plan_sig.exists() and not plan_side.exists()
     assert not os.path.lexists(fdir)
     assert _r10_passes(plan_dir, "F002") is False
+
+
+@pytest.mark.parametrize("child", [False, True], ids=["top", "child"])
+def test_dpn012b_branch_d_past_zone_aware_completed_at_still_repairs(repo: Path, child: bool) -> None:
+    """Control: no signoff anywhere (rule d) + a signed_off auditor envelope
+    with an explicit zone-aware completed_at in the past — branch (d) still
+    repairs both pairs and flips passes; a re-run is idempotent."""
+    plan_dir, plan_id = _r10_plan(repo, child=child)
+    a1 = _r10_volley(plan_dir, plan_id, "F001")
+    data = json.loads(a1.read_text())
+    data["completed_at"] = _base_time().isoformat().replace("+00:00", "Z")
+    a1.write_text(json.dumps(data))
+    _clear_pre_merge(plan_dir, plan_id)
+    assert not signoff_writer.signoff_path(plan_dir, plan_id).exists()
+
+    fin = signed_off_finalizer.finalize_signed_off_feature(plan_dir, plan_id=plan_id, feature_id="F001")
+
+    assert fin.signoff_repaired is True and fin.features_passes_flipped is True
+    assert fin.signoff_path == _r10_fsig(plan_dir, plan_id)
+    assert _r10_passes(plan_dir, "F001") is True
+    assert signoff_writer.signoff_path(plan_dir, plan_id).is_file()
+    again = signed_off_finalizer.finalize_signed_off_feature(plan_dir, plan_id=plan_id, feature_id="F001")
+    assert again.already_finalized is True
