@@ -2754,6 +2754,72 @@ def test_r10_legacy_plan_level_of_other_feature_repairs_only_feature_pair(
     assert again.already_finalized is True and again.signoff_path == fsig
 
 
+_R11_MISSING = object()
+
+
+def _r11_legacy_branch_c(repo: Path, *, child: bool, completed_at: Any) -> tuple[Path, str]:
+    """Branch (c) setup exactly as the r10 legacy-repair test, then rewrite
+    F001's latest auditor envelope's ``completed_at`` in place (verdict stays
+    signed_off). ``_R11_MISSING`` removes the key."""
+    plan_dir, plan_id = _r10_plan(repo, child=child)
+    a1 = _r10_volley(plan_dir, plan_id, "F001", offset=0)
+    a2 = _r10_volley(plan_dir, plan_id, "F002", offset=10)
+    _r10_sign(plan_dir, plan_id, a2, feature_id=None, child=child)  # pre-DPN-012 writer call
+    assert not signoff_writer.feature_signoff_dir(plan_dir).exists()
+    _clear_pre_merge(plan_dir, plan_id)
+    env = json.loads(a1.read_text())
+    if completed_at is _R11_MISSING:
+        env.pop("completed_at", None)
+    else:
+        env["completed_at"] = completed_at
+    a1.write_text(json.dumps(env))
+    assert signed_off_finalizer._verdict_of(env) == signed_off_finalizer.SIGNED_OFF_VERDICT
+    return plan_dir, plan_id
+
+
+@pytest.mark.parametrize("child", [False, True], ids=["top", "child"])
+@pytest.mark.parametrize(
+    "completed_at",
+    [_R11_MISSING, "2026-11-12T10:00:00", "2026-11-12"],
+    ids=["missing", "zone_less", "date_only"],
+)
+def test_r11_legacy_repair_refused_when_envelope_completed_at_unusable(
+    repo: Path, child: bool, completed_at: Any
+) -> None:
+    """CodeRabbit 4558784587 — branch (c) must not repair a per-feature
+    signoff (and flip passes) from an envelope whose completed_at the next
+    finalize's freshness check would refuse."""
+    plan_dir, plan_id = _r11_legacy_branch_c(repo, child=child, completed_at=completed_at)
+    plan_sp = signoff_writer.signoff_path(plan_dir, plan_id)
+    plan_side = signoff_writer.charter_compliance_path(plan_dir, plan_id)
+    plan_before = plan_sp.read_bytes()
+    side_before = plan_side.read_bytes() if child else None
+
+    _r10_assert_refused(plan_dir, plan_id, "signoff_stale")
+
+    assert not _r10_fsig(plan_dir, plan_id).exists()
+    assert not _r10_fside(plan_dir, plan_id).exists()
+    assert not signoff_writer.feature_signoff_dir(plan_dir).exists()
+    assert plan_sp.read_bytes() == plan_before
+    if child:
+        assert plan_side.read_bytes() == side_before
+
+
+@pytest.mark.parametrize("child", [False, True], ids=["top", "child"])
+def test_r11_legacy_repair_with_zone_aware_completed_at_still_repairs(repo: Path, child: bool) -> None:
+    """Control: a valid zone-aware completed_at keeps the branch (c) repair."""
+    plan_dir, plan_id = _r11_legacy_branch_c(
+        repo, child=child, completed_at=_base_time().isoformat().replace("+00:00", "Z")
+    )
+    fin = signed_off_finalizer.finalize_signed_off_feature(plan_dir, plan_id=plan_id, feature_id="F001")
+    assert fin.signoff_repaired is True
+    assert fin.features_passes_flipped is True
+    assert fin.signoff_path == _r10_fsig(plan_dir, plan_id)
+    assert _r10_passes(plan_dir, "F001") is True
+    again = signed_off_finalizer.finalize_signed_off_feature(plan_dir, plan_id=plan_id, feature_id="F001")
+    assert again.already_finalized is True
+
+
 def test_r10_repair_with_no_signoff_writes_both_pairs(repo: Path) -> None:
     plan_dir, plan_id = _r10_plan(repo, child=True)
     _r10_volley(plan_dir, plan_id, "F001")
