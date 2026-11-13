@@ -1652,7 +1652,10 @@ def _emit_volley_terminal(
     If the writer raises ``SignoffWriteError`` / ``ChildCharterViolation`` the
     result is downgraded to the existing ``blocked`` terminal (CLI exit 3)
     and announced as such; a raw ``OSError`` propagates with no success
-    announcement. Non-success terminals keep the announce-first order.
+    announcement. Non-success terminals keep the announce-first order. If the
+    deferred success announcement itself fails AFTER ``signoff.json`` was
+    durably written, that is a printed warning only: the result stays
+    ``signed_off`` and the signoff is never rewritten as ``blocked``.
 
     A ``signed_off`` result with NO audit paths cannot produce a signoff, so it
     is downgraded to ``blocked`` before anything is announced. A
@@ -1756,7 +1759,16 @@ def _emit_volley_terminal(
                     result.audit_paths,
                 )
     if announce and defer_announce:
-        _announce_volley_terminal(result, loaded=loaded, feature_id=feature_id)
+        if result.final_status == "signed_off":
+            # DPN-009 — signoff.json is already durable. A failed success
+            # announcement must not reach the dispatch_volley backstop, which
+            # would emit a ``blocked`` terminal and rewrite the signoff.
+            try:
+                _announce_volley_terminal(result, loaded=loaded, feature_id=feature_id)
+            except Exception as announce_exc:  # noqa: BLE001 — signoff is durable
+                print(f"[volley] WARN: signed_off terminal announce failed: {announce_exc!r}")
+        else:
+            _announce_volley_terminal(result, loaded=loaded, feature_id=feature_id)
     return result
 
 
