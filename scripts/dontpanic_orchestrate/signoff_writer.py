@@ -20,12 +20,15 @@ later volley cannot overwrite it.
 from __future__ import annotations
 
 import contextlib
+import dataclasses
 import datetime as dt
+import errno
 import hashlib
 import json
 import os
 import re
-import tempfile
+import secrets
+import stat
 from pathlib import Path
 from typing import Any
 
@@ -39,8 +42,18 @@ class SignoffWriteError(RuntimeError):
     pass
 
 
+def _now() -> dt.datetime:
+    """The writer clock: aware UTC, full precision (microseconds kept)."""
+    return dt.datetime.now(dt.timezone.utc)
+
+
+def _iso_seconds(moment: dt.datetime) -> str:
+    """``moment`` as the signoff ``decided_at`` text (whole second, ``Z``)."""
+    return moment.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
 def _now_iso() -> str:
-    return dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return _iso_seconds(_now())
 
 
 def _next_action_for(volley_status: str, signed_off: bool) -> str:
@@ -207,60 +220,288 @@ def _audit_digests(audit_paths: list[Path], audits_rel: list[str]) -> dict[str, 
     return digests
 
 
-def _atomic_write_json(path: Path, obj: dict[str, Any]) -> None:
-    """Write ``obj`` as JSON to ``path`` atomically: a same-directory temp file
-    is fully written then ``os.replace``d over the target, so readers never
-    see a torn file. The temp file is removed if any step fails; the original
-    error (e.g. ``IsADirectoryError`` when a directory occupies ``path``)
-    propagates unchanged."""
-    fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
+# ───────── DPN-012b review round 2 — ONE shared no-follow safe-write helper ─────────
+#
+# Every signoff-evidence file (plan-level signoff + side-car, per-feature
+# signoff + side-car) is read, written, retired and restored RELATIVE TO A
+# DIRECTORY FD whose every component below ``plan_dir`` (``audit``,
+# ``feature-signoffs``) was opened with ``O_NOFOLLOW``. ``plan_dir`` itself is
+# opened normally (it may legitimately sit under a symlinked ``/tmp``). A
+# symlink (or non-directory) at any component, or a symlink at the file
+# itself, is refused with :class:`SignoffWriteError`; a link swapped into a
+# component AFTER it was opened cannot redirect the write, because the temp
+# file and the rename are both relative to the already-open fd.
+
+_CLOEXEC = getattr(os, "O_CLOEXEC", 0)
+_DIR_FLAGS = os.O_RDONLY | os.O_DIRECTORY | _CLOEXEC
+_NOFOLLOW_DIR_FLAGS = _DIR_FLAGS | os.O_NOFOLLOW
+# Same mode tempfile.mkstemp gives the files today (0o600, before umask).
+_EVIDENCE_FILE_MODE = 0o600
+
+
+def _component_refusal(parent_fd: int, name: str, path: Path) -> SignoffWriteError:
+    """The refusal for a component ``name`` (under ``parent_fd``) that could
+    not be opened no-follow as a directory (``ELOOP`` / ``ENOTDIR``)."""
     try:
-        with os.fdopen(fd, "w", encoding="utf-8") as fh:
-            fh.write(json.dumps(obj, indent=2, ensure_ascii=False) + "\n")
-        os.replace(tmp_name, path)
-    except BaseException:
-        with contextlib.suppress(FileNotFoundError):
-            os.unlink(tmp_name)
+        is_link = stat.S_ISLNK(os.stat(name, dir_fd=parent_fd, follow_symlinks=False).st_mode)
+    except OSError:
+        is_link = False
+    if is_link:
+        return SignoffWriteError(
+            f"signoff evidence directory {path} is a symlink; refusing to "
+            f"write or read signoff evidence through it"
+        )
+    return SignoffWriteError(
+        f"signoff evidence path {path} exists but is not a directory; "
+        f"refusing to write or read signoff evidence"
+    )
+
+
+def _open_child_dir(parent_fd: int, name: str, path: Path, *, create: bool) -> tuple[int, bool]:
+    """Open directory ``name`` relative to ``parent_fd`` WITHOUT following a
+    symlink; with ``create`` a missing one is ``mkdir``-ed relative to
+    ``parent_fd`` first. Returns ``(fd, created)``. A missing directory
+    without ``create`` raises ``FileNotFoundError``; a symlink or
+    non-directory raises :class:`SignoffWriteError`."""
+    created = False
+    try:
+        try:
+            return os.open(name, _NOFOLLOW_DIR_FLAGS, dir_fd=parent_fd), False
+        except FileNotFoundError:
+            if not create:
+                raise
+            try:
+                os.mkdir(name, dir_fd=parent_fd)
+                created = True
+            except FileExistsError:
+                pass
+            return os.open(name, _NOFOLLOW_DIR_FLAGS, dir_fd=parent_fd), created
+    except OSError as exc:
+        if exc.errno in (errno.ELOOP, errno.ENOTDIR):
+            raise _component_refusal(parent_fd, name, path) from exc
         raise
 
 
-def _atomic_write_bytes(path: Path, data: bytes) -> None:
-    """Byte-exact atomic restore helper (temp + ``os.replace``) used only by
-    :func:`_commit_signoff_pair` rollback."""
-    fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
+def _safe_open_dir(plan_dir: Path, *components: str, create: bool = False) -> int:
+    """Return an fd for ``plan_dir/<components...>``: ``plan_dir`` opened
+    normally, every component below it opened no-follow relative to its
+    parent's fd (see :func:`_open_child_dir`). The caller closes the fd."""
+    plan_dir = Path(plan_dir)
+    if create:
+        plan_dir.mkdir(parents=True, exist_ok=True)
+    fd = os.open(plan_dir, _DIR_FLAGS)
+    path = plan_dir
+    try:
+        for name in components:
+            path = path / name
+            child, _created = _open_child_dir(fd, name, path, create=create)
+            os.close(fd)
+            fd = child
+    except BaseException:
+        os.close(fd)
+        raise
+    return fd
+
+
+def _symlink_file_refusal(path: Path) -> SignoffWriteError:
+    return SignoffWriteError(
+        f"signoff evidence file {path} is a symlink; refusing to write or "
+        f"read signoff evidence through it"
+    )
+
+
+def _read_regular_file(dir_fd: int, name: str, path: Path) -> bytes | None:
+    """Bytes of the regular file ``name`` in ``dir_fd``, never following a
+    symlink there (refused with :class:`SignoffWriteError`). ``None`` when
+    it is absent or not a regular file (e.g. a directory)."""
+    try:
+        fd = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | _CLOEXEC, dir_fd=dir_fd)
+    except FileNotFoundError:
+        return None
+    except OSError as exc:
+        if exc.errno == errno.ELOOP:
+            raise _symlink_file_refusal(path) from exc
+        raise
+    with os.fdopen(fd, "rb") as fh:
+        if not stat.S_ISREG(os.fstat(fh.fileno()).st_mode):
+            return None
+        return fh.read()
+
+
+def _safe_read_bytes(plan_dir: Path, *rel_components: str) -> bytes | None:
+    """No-follow read of ``plan_dir/<rel_components...>`` (the last component
+    is the file). ``None`` when the file or a directory on the way is absent,
+    or the file is not a regular file; a symlink at any component below
+    ``plan_dir`` (or a non-directory where a directory is expected) raises
+    :class:`SignoffWriteError`."""
+    if not rel_components:
+        raise SignoffWriteError(f"no file named under {plan_dir}")
+    *dirs, name = rel_components
+    try:
+        dfd = _safe_open_dir(plan_dir, *dirs)
+    except FileNotFoundError:
+        return None
+    try:
+        return _read_regular_file(dfd, name, Path(plan_dir, *rel_components))
+    finally:
+        os.close(dfd)
+
+
+def safe_write_evidence_text(plan_dir: Path, rel_components: tuple[str, ...], text: str) -> None:
+    """DPN-012b review round 3 — write ``text`` (UTF-8) to
+    ``plan_dir/<rel_components...>`` (the last component is the file) through
+    the shared no-follow helper: every directory below ``plan_dir`` is opened
+    (created if missing) no-follow relative to its parent's fd, and the file
+    is written temp + rename relative to that fd (:func:`_safe_write_bytes`).
+    A symlink (or non-directory) at any directory component, or a symlink at
+    the file, raises :class:`SignoffWriteError` and nothing is written."""
+    if not rel_components:
+        raise SignoffWriteError(f"no file named under {plan_dir}")
+    *dirs, name = rel_components
+    dfd = _safe_open_dir(plan_dir, *dirs, create=True)
+    try:
+        _safe_write_bytes(dfd, name, text.encode("utf-8"), Path(plan_dir, *rel_components))
+    finally:
+        os.close(dfd)
+
+
+def safe_unlink_evidence(plan_dir: Path, rel_components: tuple[str, ...]) -> None:
+    """Remove ``plan_dir/<rel_components...>`` (absent is fine) relative to a
+    directory fd opened no-follow below ``plan_dir`` (a link at the file is
+    removed, never its target). A symlinked directory component raises
+    :class:`SignoffWriteError`."""
+    if not rel_components:
+        raise SignoffWriteError(f"no file named under {plan_dir}")
+    *dirs, name = rel_components
+    try:
+        dfd = _safe_open_dir(plan_dir, *dirs)
+    except FileNotFoundError:
+        return
+    try:
+        with contextlib.suppress(FileNotFoundError):
+            _safe_unlink(dfd, name)
+    finally:
+        os.close(dfd)
+
+
+def _refuse_symlink_destination(dir_fd: int, name: str, path: Path) -> None:
+    try:
+        st = os.stat(name, dir_fd=dir_fd, follow_symlinks=False)
+    except FileNotFoundError:
+        return
+    if stat.S_ISLNK(st.st_mode):
+        raise _symlink_file_refusal(path)
+
+
+def _safe_write_bytes(dir_fd: int, name: str, data: bytes, path: Path | None = None) -> None:
+    """Atomically write ``data`` to ``name`` in ``dir_fd``: a temp file
+    created ``O_EXCL | O_NOFOLLOW`` in the same directory fd is fully written,
+    the destination is re-checked (a symlink there is refused, the temp
+    removed), then ``os.rename``d over it — both sides relative to
+    ``dir_fd``. Any other error (e.g. ``IsADirectoryError`` when a directory
+    occupies ``name``) propagates unchanged after the temp is removed."""
+    shown = path if path is not None else Path(name)
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | _CLOEXEC
+    for _attempt in range(100):
+        tmp = f".{name}.{secrets.token_hex(6)}.tmp"
+        try:
+            fd = os.open(tmp, flags, _EVIDENCE_FILE_MODE, dir_fd=dir_fd)
+            break
+        except FileExistsError:
+            continue
+    else:
+        raise FileExistsError(f"could not create a temp file for {shown}")
     try:
         with os.fdopen(fd, "wb") as fh:
             fh.write(data)
-        os.replace(tmp_name, path)
+        _refuse_symlink_destination(dir_fd, name, shown)
+        os.rename(tmp, name, src_dir_fd=dir_fd, dst_dir_fd=dir_fd)
     except BaseException:
         with contextlib.suppress(FileNotFoundError):
-            os.unlink(tmp_name)
+            os.unlink(tmp, dir_fd=dir_fd)
         raise
 
 
-def _read_bytes_if_file(path: Path) -> bytes | None:
-    return path.read_bytes() if path.is_file() else None
+def _safe_unlink(dir_fd: int, name: str) -> None:
+    """Remove ``name`` from ``dir_fd`` (never follows: a link is removed, not
+    its target)."""
+    os.unlink(name, dir_fd=dir_fd)
 
 
-def _restore(path: Path, previous: bytes | None) -> None:
-    """Put ``path`` back to ``previous`` (``None`` = absent). Never raises; a
+@dataclasses.dataclass(frozen=True)
+class _Target:
+    """A signoff-evidence file ``name`` inside the no-follow-checked open
+    directory ``dir_fd``. ``path`` is for messages and ``os.fspath`` (so a
+    ``Path(target)`` compares equal to the plain path)."""
+
+    dir_fd: int
+    name: str
+    path: Path
+
+    def __fspath__(self) -> str:
+        return os.fspath(self.path)
+
+
+def _as_target(path: _Target | Path) -> tuple[_Target, int | None]:
+    """``(target, fd_to_close)``: a plain path is opened as its parent
+    directory (normally) + the file name."""
+    if isinstance(path, _Target):
+        return path, None
+    p = Path(path)
+    dfd = _safe_open_dir(p.parent)
+    return _Target(dfd, p.name, p), dfd
+
+
+def _write_target(path: _Target | Path, data: bytes) -> None:
+    target, owned = _as_target(path)
+    try:
+        _safe_write_bytes(target.dir_fd, target.name, data, target.path)
+    finally:
+        if owned is not None:
+            os.close(owned)
+
+
+def _atomic_write_json(path: _Target | Path, obj: dict[str, Any]) -> None:
+    """Write ``obj`` as JSON to ``path`` atomically through
+    :func:`_safe_write_bytes`: readers never see a torn file, the temp file is
+    removed if any step fails, and the original error (e.g.
+    ``IsADirectoryError`` when a directory occupies ``path``) propagates
+    unchanged; a symlink at ``path`` is refused (:class:`SignoffWriteError`)."""
+    _write_target(path, (json.dumps(obj, indent=2, ensure_ascii=False) + "\n").encode("utf-8"))
+
+
+def _atomic_write_bytes(path: _Target | Path, data: bytes) -> None:
+    """Byte-exact atomic restore helper (:func:`_safe_write_bytes`) used only
+    by :func:`_commit_signoff_pair` rollback."""
+    _write_target(path, data)
+
+
+def _read_bytes_if_file(target: _Target) -> bytes | None:
+    """Snapshot read: the bytes of a regular file, ``None`` when absent / not
+    a regular file; a symlink there is refused (:class:`SignoffWriteError`)
+    before anything is retired."""
+    return _read_regular_file(target.dir_fd, target.name, target.path)
+
+
+def _restore(target: _Target, previous: bytes | None) -> None:
+    """Put ``target`` back to ``previous`` (``None`` = absent). Never raises; a
     failed restore of a file falls back to removing it so no half-state
     survives."""
     try:
         if previous is None:
             with contextlib.suppress(FileNotFoundError):
-                path.unlink()
+                _safe_unlink(target.dir_fd, target.name)
         else:
-            _atomic_write_bytes(path, previous)
-    except OSError:
+            _atomic_write_bytes(target, previous)
+    except (OSError, SignoffWriteError):
         with contextlib.suppress(OSError):
-            path.unlink()
+            _safe_unlink(target.dir_fd, target.name)
 
 
 def _commit_signoff_pair(
-    out: Path,
+    out: _Target,
     payload: dict[str, Any],
-    side_car: Path | None,
+    side_car: _Target | None,
     compliance: dict[str, Any] | None,
 ) -> None:
     """Write the signoff (and, for child plans, its compliance side-car) as one
@@ -281,7 +522,7 @@ def _commit_signoff_pair(
 
 
 def _commit_signoff_pairs(
-    pairs: list[tuple[Path, dict[str, Any], Path | None, dict[str, Any] | None]],
+    pairs: list[tuple[_Target, dict[str, Any], _Target | None, dict[str, Any] | None]],
 ) -> None:
     """DPN-012 — commit one or more ``(signoff, payload, side_car, compliance)``
     pairs as ONE all-or-nothing transaction (generalises
@@ -292,8 +533,13 @@ def _commit_signoff_pairs(
     its signoff — each atomically. Callers list the plan-level pair LAST so
     the plan-level signoff is the final write. If any step fails, EVERY
     target (all signoffs and side-cars) is restored to its previous bytes (or
-    absence) and the original error is re-raised."""
-    targets: list[Path] = []
+    absence) and the original error is re-raised.
+
+    DPN-012b review round 2 — every step goes through the no-follow helper
+    (targets are files in already-opened, checked directory fds): a symlink at
+    any target is refused by the snapshot read BEFORE anything is retired, and
+    re-checked right before each rename."""
+    targets: list[_Target] = []
     for out, _payload, side_car, _compliance in pairs:
         targets.append(out)
         if side_car is not None:
@@ -302,7 +548,7 @@ def _commit_signoff_pairs(
     try:
         for out, _payload, _side_car, _compliance in pairs:
             if previous[out] is not None:
-                out.unlink()
+                _safe_unlink(out.dir_fd, out.name)
         for out, payload, side_car, compliance in pairs:
             if side_car is not None and compliance is not None:
                 _atomic_write_json(side_car, compliance)
@@ -362,7 +608,120 @@ def feature_charter_compliance_path(plan_dir: Path, plan_id: str, feature_id: st
     return feature_signoff_dir(plan_dir) / f"charter-compliance-{plan_id}--{fid}.json"
 
 
-def write_signoff(
+def _require_real_feature_signoff_dir(plan_dir: Path) -> Path:
+    """DPN-012b — return :func:`feature_signoff_dir` when it is absent or a
+    real directory. A symlink there (to a directory or dangling) or any other
+    non-directory (e.g. a stray regular file) raises
+    :class:`SignoffWriteError`: evidence is never written or read through it.
+    Review round 2: walks ``audit/`` and ``feature-signoffs/`` with the shared
+    no-follow helper (:func:`_safe_open_dir`), so a symlinked ``audit/``
+    parent is refused too."""
+    d = feature_signoff_dir(plan_dir)
+    try:
+        fd = _safe_open_dir(plan_dir, "audit", FEATURE_SIGNOFF_DIRNAME)
+    except FileNotFoundError:
+        return d
+    os.close(fd)
+    return d
+
+
+def _require_no_case_collision(plan_dir: Path, plan_id: str, feature_id: str) -> None:
+    """DPN-012b — raise :class:`SignoffWriteError` when the per-feature
+    directory holds an entry whose name casefolds equal to this feature's
+    signoff or side-car name but is not identical to it (feature ids that
+    differ only by case, e.g. ``F1`` / ``f1``, collide on a case-insensitive
+    volume). Compares ``os.listdir`` names, so it behaves the same on
+    case-sensitive and case-insensitive volumes. Lists the directory through
+    the no-follow helper."""
+    d = feature_signoff_dir(plan_dir)
+    try:
+        fd = _safe_open_dir(plan_dir, "audit", FEATURE_SIGNOFF_DIRNAME)
+    except FileNotFoundError:
+        return
+    try:
+        entries = os.listdir(fd)
+    finally:
+        os.close(fd)
+    targets = {
+        p.name.casefold(): p.name
+        for p in (
+            feature_signoff_path(plan_dir, plan_id, feature_id),
+            feature_charter_compliance_path(plan_dir, plan_id, feature_id),
+        )
+    }
+    for entry in sorted(entries):
+        name = targets.get(entry.casefold())
+        if name is not None and entry != name:
+            raise SignoffWriteError(
+                f"per-feature signoff evidence {entry!r} in {d} case-collides with "
+                f"{name!r} for feature {feature_id!r}; feature ids that differ only "
+                f"by case cannot hold separate evidence"
+            )
+
+
+class _EvidenceDirs:
+    """DPN-012b review round 2 — the open, no-follow-checked directory chain
+    ``plan_dir`` → ``audit`` (→ ``feature-signoffs``) a signoff write goes
+    through. Existing components are opened (and checked) up front and HELD
+    until the commit, so a link swapped in afterwards cannot redirect it;
+    missing ones are created by :meth:`ensure` relative to the held parent
+    fd. ``fds[0]`` is ``plan_dir``; ``fds[i]`` is ``components[i-1]``."""
+
+    def __init__(self, plan_dir: Path, components: tuple[str, ...]) -> None:
+        self._plan_dir = Path(plan_dir)
+        self._components = components
+        self._fds: list[int] = []
+        self._created: set[int] = set()
+        try:
+            self._fds.append(os.open(self._plan_dir, _DIR_FLAGS))
+            for depth in range(1, len(components) + 1):
+                fd, _created = _open_child_dir(
+                    self._fds[-1], components[depth - 1], self._path(depth), create=False
+                )
+                self._fds.append(fd)
+        except FileNotFoundError:
+            pass  # the rest is created by ensure()
+        except BaseException:
+            self.close()
+            raise
+
+    def _path(self, depth: int) -> Path:
+        return self._plan_dir.joinpath(*self._components[:depth])
+
+    def ensure(self, depth: int) -> int:
+        """The fd of the component at ``depth``, creating missing ones."""
+        if not self._fds:
+            self._plan_dir.mkdir(parents=True, exist_ok=True)
+            self._fds.append(os.open(self._plan_dir, _DIR_FLAGS))
+        while len(self._fds) <= depth:
+            d = len(self._fds)
+            fd, created = _open_child_dir(
+                self._fds[-1], self._components[d - 1], self._path(d), create=True
+            )
+            self._fds.append(fd)
+            if created:
+                self._created.add(d)
+        return self._fds[depth]
+
+    def target(self, depth: int, name: str) -> _Target:
+        return _Target(self.ensure(depth), name, self._path(depth) / name)
+
+    def remove_if_created(self, depth: int) -> None:
+        """Best-effort ``rmdir`` (relative to the parent fd) of the component
+        at ``depth`` when this transaction created it."""
+        if depth in self._created and len(self._fds) > depth:
+            with contextlib.suppress(OSError):
+                os.rmdir(self._components[depth - 1], dir_fd=self._fds[depth - 1])
+
+    def close(self) -> None:
+        for fd in reversed(self._fds):
+            with contextlib.suppress(OSError):
+                os.close(fd)
+        self._fds = []
+
+
+def _write_signoff_in(
+    dirs: _EvidenceDirs,
     *,
     plan_id: str,
     tier: str,
@@ -371,47 +730,19 @@ def write_signoff(
     audit_paths: list[Path],
     plan_dir: Path,
     volley_status: str,
-    signoff_reason: str | None = None,
-    child_charter: Any = None,
-    commit_policy: Any = None,
-    modified_files: list[str] | None = None,
-    orchestration: Any = None,
-    patch_completeness: dict[str, Any] | None = None,
-    feature_id: str | None = None,
-    plan_level: bool = True,
-    decided_at: str | None = None,
-) -> Path:
-    """Build, validate, and write the signoff.json closeout. Returns the path.
-
-    DPN-012 — per-feature evidence. When ``feature_id`` is given, the same
-    payload (same bytes, same ``signoff_id``) and, for child plans, the same
-    compliance side-car are ALSO written to
-    :func:`feature_signoff_path` / :func:`feature_charter_compliance_path`,
-    for every volley outcome (success and non-success), in one all-or-nothing
-    transaction with the plan-level pair (any failure restores all four files
-    to their previous bytes or absence). ``plan_level=False`` (requires
-    ``feature_id``) writes ONLY the per-feature pair and never touches the
-    plan-level pair; the returned path is then the per-feature signoff. With
-    ``feature_id=None`` behaviour is byte-for-byte unchanged. An invalid
-    ``feature_id`` raises :class:`SignoffWriteError` before anything is
-    written.
-
-    Plan 2026-05-02-003 F002: when both ``child_charter`` and ``commit_policy``
-    are passed, runs ``check_child_charter_compliance`` BEFORE persisting any
-    artifact. On ``ChildCharterViolation`` neither the signoff envelope nor
-    the side-car compliance file is written (no-partial-artifact, mirrors
-    plan 005 F002 acceptance #5). On compliance pass, writes the side-car
-    file at ``audit/charter-compliance-{plan_id}.json`` recording the parsed
-    return-condition status + satisfied requires items.
-
-    The Signoff schema (agent-conventions v1.0) is unchanged — compliance
-    output lives in the side-car, matching F001's pop-orchestration-block
-    schema-discipline pattern (D006-style).
-    """
+    signoff_reason: str | None,
+    child_charter: Any,
+    commit_policy: Any,
+    modified_files: list[str] | None,
+    patch_completeness: dict[str, Any] | None,
+    feature_id: str | None,
+    plan_level: bool,
+    decided_at: str | None,
+) -> tuple[Path, dict[str, Any] | None]:
+    """Body of :func:`write_signoff` once ``dirs`` holds the checked
+    directory chain. Returns ``(path write_signoff returns, compliance)``."""
     if feature_id is not None:
-        _require_feature_id(feature_id)
-    elif not plan_level:
-        raise SignoffWriteError("plan_level=False requires a feature_id")
+        _require_no_case_collision(plan_dir, plan_id, feature_id)
 
     payload = build_signoff_dict(
         plan_id=plan_id,
@@ -443,23 +774,24 @@ def write_signoff(
         )
 
     out = signoff_path(plan_dir, plan_id)
-    out.parent.mkdir(parents=True, exist_ok=True)
+    side_name = charter_compliance_path(plan_dir, plan_id).name
+    dirs.ensure(1)
     if feature_id is None:
         _commit_signoff_pair(
-            out,
+            dirs.target(1, out.name),
             payload,
-            charter_compliance_path(plan_dir, plan_id) if compliance is not None else None,
+            dirs.target(1, side_name) if compliance is not None else None,
             compliance,
         )
-    else:
-        feature_out = feature_signoff_path(plan_dir, plan_id, feature_id)
-        pairs: list[tuple[Path, dict[str, Any], Path | None, dict[str, Any] | None]] = [
+        return out, compliance
+    feature_out = feature_signoff_path(plan_dir, plan_id, feature_id)
+    feature_side_name = feature_charter_compliance_path(plan_dir, plan_id, feature_id).name
+    try:
+        pairs: list[tuple[_Target, dict[str, Any], _Target | None, dict[str, Any] | None]] = [
             (
-                feature_out,
+                dirs.target(2, feature_out.name),
                 payload,
-                feature_charter_compliance_path(plan_dir, plan_id, feature_id)
-                if compliance is not None
-                else None,
+                dirs.target(2, feature_side_name) if compliance is not None else None,
                 compliance,
             )
         ]
@@ -467,24 +799,114 @@ def write_signoff(
             # Plan-level pair LAST: its signoff is the transaction's final write.
             pairs.append(
                 (
-                    out,
+                    dirs.target(1, out.name),
                     payload,
-                    charter_compliance_path(plan_dir, plan_id) if compliance is not None else None,
+                    dirs.target(1, side_name) if compliance is not None else None,
                     compliance,
                 )
             )
         else:
             out = feature_out
-        feature_dir = feature_out.parent
-        created_dir = not feature_dir.exists()
-        feature_dir.mkdir(parents=True, exist_ok=True)
-        try:
-            _commit_signoff_pairs(pairs)
-        except BaseException:
-            if created_dir:
-                with contextlib.suppress(OSError):
-                    feature_dir.rmdir()
-            raise
+        _commit_signoff_pairs(pairs)
+    except BaseException:
+        dirs.remove_if_created(2)
+        raise
+    return out, compliance
+
+
+def write_signoff(
+    *,
+    plan_id: str,
+    tier: str,
+    iteration: int,
+    agents_in_panel: list[str],
+    audit_paths: list[Path],
+    plan_dir: Path,
+    volley_status: str,
+    signoff_reason: str | None = None,
+    child_charter: Any = None,
+    commit_policy: Any = None,
+    modified_files: list[str] | None = None,
+    orchestration: Any = None,
+    patch_completeness: dict[str, Any] | None = None,
+    feature_id: str | None = None,
+    plan_level: bool = True,
+    decided_at: str | None = None,
+) -> Path:
+    """Build, validate, and write the signoff.json closeout. Returns the path.
+
+    DPN-012 — per-feature evidence. When ``feature_id`` is given, the same
+    payload (same bytes, same ``signoff_id``) and, for child plans, the same
+    compliance side-car are ALSO written to
+    :func:`feature_signoff_path` / :func:`feature_charter_compliance_path`,
+    for every volley outcome (success and non-success), in one all-or-nothing
+    transaction with the plan-level pair (any failure restores all four files
+    to their previous bytes or absence). ``plan_level=False`` (requires
+    ``feature_id``) writes ONLY the per-feature pair and never touches the
+    plan-level pair; the returned path is then the per-feature signoff. With
+    ``feature_id=None`` behaviour is byte-for-byte unchanged (the plan-level
+    pair only; ``audit/feature-signoffs/`` is never opened, created or
+    checked, so a stray file or symlink there does not affect it), except
+    that a symlink on the plan-level path is refused (below). An invalid
+    ``feature_id`` raises :class:`SignoffWriteError` before anything is
+    written.
+
+    DPN-012b review round 2 — every evidence file is read, retired, written
+    and restored relative to directory fds opened no-follow below
+    ``plan_dir`` (``audit/``, and for a per-feature write
+    ``audit/feature-signoffs/``). A symlink (or non-directory) at any of those
+    components, or a symlink at any signoff / side-car file being replaced,
+    raises :class:`SignoffWriteError` and nothing is written outside the
+    plan tree — including when a link is swapped in after the check.
+
+    Plan 2026-05-02-003 F002: when both ``child_charter`` and ``commit_policy``
+    are passed, runs ``check_child_charter_compliance`` BEFORE persisting any
+    artifact. On ``ChildCharterViolation`` neither the signoff envelope nor
+    the side-car compliance file is written (no-partial-artifact, mirrors
+    plan 005 F002 acceptance #5). On compliance pass, writes the side-car
+    file at ``audit/charter-compliance-{plan_id}.json`` recording the parsed
+    return-condition status + satisfied requires items.
+
+    The Signoff schema (agent-conventions v1.0) is unchanged — compliance
+    output lives in the side-car, matching F001's pop-orchestration-block
+    schema-discipline pattern (D006-style).
+    """
+    if feature_id is not None:
+        _require_feature_id(feature_id)
+    elif not plan_level:
+        raise SignoffWriteError("plan_level=False requires a feature_id")
+    # DPN-012b — refuse before ANY write when a directory on the evidence path
+    # (``audit/``, and for a per-feature write ``audit/feature-signoffs/``) is
+    # a symlink / non-directory, or (per-feature) when another feature id's
+    # evidence case-collides with this one. The checked directories stay open
+    # and every read / write / retire below is relative to them (review
+    # round 2). A plan-level-only write never opens or touches
+    # ``feature-signoffs/``.
+    components: tuple[str, ...] = ("audit",)
+    if feature_id is not None:
+        components = ("audit", FEATURE_SIGNOFF_DIRNAME)
+    dirs = _EvidenceDirs(plan_dir, components)
+    try:
+        out, compliance = _write_signoff_in(
+            dirs,
+            plan_id=plan_id,
+            tier=tier,
+            iteration=iteration,
+            agents_in_panel=agents_in_panel,
+            audit_paths=audit_paths,
+            plan_dir=plan_dir,
+            volley_status=volley_status,
+            signoff_reason=signoff_reason,
+            child_charter=child_charter,
+            commit_policy=commit_policy,
+            modified_files=modified_files,
+            patch_completeness=patch_completeness,
+            feature_id=feature_id,
+            plan_level=plan_level,
+            decided_at=decided_at,
+        )
+    finally:
+        dirs.close()
 
     # Plan 2026-05-02-003 F003: when this signoff is for a child plan,
     # record a best-effort volley.return_to_parent trace on the child's
@@ -519,6 +941,8 @@ __all__ = [
     "feature_charter_compliance_path",
     "feature_signoff_dir",
     "feature_signoff_path",
+    "safe_unlink_evidence",
+    "safe_write_evidence_text",
     "signoff_path",
     "write_signoff",
 ]

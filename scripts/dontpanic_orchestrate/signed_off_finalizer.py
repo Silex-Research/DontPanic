@@ -59,6 +59,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -224,6 +225,69 @@ def _parse_iso(value: Any) -> dt.datetime | None:
     return parsed
 
 
+def _require_datable_auditor_envelope(
+    envelope: dict[str, Any] | None,
+    auditor_path: Path | None,
+    feature_id: str,
+    now: dt.datetime,
+) -> None:
+    """DPN-012b item 6 — before branch (d) repairs a signoff from scratch, the
+    selected signed_off auditor envelope must be locatable and datable under
+    the SAME rule branch (c) applies (:func:`_repair_clock_problem` against
+    the caller's single full-precision clock reading ``now``, whose
+    whole-second form the repair then stamps — no clock read here). That
+    refuses a missing / unparseable / zone-less / date-only ``completed_at``
+    AND one later than ``now`` by any amount (a repair the next run would
+    reject as stale). Refuses with ``signoff_stale`` so nothing is written
+    and nothing is flipped."""
+    if auditor_path is None:
+        raise FinalizeError(
+            "signoff_stale",
+            f"no signed_off auditor envelope path could be selected for {feature_id}; "
+            f"a repaired signoff could not be bound to it, refusing to finalize.",
+        )
+    stale = _repair_clock_problem(envelope, auditor_path, now)
+    if stale is not None:
+        raise FinalizeError(
+            "signoff_stale",
+            f"signed_off auditor envelope {auditor_path} for {feature_id}: {stale}; "
+            f"a repaired signoff's freshness could not be verified, refusing to "
+            f"finalize.",
+        )
+
+
+def _repair_clock_problem(
+    envelope: dict[str, Any] | None, auditor_path: Path | None, now: dt.datetime
+) -> str | None:
+    """DPN-012b review round 3 (Thanos ruling) — the ONE clock rule shared by
+    the repair branches (c) and (d). ``now`` is the branch's single
+    full-precision writer-clock reading (:func:`signoff_writer._now`); the
+    repair stamps ``signoff_writer._iso_seconds(now)`` as ``decided_at``.
+    Returns the problem text, else ``None``:
+
+      * no envelope, or a missing / unparseable / zone-less / date-only
+        ``completed_at`` (reported by :func:`_freshness_problem` against the
+        stamped ``decided_at``);
+      * ``completed_at`` later than ``now`` by ANY amount (microseconds kept —
+        never compared against the truncated ``decided_at``).
+
+    (:func:`_freshness_problem` keeps its second granularity for the ordinary
+    validate path.)"""
+    if envelope is None:
+        return "no signed_off auditor envelope"
+    decided_at = signoff_writer._iso_seconds(now)
+    stale = _freshness_problem(envelope, {"decided_at": decided_at}, auditor_path)
+    if stale is not None:
+        return stale
+    completed = _parse_iso(envelope.get("completed_at"))
+    if completed is not None and completed > now:
+        return (
+            f"completed_at {envelope.get('completed_at')} is later than the "
+            f"finalizer's clock {now.isoformat()} (full precision)"
+        )
+    return None
+
+
 def _freshness_problem(
     envelope: dict[str, Any], signoff: dict[str, Any], auditor_path: Path | None
 ) -> str | None:
@@ -267,7 +331,8 @@ _SIGNOFF_SIBLING_KEYS = frozenset({"patch_completeness", "audit_digests"})
 
 def _listed_entries(audits: list[Any], auditor_path: Path, plan_dir: Path) -> list[str]:
     """The signoff ``audits`` entries (plan-relative or absolute) that
-    resolve to ``auditor_path``."""
+    resolve to ``auditor_path`` — or name the same file through another
+    link (DPN-012b: a hard-link alias under a neutral name)."""
     target = auditor_path.resolve()
     found: list[str] = []
     for entry in audits:
@@ -276,15 +341,38 @@ def _listed_entries(audits: list[Any], auditor_path: Path, plan_dir: Path) -> li
         p = Path(entry)
         if not p.is_absolute():
             p = plan_dir / p
-        if p.resolve() == target:
+        if p.resolve() == target or _same_file(p, auditor_path):
             found.append(entry)
     return found
+
+
+def _same_file(a: Path, b: Path) -> bool:
+    """``os.path.samefile`` that treats any ``OSError`` (missing, unreadable)
+    as no match."""
+    try:
+        return os.path.samefile(a, b)
+    except OSError:
+        return False
 
 
 def _signoff_lists_audit(audits: list[Any], auditor_path: Path, plan_dir: Path) -> bool:
     """True when one of the signoff's ``audits`` entries (plan-relative or
     absolute) resolves to ``auditor_path``."""
     return bool(_listed_entries(audits, auditor_path, plan_dir))
+
+
+def _read_evidence_bytes(plan_dir: Path, path: Path) -> bytes | None:
+    """DPN-012b review round 2 — read a signoff / side-car file through the
+    shared no-follow helper (:func:`signoff_writer._safe_read_bytes`),
+    relative to ``plan_dir``: ``None`` when absent or not a regular file; a
+    symlink at the file or at any component below ``plan_dir`` raises
+    ``SignoffWriteError``. A path outside ``plan_dir`` is read relative to its
+    own parent (the leaf is still never followed)."""
+    try:
+        rel = path.relative_to(plan_dir).parts
+    except ValueError:
+        return signoff_writer._safe_read_bytes(path.parent, path.name)
+    return signoff_writer._safe_read_bytes(plan_dir, *rel)
 
 
 def _validate_existing_signoff(
@@ -311,7 +399,9 @@ def _validate_existing_signoff(
       * ``signoff_unreadable``  — empty, torn/unparseable JSON, not an object,
         or fails the agent-conventions ``Signoff`` schema (the post-validation
         ``patch_completeness`` / ``audit_digests`` sibling keys are ignored for
-        the schema check).
+        the schema check); or (DPN-012b review round 2) the signoff or the
+        child side-car is a symlink or sits under a symlinked ``audit/`` /
+        ``feature-signoffs/`` component (read no-follow, never through it).
       * ``signoff_wrong_plan``  — ``task_id`` != the plan being finalized.
       * ``signoff_not_success`` — ``signoff`` is not ``true`` or
         ``next_action`` != ``merge`` (a non-success terminal record).
@@ -343,9 +433,16 @@ def _validate_existing_signoff(
     from pydantic import ValidationError
 
     try:
-        raw = out_path.read_text()
-        data = json.loads(raw)
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raw = _read_evidence_bytes(plan_dir, out_path)
+        if raw is None:
+            raise FileNotFoundError(f"{out_path} is missing or not a regular file")
+        data = json.loads(raw.decode("utf-8"))
+    except (
+        OSError,
+        UnicodeDecodeError,
+        json.JSONDecodeError,
+        signoff_writer.SignoffWriteError,
+    ) as exc:
         raise FinalizeError(
             "signoff_unreadable",
             f"existing signoff {out_path} is empty or unparseable ({exc}); "
@@ -415,12 +512,24 @@ def _validate_existing_signoff(
         )
         problem: str | None = None
         compliance: Any = None
-        if not side_car.is_file():
+        side_car_bytes: bytes | None = None
+        try:
+            side_car_bytes = _read_evidence_bytes(plan_dir, side_car)
+        except signoff_writer.SignoffWriteError as exc:
+            # DPN-012b review round 2 — never read a side-car through a link.
+            raise FinalizeError(
+                "signoff_unreadable",
+                f"plan {plan_id} charter-compliance side-car {side_car} cannot be "
+                f"trusted: {exc}; refusing to finalize.",
+            ) from exc
+        except OSError as exc:
+            problem = f"side-car is unparseable ({exc})"
+        if problem is None and side_car_bytes is None:
             problem = "side-car is missing"
-        else:
+        elif problem is None and side_car_bytes is not None:
             try:
-                compliance = json.loads(side_car.read_text())
-            except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+                compliance = json.loads(side_car_bytes.decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError) as exc:
                 problem = f"side-car is unparseable ({exc})"
         if problem is None and not isinstance(compliance, dict):
             problem = "side-car is not a JSON object"
@@ -569,8 +678,20 @@ def _is_satisfied_successor(sibling_dir: Path, *, parent_plan_id: str, acceptanc
     try:
         sib_charter = nested_orchestration.ChildCharter.model_validate(charter_block)
         sib_policy = nested_orchestration.CommitPolicy.model_validate(fm.get("commit_policy") or {})
-        signoff = json.loads(signoff_writer.signoff_path(sibling_dir, sib_id).read_text())
-        side = json.loads(signoff_writer.charter_compliance_path(sibling_dir, sib_id).read_text())
+        # DPN-012b review round 3 — signoff evidence is read through the
+        # shared no-follow helper relative to the sibling dir: a symlink at
+        # ``audit/`` or at either file raises (→ not a successor), like any
+        # unreadable artifact; absent → not a successor.
+        signoff_bytes = signoff_writer._safe_read_bytes(
+            sibling_dir, "audit", signoff_writer.signoff_path(sibling_dir, sib_id).name
+        )
+        side_bytes = signoff_writer._safe_read_bytes(
+            sibling_dir, "audit", signoff_writer.charter_compliance_path(sibling_dir, sib_id).name
+        )
+        if signoff_bytes is None or side_bytes is None:
+            return False
+        signoff = json.loads(signoff_bytes)
+        side = json.loads(side_bytes)
     except Exception:  # noqa: BLE001 — any unreadable artifact disqualifies
         return False
     if not isinstance(signoff, dict) or not isinstance(side, dict):
@@ -768,13 +889,16 @@ def _satisfied_successor(
     """Locate a satisfied successor for a ``superseded`` child: a sibling plan
     directory (same plans root) that is a child of the same parent for the
     same ``parent_acceptance_item`` and is durably ``satisfied`` (see
-    :func:`_is_satisfied_successor`). Returns its directory, or None."""
+    :func:`_is_satisfied_successor`). A sibling whose directory entry is a
+    symlink is skipped. Returns its directory, or None."""
     acceptance_item = getattr(child_charter, "parent_acceptance_item", None)
     if not parent_plan_id or not isinstance(acceptance_item, str):
         return None
     plans_root = plan_dir.parent
     try:
-        candidates = sorted(p for p in plans_root.iterdir() if p.is_dir())
+        # DPN-012b review round 3 — a sibling whose plan-dir entry is itself a
+        # symlink never counts (its evidence lives outside the plans root).
+        candidates = sorted(p for p in plans_root.iterdir() if not p.is_symlink() and p.is_dir())
     except OSError:
         return None
     for sibling in candidates:
@@ -830,14 +954,16 @@ def _entry_names_feature(entry: str, feature_id: str) -> bool:
     """True when an ``audits`` entry's file name follows the audit-envelope
     convention (``<vendor>-<role>-<feature_id>-i<N>.json``, as parsed by
     :func:`closeout._audit_paths_for_feature`) for ``feature_id`` — even when
-    the path no longer resolves (moved repo, deleted envelope)."""
-    name = Path(entry).name
+    the path no longer resolves (moved repo, deleted envelope). Compared
+    case-insensitively (DPN-012b): ``codex-auditor-f001-i0.json`` names
+    ``F001``."""
+    name = Path(entry).name.casefold()
     if not name.endswith(".json"):
         return False
     parts = name[:-5].split("-")
     return (
         len(parts) >= 4
-        and feature_id in parts
+        and feature_id.casefold() in parts
         and any(part in {"implementer", "auditor"} for part in parts)
     )
 
@@ -864,8 +990,16 @@ def _plan_signoff_belongs_to_other_features(
     )
 
     try:
-        data = json.loads(out_path.read_text())
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        raw = _read_evidence_bytes(plan_dir, out_path)
+        if raw is None:
+            return False
+        data = json.loads(raw.decode("utf-8"))
+    except (
+        OSError,
+        UnicodeDecodeError,
+        json.JSONDecodeError,
+        signoff_writer.SignoffWriteError,
+    ):
         return False
     if not isinstance(data, dict):
         return False
@@ -951,6 +1085,13 @@ def _repair_signoff(
             f"child charter compliance failed for {plan_id}; refusing to "
             f"repair the signoff or flip passes: {exc}",
         ) from exc
+    except signoff_writer.SignoffWriteError as exc:
+        # DPN-012b — no writer refusal escapes the finalizer uncaught.
+        raise FinalizeError(
+            "signoff_unreadable",
+            f"signoff repair for {plan_id} feature {feature_id} was refused by "
+            f"the signoff writer; refusing to flip passes: {exc}",
+        ) from exc
 
 
 def finalize_signed_off_feature(
@@ -1029,6 +1170,18 @@ def finalize_signed_off_feature(
         # A feature id that cannot name per-feature evidence keeps the
         # pre-DPN-012 plan-level-only behaviour.
         feature_out = feature_side_car = None
+    # DPN-012b — the per-feature evidence directory must be absent or a real
+    # (non-symlink) directory, and must hold no entry that only case-collides
+    # with this feature's evidence names; otherwise no rule can be trusted.
+    try:
+        signoff_writer._require_real_feature_signoff_dir(plan_dir)
+        if feature_out is not None:
+            signoff_writer._require_no_case_collision(plan_dir, plan_id, feature_id)
+    except signoff_writer.SignoffWriteError as exc:
+        raise FinalizeError(
+            "signoff_unreadable",
+            f"per-feature signoff evidence for {feature_id} cannot be trusted: {exc}",
+        ) from exc
     validate_kwargs: dict[str, Any] = {
         "plan_dir": plan_dir,
         "plan_id": plan_id,
@@ -1063,17 +1216,13 @@ def finalize_signed_off_feature(
         ):
             # (c) legacy multi-feature plan: the plan-level signoff is another
             # feature's — repair ONLY this feature's per-feature pair, and only
-            # from an envelope whose completed_at _freshness_problem can parse.
-            # The repair's decided_at (writer clock) must already pass the
-            # same _freshness_problem the next run applies (no future envelope).
-            # One clock read: the writer stamps the decided_at checked here.
-            decided_at = signoff_writer._now_iso()
-            prospective = {"decided_at": decided_at}
-            stale = (
-                "no signed_off auditor envelope"
-                if envelope is None
-                else _freshness_problem(envelope, prospective, auditor_path)
-            )
+            # from an envelope whose completed_at _freshness_problem can parse
+            # and that is not later than the finalizer's clock by ANY amount
+            # (_repair_clock_problem, shared with branch (d)). One clock read
+            # at full precision; the writer stamps its whole-second form.
+            now = signoff_writer._now()
+            decided_at = signoff_writer._iso_seconds(now)
+            stale = _repair_clock_problem(envelope, auditor_path, now)
             if stale is not None:
                 raise FinalizeError(
                     "signoff_stale",
@@ -1096,6 +1245,11 @@ def finalize_signed_off_feature(
             _validate_existing_signoff(plan_out, **validate_kwargs)
             out_path = plan_out
     else:
+        # One clock read at full precision (checked by the shared rule); the
+        # writer stamps its whole-second form.
+        now = signoff_writer._now()
+        decided_at = signoff_writer._iso_seconds(now)
+        _require_datable_auditor_envelope(envelope, auditor_path, feature_id, now)
         # (d) no signoff at all (the pre_merge pause skipped
         # _emit_volley_terminal) — repair both pairs. The feature's own copy
         # is the evidence every later run selects (rule a), so it is the one
@@ -1104,6 +1258,7 @@ def finalize_signed_off_feature(
             plan_dir,
             evidence_feature_id=feature_id if feature_out is not None else None,
             plan_level=True,
+            decided_at=decided_at,
             **repair_kwargs,
         )
         if feature_out is not None:
