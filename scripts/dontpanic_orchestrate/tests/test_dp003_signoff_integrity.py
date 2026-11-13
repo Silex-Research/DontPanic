@@ -3292,10 +3292,22 @@ def _r11_stray_file(plan_dir: Path) -> Path:
 def test_dpn012b_writer_stray_file_raises_signoff_write_error_writes_nothing(
     repo: Path, feature_id: str | None
 ) -> None:
+    """A per-feature write is refused by a stray file at
+    ``audit/feature-signoffs``. DPN-012b review round 2 (Item 3, a deliberate
+    change of this test's ``plan_level_only`` case): a plan-level-only write
+    (``feature_id=None``) never touches ``feature-signoffs`` and SUCCEEDS,
+    leaving the stray file byte-identical."""
     plan_dir, plan_id = _r10_plan(repo, child=True)
     a1 = _r10_volley(plan_dir, plan_id, "F001")
-    _r11_stray_file(plan_dir)
+    stray = _r11_stray_file(plan_dir)
     before = _r10_tree(plan_dir)
+    if feature_id is None:
+        out = _r10_sign(plan_dir, plan_id, a1, feature_id=None, child=True)
+        assert out == signoff_writer.signoff_path(plan_dir, plan_id) and out.is_file()
+        assert signoff_writer.charter_compliance_path(plan_dir, plan_id).is_file()
+        assert stray.is_file() and not stray.is_symlink()
+        assert stray.read_bytes() == b"stray, not a directory\n"
+        return
     with pytest.raises(signoff_writer.SignoffWriteError, match="not a directory"):
         _r10_sign(plan_dir, plan_id, a1, feature_id=feature_id, child=True)
     assert _r10_tree(plan_dir) == before

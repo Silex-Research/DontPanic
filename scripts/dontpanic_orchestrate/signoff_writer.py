@@ -797,8 +797,10 @@ def write_signoff(
     to their previous bytes or absence). ``plan_level=False`` (requires
     ``feature_id``) writes ONLY the per-feature pair and never touches the
     plan-level pair; the returned path is then the per-feature signoff. With
-    ``feature_id=None`` behaviour is byte-for-byte unchanged, except that a
-    symlink on the evidence path is refused (below). An invalid
+    ``feature_id=None`` behaviour is byte-for-byte unchanged (the plan-level
+    pair only; ``audit/feature-signoffs/`` is never opened, created or
+    checked, so a stray file or symlink there does not affect it), except
+    that a symlink on the plan-level path is refused (below). An invalid
     ``feature_id`` raises :class:`SignoffWriteError` before anything is
     written.
 
@@ -831,8 +833,11 @@ def write_signoff(
     # a symlink / non-directory, or (per-feature) when another feature id's
     # evidence case-collides with this one. The checked directories stay open
     # and every read / write / retire below is relative to them (review
-    # round 2).
-    components: tuple[str, ...] = ("audit", FEATURE_SIGNOFF_DIRNAME)
+    # round 2). A plan-level-only write never opens or touches
+    # ``feature-signoffs/``.
+    components: tuple[str, ...] = ("audit",)
+    if feature_id is not None:
+        components = ("audit", FEATURE_SIGNOFF_DIRNAME)
     dirs = _EvidenceDirs(plan_dir, components)
     try:
         out, compliance = _write_signoff_in(
