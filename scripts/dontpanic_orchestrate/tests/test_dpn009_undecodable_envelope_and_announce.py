@@ -146,6 +146,9 @@ def test_dpn009_later_non_object_auditor_envelope_disqualifies_successor(
 
 
 # (d) unreadable auditor-named file (chmod 000; restored in finally)
+@pytest.mark.skipif(
+    hasattr(os, "geteuid") and os.geteuid() == 0, reason="root can read chmod-000 files"
+)
 def test_dpn009_later_unreadable_auditor_envelope_disqualifies_successor(repo: Path) -> None:
     succ, _i0 = _successor_with_signed_off_i0(repo)
     bad = _later_auditor_path(succ)
@@ -218,7 +221,7 @@ _ASCII_LOCALE_PROBE = textwrap.dedent(
     from dontpanic_orchestrate import signed_off_finalizer
     succ = Path(sys.argv[1])
     print(json.dumps({
-        "encoding": locale.getencoding(),
+        "encoding": locale.getpreferredencoding(False),
         "utf8_mode": sys.flags.utf8_mode,
         "successor": signed_off_finalizer._is_satisfied_successor(
             succ, parent_plan_id=sys.argv[2], acceptance_item="parent acceptance #1"
@@ -350,6 +353,67 @@ def test_dpn009_emit_terminal_success_announce_failure_keeps_signed_off(
         assert _terminal_statuses(plan_dir) == ["signed_off"]
     else:
         assert _terminal_statuses(plan_dir) == []
+    assert [getattr(e, "kind", None) for e in captured] == []
+
+
+class _BadReprError(RuntimeError):
+    def __repr__(self) -> str:
+        raise ValueError("repr exploded (injected)")
+
+
+class _BrokenStdout:
+    def write(self, _s: str) -> int:
+        raise OSError(32, "Broken pipe (injected)")
+
+    def flush(self) -> None:
+        raise OSError(32, "Broken pipe (injected)")
+
+
+# (g2) the WARN print itself fails — still signed_off, nothing escapes
+@pytest.mark.parametrize("how", ["repr", "stdout"])
+def test_dpn009_emit_terminal_warn_print_failure_still_signed_off(
+    repo: Path,
+    captured: list[Any],
+    monkeypatch: pytest.MonkeyPatch,
+    how: str,
+) -> None:
+    """The success announcement raises AND building/printing the WARN raises
+    (the exception's ``__repr__`` raises, or stdout is broken). Nothing may
+    escape ``_emit_volley_terminal``; the durable success signoff stands."""
+    plan_dir = dp3._make_plan(repo, TOP_ID)
+    auditor = dp3._write_envelopes(plan_dir, TOP_ID)
+    loaded = plan_loader.load(plan_dir)
+    sp = signoff_writer.signoff_path(plan_dir, TOP_ID)
+    assert not sp.exists()
+    fired: list[str] = []
+    real_append = inbox.append_event
+
+    def _flaky_append(plan_dir: Path, *, event: str, **kw: Any) -> Any:
+        if event == "volley_terminal" and kw.get("final_status") == "signed_off" and not fired:
+            fired.append(how)
+            if how == "repr":
+                raise _BadReprError("inbox down (injected)")
+            # Break stdout only now, so the WARN print is what hits it.
+            monkeypatch.setattr(sys, "stdout", _BrokenStdout())
+            raise OSError(28, "No space left on device (injected)")
+        return real_append(plan_dir, event=event, **kw)
+
+    monkeypatch.setattr(supervisor.inbox, "append_event", _flaky_append)
+
+    out = supervisor._emit_volley_terminal(
+        supervisor.VolleyResult("signed_off", 1, "auditor signed off", [auditor]),
+        loaded=loaded,
+        feature_id="F001",
+        agents_in_panel=["claude", "codex"],
+    )
+
+    assert fired == [how]
+    assert out.final_status == "signed_off", out
+    assert out.reason == "auditor signed off"
+    so = _signoff(plan_dir)
+    assert so["signoff"] is True and so["next_action"] == "merge", so
+    assert [Path(a).name for a in so["audits"]] == [auditor.name]
+    assert _terminal_statuses(plan_dir) == []
     assert [getattr(e, "kind", None) for e in captured] == []
 
 

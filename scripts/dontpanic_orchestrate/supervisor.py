@@ -14,7 +14,7 @@ import datetime as dt
 import json
 import os
 import re
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -1766,7 +1766,8 @@ def _emit_volley_terminal(
             try:
                 _announce_volley_terminal(result, loaded=loaded, feature_id=feature_id)
             except Exception as announce_exc:  # noqa: BLE001 — signoff is durable
-                print(f"[volley] WARN: signed_off terminal announce failed: {announce_exc!r}")
+                with suppress(Exception):  # a failing WARN must not escape either
+                    print(f"[volley] WARN: signed_off terminal announce failed: {announce_exc!r}")
         else:
             _announce_volley_terminal(result, loaded=loaded, feature_id=feature_id)
     return result
