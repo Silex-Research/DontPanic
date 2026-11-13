@@ -677,8 +677,20 @@ def _is_satisfied_successor(sibling_dir: Path, *, parent_plan_id: str, acceptanc
     try:
         sib_charter = nested_orchestration.ChildCharter.model_validate(charter_block)
         sib_policy = nested_orchestration.CommitPolicy.model_validate(fm.get("commit_policy") or {})
-        signoff = json.loads(signoff_writer.signoff_path(sibling_dir, sib_id).read_text())
-        side = json.loads(signoff_writer.charter_compliance_path(sibling_dir, sib_id).read_text())
+        # DPN-012b review round 3 — signoff evidence is read through the
+        # shared no-follow helper relative to the sibling dir: a symlink at
+        # ``audit/`` or at either file raises (→ not a successor), like any
+        # unreadable artifact; absent → not a successor.
+        signoff_bytes = signoff_writer._safe_read_bytes(
+            sibling_dir, "audit", signoff_writer.signoff_path(sibling_dir, sib_id).name
+        )
+        side_bytes = signoff_writer._safe_read_bytes(
+            sibling_dir, "audit", signoff_writer.charter_compliance_path(sibling_dir, sib_id).name
+        )
+        if signoff_bytes is None or side_bytes is None:
+            return False
+        signoff = json.loads(signoff_bytes)
+        side = json.loads(side_bytes)
     except Exception:  # noqa: BLE001 — any unreadable artifact disqualifies
         return False
     if not isinstance(signoff, dict) or not isinstance(side, dict):
@@ -858,13 +870,16 @@ def _satisfied_successor(
     """Locate a satisfied successor for a ``superseded`` child: a sibling plan
     directory (same plans root) that is a child of the same parent for the
     same ``parent_acceptance_item`` and is durably ``satisfied`` (see
-    :func:`_is_satisfied_successor`). Returns its directory, or None."""
+    :func:`_is_satisfied_successor`). A sibling whose directory entry is a
+    symlink is skipped. Returns its directory, or None."""
     acceptance_item = getattr(child_charter, "parent_acceptance_item", None)
     if not parent_plan_id or not isinstance(acceptance_item, str):
         return None
     plans_root = plan_dir.parent
     try:
-        candidates = sorted(p for p in plans_root.iterdir() if p.is_dir())
+        # DPN-012b review round 3 — a sibling whose plan-dir entry is itself a
+        # symlink never counts (its evidence lives outside the plans root).
+        candidates = sorted(p for p in plans_root.iterdir() if not p.is_symlink() and p.is_dir())
     except OSError:
         return None
     for sibling in candidates:

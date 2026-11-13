@@ -3880,3 +3880,56 @@ def test_dpn012b_rr2c_branch_c_subsecond_past_completed_at_repairs(
     assert fin.signoff_path == _r10_fsig(plan_dir, plan_id)
     assert json.loads(_r10_fsig(plan_dir, plan_id).read_text())["decided_at"] == t_iso
     assert _r10_passes(plan_dir, "F001") is True
+
+
+# ───────── DPN-012b review round 3 (Sentinel 5887557406, Thanos ruling) ─────────
+
+
+# Item 2 — successor evidence is read no-follow; a symlinked sibling never counts ─
+
+
+def _rr3_successor_case(repo: Path, link: str | None) -> tuple[Path, Path]:
+    """A satisfied successor sibling (real files) + a superseded child with a
+    valid signoff. ``link`` then moves one piece of the sibling's evidence to
+    an outside directory and leaves a symlink to it in its place (the target
+    holds the same valid satisfied JSON): ``signoff`` (plan-level signoff
+    file), ``side_car`` (charter-compliance file), ``audit`` (the ``audit/``
+    dir), ``plan_dir`` (the sibling plan dir itself). Returns
+    ``(child plan_dir, outside)``."""
+    succ = _successor(repo, "satisfied")
+    plan_dir = _superseded_child_with_signoff(repo)
+    outside = repo.parent / "rr3-outside"
+    outside.mkdir()
+    if link == "signoff":
+        moved = signoff_writer.signoff_path(succ, _SUCCESSOR_ID)
+    elif link == "side_car":
+        moved = signoff_writer.charter_compliance_path(succ, _SUCCESSOR_ID)
+    elif link == "audit":
+        moved = succ / "audit"
+    elif link == "plan_dir":
+        moved = succ
+    else:
+        return plan_dir, outside
+    os.rename(moved, outside / moved.name)
+    os.symlink(outside / moved.name, moved)
+    return plan_dir, outside
+
+
+@pytest.mark.parametrize("link", ["signoff", "side_car", "audit", "plan_dir"])
+def test_dpn012b_rr3_successor_symlinked_evidence_never_satisfies(repo: Path, link: str) -> None:
+    """A superseded child whose only would-be successor's evidence (plan-level
+    signoff file, side-car file, ``audit/`` dir, or the sibling plan dir
+    itself) is a symlink to valid satisfied JSON outside: no successor →
+    ``child_not_satisfied``; nothing flips, nothing is written."""
+    plan_dir, outside = _rr3_successor_case(repo, link)
+    before_outside = _rr2_snapshot(outside)
+    _assert_refused(plan_dir, CHILD_ID, "child_not_satisfied")
+    assert _rr2_snapshot(outside) == before_outside
+
+
+def test_dpn012b_rr3_successor_control_real_files_accepted(repo: Path) -> None:
+    """Control: the same successor sibling with real files is accepted."""
+    plan_dir, _outside = _rr3_successor_case(repo, None)
+    fin = signed_off_finalizer.finalize_signed_off_feature(plan_dir, plan_id=CHILD_ID, feature_id="F001")
+    assert fin.features_passes_flipped is True
+    assert _passes(plan_dir) is True
