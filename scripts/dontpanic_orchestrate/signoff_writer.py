@@ -337,6 +337,43 @@ def _safe_read_bytes(plan_dir: Path, *rel_components: str) -> bytes | None:
         os.close(dfd)
 
 
+def safe_write_evidence_text(plan_dir: Path, rel_components: tuple[str, ...], text: str) -> None:
+    """DPN-012b review round 3 — write ``text`` (UTF-8) to
+    ``plan_dir/<rel_components...>`` (the last component is the file) through
+    the shared no-follow helper: every directory below ``plan_dir`` is opened
+    (created if missing) no-follow relative to its parent's fd, and the file
+    is written temp + rename relative to that fd (:func:`_safe_write_bytes`).
+    A symlink (or non-directory) at any directory component, or a symlink at
+    the file, raises :class:`SignoffWriteError` and nothing is written."""
+    if not rel_components:
+        raise SignoffWriteError(f"no file named under {plan_dir}")
+    *dirs, name = rel_components
+    dfd = _safe_open_dir(plan_dir, *dirs, create=True)
+    try:
+        _safe_write_bytes(dfd, name, text.encode("utf-8"), Path(plan_dir, *rel_components))
+    finally:
+        os.close(dfd)
+
+
+def safe_unlink_evidence(plan_dir: Path, rel_components: tuple[str, ...]) -> None:
+    """Remove ``plan_dir/<rel_components...>`` (absent is fine) relative to a
+    directory fd opened no-follow below ``plan_dir`` (a link at the file is
+    removed, never its target). A symlinked directory component raises
+    :class:`SignoffWriteError`."""
+    if not rel_components:
+        raise SignoffWriteError(f"no file named under {plan_dir}")
+    *dirs, name = rel_components
+    try:
+        dfd = _safe_open_dir(plan_dir, *dirs)
+    except FileNotFoundError:
+        return
+    try:
+        with contextlib.suppress(FileNotFoundError):
+            _safe_unlink(dfd, name)
+    finally:
+        os.close(dfd)
+
+
 def _refuse_symlink_destination(dir_fd: int, name: str, path: Path) -> None:
     try:
         st = os.stat(name, dir_fd=dir_fd, follow_symlinks=False)
@@ -894,6 +931,8 @@ __all__ = [
     "feature_charter_compliance_path",
     "feature_signoff_dir",
     "feature_signoff_path",
+    "safe_unlink_evidence",
+    "safe_write_evidence_text",
     "signoff_path",
     "write_signoff",
 ]

@@ -205,6 +205,42 @@ def _now_iso() -> str:
     return dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def _commit_plan_signoff(
+    plan_dir: Path, signoff_path: Path, payload: dict[str, Any], memo_path: Path
+) -> None:
+    """DPN-012b review round 3 — write the plan-level signoff envelope through
+    the shared no-follow helper (:func:`signoff_writer.safe_write_evidence_text`:
+    ``audit/`` opened no-follow below ``plan_dir``, temp + rename relative to
+    that fd, a symlinked destination refused). Same JSON text as before. On
+    any failure the memo written just before is rolled back; a refused link
+    surfaces as :class:`CloseoutError` (the CLI's ``[close] REFUSED`` path),
+    any other ``OSError`` propagates unchanged."""
+    try:
+        signoff_writer.safe_write_evidence_text(
+            plan_dir,
+            ("audit", signoff_path.name),
+            json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
+        )
+    except signoff_writer.SignoffWriteError as exc:
+        memo_path.unlink(missing_ok=True)
+        raise CloseoutError(
+            f"refusing to write the signoff envelope {signoff_path}: {exc}"
+        ) from exc
+    except OSError:
+        memo_path.unlink(missing_ok=True)
+        raise
+
+
+def _discard_plan_signoff(plan_dir: Path, signoff_path: Path) -> None:
+    """Rollback of :func:`_commit_plan_signoff`: unlink the signoff relative to
+    the no-follow-opened ``audit/`` fd (a symlinked ``audit/`` swapped in since
+    is left alone — nothing is removed through it)."""
+    try:
+        signoff_writer.safe_unlink_evidence(plan_dir, ("audit", signoff_path.name))
+    except signoff_writer.SignoffWriteError:
+        pass
+
+
 def _audit_paths_for_feature(plan_dir: Path, feature_id: str) -> list[Path]:
     """Return the audit envelope paths for ``feature_id``, in append order
     (implementer-i0, auditor-i0, implementer-i1, auditor-i1, ...).
@@ -678,14 +714,9 @@ def run_close_out(
     # between these two writes never leaves a cleared-breaker-without-
     # signoff state. On OSError, roll back the memo so the operator's next
     # invocation is not staring at a stale template with no signoff peer.
-    signoff_path.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        signoff_path.write_text(
-            json.dumps(payload, indent=2, ensure_ascii=False) + "\n"
-        )
-    except OSError:
-        memo_path.unlink(missing_ok=True)
-        raise
+    # DPN-012b review round 3: no-follow write; a link is refused
+    # (CloseoutError) with the same memo rollback.
+    _commit_plan_signoff(plan_dir, signoff_path, payload, memo_path)
 
     # Step 4b — COMMIT operator_resolution sidecar (v3 F004 i1 fix). The
     # Signoff schema has extra='forbid' so this metadata cannot ride along
@@ -698,7 +729,7 @@ def run_close_out(
             json.dumps(resolution_payload, indent=2, ensure_ascii=False) + "\n"
         )
     except OSError:
-        signoff_path.unlink(missing_ok=True)
+        _discard_plan_signoff(plan_dir, signoff_path)
         memo_path.unlink(missing_ok=True)
         raise
 
@@ -942,18 +973,13 @@ def run_operator_finish(
     # COMMIT memo → signoff → resolution sidecar (roll back on OSError).
     memo_path.parent.mkdir(parents=True, exist_ok=True)
     memo_path.write_text(memo_body)
-    signoff_path.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        signoff_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n")
-    except OSError:
-        memo_path.unlink(missing_ok=True)
-        raise
+    _commit_plan_signoff(plan_dir, signoff_path, payload, memo_path)
     try:
         resolution_path.write_text(
             json.dumps(resolution_payload, indent=2, ensure_ascii=False) + "\n"
         )
     except OSError:
-        signoff_path.unlink(missing_ok=True)
+        _discard_plan_signoff(plan_dir, signoff_path)
         memo_path.unlink(missing_ok=True)
         raise
 
