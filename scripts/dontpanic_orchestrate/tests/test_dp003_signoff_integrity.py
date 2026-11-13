@@ -3820,3 +3820,63 @@ def test_dpn012b_rr2_branch_d_subsecond_past_completed_at_repairs(
     assert fin.signoff_repaired is True and fin.features_passes_flipped is True
     assert json.loads(signoff_writer.signoff_path(plan_dir, plan_id).read_text())["decided_at"] == t_iso
     assert _r10_passes(plan_dir, "F001") is True
+
+
+# Addendum — branch (c) also refuses ANY future completed_at, even sub-second ─
+
+
+def _rr2c_branch_c_setup(
+    repo: Path, monkeypatch: pytest.MonkeyPatch, child: bool, delta: dt.timedelta
+) -> tuple[Path, str, str]:
+    """Legacy branch (c) (the plan-level signoff is F002's; F001 has no
+    per-feature signoff); the writer clock is pinned to a constant whole
+    second T; F001's signed_off envelope's zone-aware completed_at is
+    T + ``delta`` with microseconds kept."""
+    t = dt.datetime.now(dt.timezone.utc).replace(microsecond=0)
+    t_iso = t.strftime("%Y-%m-%dT%H:%M:%SZ")
+    completed_at = (t + delta).isoformat().replace("+00:00", "Z")
+    assert "." in completed_at  # microseconds present
+    plan_dir, plan_id = _r11_legacy_branch_c(repo, child=child, completed_at=completed_at)
+    monkeypatch.setattr(signoff_writer, "_now_iso", lambda: t_iso)
+    assert signoff_writer.signoff_path(plan_dir, plan_id).is_file()
+    assert not _r10_fsig(plan_dir, plan_id).exists()
+    return plan_dir, plan_id, t_iso
+
+
+@pytest.mark.parametrize("child", [False, True], ids=["top", "child"])
+def test_dpn012b_rr2c_branch_c_subsecond_future_completed_at_refused(
+    repo: Path, monkeypatch: pytest.MonkeyPatch, child: bool
+) -> None:
+    plan_dir, plan_id, _t_iso = _rr2c_branch_c_setup(
+        repo, monkeypatch, child, dt.timedelta(milliseconds=500)
+    )
+    plan_sp = signoff_writer.signoff_path(plan_dir, plan_id)
+    plan_side = signoff_writer.charter_compliance_path(plan_dir, plan_id)
+    plan_before = plan_sp.read_bytes()
+    side_before = plan_side.read_bytes() if child else None
+    features_before = (plan_dir / "features.json").read_bytes()
+
+    _r10_assert_refused(plan_dir, plan_id, "signoff_stale")
+
+    assert not _r10_fsig(plan_dir, plan_id).exists()
+    assert not _r10_fside(plan_dir, plan_id).exists()
+    assert not os.path.lexists(signoff_writer.feature_signoff_dir(plan_dir))
+    assert plan_sp.read_bytes() == plan_before
+    if child:
+        assert plan_side.read_bytes() == side_before
+    assert (plan_dir / "features.json").read_bytes() == features_before
+
+
+@pytest.mark.parametrize("child", [False, True], ids=["top", "child"])
+def test_dpn012b_rr2c_branch_c_subsecond_past_completed_at_repairs(
+    repo: Path, monkeypatch: pytest.MonkeyPatch, child: bool
+) -> None:
+    """Control: completed_at = T − 0.5 s still repairs (stamped T)."""
+    plan_dir, plan_id, t_iso = _rr2c_branch_c_setup(
+        repo, monkeypatch, child, -dt.timedelta(milliseconds=500)
+    )
+    fin = signed_off_finalizer.finalize_signed_off_feature(plan_dir, plan_id=plan_id, feature_id="F001")
+    assert fin.signoff_repaired is True and fin.features_passes_flipped is True
+    assert fin.signoff_path == _r10_fsig(plan_dir, plan_id)
+    assert json.loads(_r10_fsig(plan_dir, plan_id).read_text())["decided_at"] == t_iso
+    assert _r10_passes(plan_dir, "F001") is True

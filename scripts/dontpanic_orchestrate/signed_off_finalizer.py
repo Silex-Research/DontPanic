@@ -244,10 +244,9 @@ def _require_datable_auditor_envelope(
     DPN-012b review round 2 — branch (d) additionally keeps microseconds: a
     ``completed_at`` later than ``decided_at`` by ANY amount, even sub-second,
     is refused, so the ``decided_at`` the repair stamps is never earlier than
-    ``completed_at`` at full precision. (:func:`_freshness_problem` itself
-    keeps its second granularity for the ordinary validate path and branch
-    (c), where a whole-second writer stamp in the same second as a
-    microsecond ``completed_at`` must stay fresh.)"""
+    ``completed_at`` at full precision (:func:`_completed_after_decided`,
+    shared with branch (c)). (:func:`_freshness_problem` itself keeps its
+    second granularity for the ordinary validate path.)"""
     if auditor_path is None:
         raise FinalizeError(
             "signoff_stale",
@@ -261,13 +260,7 @@ def _require_datable_auditor_envelope(
         else _freshness_problem(envelope, prospective, auditor_path)
     )
     if stale is None and envelope is not None:
-        completed = _parse_iso(envelope.get("completed_at"))
-        decided = _parse_iso(decided_at)
-        if completed is not None and decided is not None and decided < completed:
-            stale = (
-                f"completed_at {envelope.get('completed_at')} is later than the "
-                f"repair's decided_at {decided_at} (sub-second precision)"
-            )
+        stale = _completed_after_decided(envelope, decided_at)
     if stale is not None:
         raise FinalizeError(
             "signoff_stale",
@@ -275,6 +268,23 @@ def _require_datable_auditor_envelope(
             f"a repaired signoff's freshness could not be verified, refusing to "
             f"finalize.",
         )
+
+
+def _completed_after_decided(envelope: dict[str, Any], decided_at: str) -> str | None:
+    """DPN-012b review round 2 — the exact, microsecond-kept compare shared by
+    the repair branches (c) and (d): return the problem text when the
+    envelope's ``completed_at`` is later than the repair's ``decided_at`` by
+    ANY amount (even sub-second), else ``None``. Applied only after
+    :func:`_freshness_problem` passed (so both values are datable); an
+    unparseable value yields ``None`` here."""
+    completed = _parse_iso(envelope.get("completed_at"))
+    decided = _parse_iso(decided_at)
+    if completed is not None and decided is not None and decided < completed:
+        return (
+            f"completed_at {envelope.get('completed_at')} is later than the "
+            f"repair's decided_at {decided_at} (sub-second precision)"
+        )
+    return None
 
 
 def _freshness_problem(
@@ -1174,7 +1184,9 @@ def finalize_signed_off_feature(
             # feature's — repair ONLY this feature's per-feature pair, and only
             # from an envelope whose completed_at _freshness_problem can parse.
             # The repair's decided_at (writer clock) must already pass the
-            # same _freshness_problem the next run applies (no future envelope).
+            # same _freshness_problem the next run applies (no future envelope),
+            # and then, like branch (d), the exact _completed_after_decided
+            # compare (a completed_at later by ANY amount, even sub-second).
             # One clock read: the writer stamps the decided_at checked here.
             decided_at = signoff_writer._now_iso()
             prospective = {"decided_at": decided_at}
@@ -1183,6 +1195,8 @@ def finalize_signed_off_feature(
                 if envelope is None
                 else _freshness_problem(envelope, prospective, auditor_path)
             )
+            if stale is None and envelope is not None:
+                stale = _completed_after_decided(envelope, decided_at)
             if stale is not None:
                 raise FinalizeError(
                     "signoff_stale",
