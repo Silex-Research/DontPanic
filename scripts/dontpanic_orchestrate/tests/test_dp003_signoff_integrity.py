@@ -3757,3 +3757,54 @@ def test_dpn012b_rr2_linked_plan_level_signoff_refused(repo: Path, actor: str) -
     assert _rr2_snapshot(outside) == before
     assert sp.is_symlink()
     assert _r10_passes(plan_dir, "F001") is False
+
+
+# Item 2 — branch (d) refuses ANY future completed_at, even sub-second ─────
+
+
+def _rr2_branch_d_setup(
+    repo: Path, monkeypatch: pytest.MonkeyPatch, child: bool, delta: dt.timedelta
+) -> tuple[Path, str, str]:
+    """No signoff anywhere (rule d); the writer clock is pinned to a whole
+    second T; the signed_off auditor envelope's zone-aware completed_at is
+    T + ``delta`` with microseconds kept."""
+    t = dt.datetime.now(dt.timezone.utc).replace(microsecond=0)
+    t_iso = t.strftime("%Y-%m-%dT%H:%M:%SZ")
+    plan_dir, plan_id = _r10_plan(repo, child=child)
+    a1 = _r10_volley(plan_dir, plan_id, "F001")
+    data = json.loads(a1.read_text())
+    data["completed_at"] = (t + delta).isoformat().replace("+00:00", "Z")
+    assert "." in data["completed_at"]  # microseconds present
+    a1.write_text(json.dumps(data))
+    _clear_pre_merge(plan_dir, plan_id)
+    monkeypatch.setattr(signoff_writer, "_now_iso", lambda: t_iso)
+    assert not signoff_writer.signoff_path(plan_dir, plan_id).exists()
+    assert not os.path.lexists(signoff_writer.feature_signoff_dir(plan_dir))
+    return plan_dir, plan_id, t_iso
+
+
+@pytest.mark.parametrize("child", [False, True], ids=["top", "child"])
+def test_dpn012b_rr2_branch_d_subsecond_future_completed_at_refused(
+    repo: Path, monkeypatch: pytest.MonkeyPatch, child: bool
+) -> None:
+    plan_dir, plan_id, _t_iso = _rr2_branch_d_setup(
+        repo, monkeypatch, child, dt.timedelta(milliseconds=500)
+    )
+    _r10_assert_refused(plan_dir, plan_id, "signoff_stale")
+    assert not signoff_writer.signoff_path(plan_dir, plan_id).exists()
+    assert not signoff_writer.charter_compliance_path(plan_dir, plan_id).exists()
+    assert not os.path.lexists(signoff_writer.feature_signoff_dir(plan_dir))
+
+
+@pytest.mark.parametrize("child", [False, True], ids=["top", "child"])
+def test_dpn012b_rr2_branch_d_subsecond_past_completed_at_repairs(
+    repo: Path, monkeypatch: pytest.MonkeyPatch, child: bool
+) -> None:
+    """Control: completed_at = T − 0.5 s still repairs (stamped T)."""
+    plan_dir, plan_id, t_iso = _rr2_branch_d_setup(
+        repo, monkeypatch, child, -dt.timedelta(milliseconds=500)
+    )
+    fin = signed_off_finalizer.finalize_signed_off_feature(plan_dir, plan_id=plan_id, feature_id="F001")
+    assert fin.signoff_repaired is True and fin.features_passes_flipped is True
+    assert json.loads(signoff_writer.signoff_path(plan_dir, plan_id).read_text())["decided_at"] == t_iso
+    assert _r10_passes(plan_dir, "F001") is True

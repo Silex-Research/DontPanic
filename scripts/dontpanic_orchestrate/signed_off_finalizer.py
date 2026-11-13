@@ -239,7 +239,15 @@ def _require_datable_auditor_envelope(
     unparseable / zone-less / date-only ``completed_at`` AND one later than
     the finalizer's clock (a repair the next run would reject as stale).
     Refuses with ``signoff_stale`` so nothing is written and nothing is
-    flipped."""
+    flipped.
+
+    DPN-012b review round 2 — branch (d) additionally keeps microseconds: a
+    ``completed_at`` later than ``decided_at`` by ANY amount, even sub-second,
+    is refused, so the ``decided_at`` the repair stamps is never earlier than
+    ``completed_at`` at full precision. (:func:`_freshness_problem` itself
+    keeps its second granularity for the ordinary validate path and branch
+    (c), where a whole-second writer stamp in the same second as a
+    microsecond ``completed_at`` must stay fresh.)"""
     if auditor_path is None:
         raise FinalizeError(
             "signoff_stale",
@@ -252,6 +260,14 @@ def _require_datable_auditor_envelope(
         if envelope is None
         else _freshness_problem(envelope, prospective, auditor_path)
     )
+    if stale is None and envelope is not None:
+        completed = _parse_iso(envelope.get("completed_at"))
+        decided = _parse_iso(decided_at)
+        if completed is not None and decided is not None and decided < completed:
+            stale = (
+                f"completed_at {envelope.get('completed_at')} is later than the "
+                f"repair's decided_at {decided_at} (sub-second precision)"
+            )
     if stale is not None:
         raise FinalizeError(
             "signoff_stale",
