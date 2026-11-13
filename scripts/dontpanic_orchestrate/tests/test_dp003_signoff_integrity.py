@@ -31,6 +31,7 @@ import json
 import os
 import subprocess
 import sys
+import types
 from pathlib import Path
 from typing import Any
 
@@ -2860,14 +2861,9 @@ def test_r13_legacy_repair_stamps_guarded_decided_at_across_backward_clock_jump(
     plan_dir, plan_id = _r11_legacy_branch_c(
         repo, child=child, completed_at=(t - dt.timedelta(hours=1)).strftime(fmt)
     )
-    calls: list[str] = []
-
-    def fake_now_iso() -> str:
-        value = t_iso if not calls else (t - dt.timedelta(hours=2)).strftime(fmt)
-        calls.append(value)
-        return value
-
-    monkeypatch.setattr(signoff_writer, "_now_iso", fake_now_iso)
+    # Clock pinned at its single source (signoff_writer's ``dt``): the first
+    # read returns t, every later read t − 2 h (a backward step).
+    calls = _rr3_pin_clock(monkeypatch, t, t - dt.timedelta(hours=2))
 
     fin = signed_off_finalizer.finalize_signed_off_feature(plan_dir, plan_id=plan_id, feature_id="F001")
     assert fin.signoff_repaired is True
@@ -2875,7 +2871,7 @@ def test_r13_legacy_repair_stamps_guarded_decided_at_across_backward_clock_jump(
     assert fin.signoff_path == _r10_fsig(plan_dir, plan_id)
     assert json.loads(_r10_fsig(plan_dir, plan_id).read_text())["decided_at"] == t_iso
     assert _r10_passes(plan_dir, "F001") is True
-    assert calls == [t_iso]
+    assert calls == [t]
     again = signed_off_finalizer.finalize_signed_off_feature(plan_dir, plan_id=plan_id, feature_id="F001")
     assert again.already_finalized is True
 
@@ -3540,14 +3536,9 @@ def test_dpn012b_branch_d_single_clock_read(
     plan_sig = signoff_writer.signoff_path(plan_dir, plan_id)
     assert not plan_sig.exists()
     assert not os.path.lexists(signoff_writer.feature_signoff_dir(plan_dir))
-    calls: list[str] = []
-
-    def fake_now_iso() -> str:
-        value = t_iso if not calls else (t - dt.timedelta(hours=2)).strftime(fmt)
-        calls.append(value)
-        return value
-
-    monkeypatch.setattr(signoff_writer, "_now_iso", fake_now_iso)
+    # Clock pinned at its single source (signoff_writer's ``dt``): the first
+    # read returns t, every later read t − 2 h (a backward step).
+    calls = _rr3_pin_clock(monkeypatch, t, t - dt.timedelta(hours=2))
     # The guard must check the very value the repair stamps.
     checked: list[str] = []
     real_freshness_problem = signed_off_finalizer._freshness_problem
@@ -3567,7 +3558,7 @@ def test_dpn012b_branch_d_single_clock_read(
     assert json.loads(_r10_fsig(plan_dir, plan_id).read_text())["decided_at"] == t_iso
     assert json.loads(plan_sig.read_text())["decided_at"] == t_iso
     assert _r10_passes(plan_dir, "F001") is True
-    assert calls == [t_iso]
+    assert calls == [t]
     assert checked == [t_iso]
     again = signed_off_finalizer.finalize_signed_off_feature(plan_dir, plan_id=plan_id, feature_id="F001")
     assert again.already_finalized is True
@@ -3789,7 +3780,7 @@ def _rr2_branch_d_setup(
     assert "." in data["completed_at"]  # microseconds present
     a1.write_text(json.dumps(data))
     _clear_pre_merge(plan_dir, plan_id)
-    monkeypatch.setattr(signoff_writer, "_now_iso", lambda: t_iso)
+    _rr3_pin_clock(monkeypatch, t)
     assert not signoff_writer.signoff_path(plan_dir, plan_id).exists()
     assert not os.path.lexists(signoff_writer.feature_signoff_dir(plan_dir))
     return plan_dir, plan_id, t_iso
@@ -3837,7 +3828,7 @@ def _rr2c_branch_c_setup(
     completed_at = (t + delta).isoformat().replace("+00:00", "Z")
     assert "." in completed_at  # microseconds present
     plan_dir, plan_id = _r11_legacy_branch_c(repo, child=child, completed_at=completed_at)
-    monkeypatch.setattr(signoff_writer, "_now_iso", lambda: t_iso)
+    _rr3_pin_clock(monkeypatch, t)
     assert signoff_writer.signoff_path(plan_dir, plan_id).is_file()
     assert not _r10_fsig(plan_dir, plan_id).exists()
     return plan_dir, plan_id, t_iso
@@ -3883,6 +3874,164 @@ def test_dpn012b_rr2c_branch_c_subsecond_past_completed_at_repairs(
 
 
 # ───────── DPN-012b review round 3 (Sentinel 5887557406, Thanos ruling) ─────────
+
+
+def _rr3_pin_clock(monkeypatch: pytest.MonkeyPatch, *instants: dt.datetime) -> list[dt.datetime]:
+    """Pin the signoff writer's clock at its single source by replacing
+    ``signoff_writer.dt`` with a stand-in module: ``datetime.now(tz)`` returns
+    ``instants[k]`` on the k-th call (the last one repeats), everything else
+    (``timezone``, ``timedelta``, ``datetime.fromisoformat`` …) is the real
+    ``datetime`` module's. Works at every ref (the clock has always been
+    ``dt.datetime.now(dt.timezone.utc)`` there). Returns the list of instants
+    handed out, one entry per clock read."""
+    calls: list[dt.datetime] = []
+
+    def _now(tz: dt.tzinfo | None) -> dt.datetime:
+        value = instants[min(len(calls), len(instants) - 1)]
+        calls.append(value)
+        return value.astimezone(tz) if tz is not None else value.replace(tzinfo=None)
+
+    class _PinnedDatetime(dt.datetime):
+        @classmethod
+        def now(cls, tz: dt.tzinfo | None = None) -> dt.datetime:  # type: ignore[override]
+            return _now(tz)
+
+    fake = types.ModuleType("datetime")
+    for name in dir(dt):
+        if not name.startswith("__"):
+            setattr(fake, name, getattr(dt, name))
+    fake.datetime = _PinnedDatetime  # type: ignore[attr-defined]
+    monkeypatch.setattr(signoff_writer, "dt", fake)
+    return calls
+
+
+def _rr3_z(t: dt.datetime) -> str:
+    """Zone-aware ISO text with microseconds kept (``…00.200000Z``)."""
+    return t.isoformat(timespec="microseconds").replace("+00:00", "Z")
+
+
+def _rr3_whole_second() -> dt.datetime:
+    return dt.datetime.now(dt.timezone.utc).replace(microsecond=0)
+
+
+def _rr3_branch_d_plan(repo: Path, *, child: bool, completed_at: str) -> tuple[Path, str]:
+    """Rule (d): no signoff anywhere; F001's signed_off auditor envelope's
+    completed_at is ``completed_at``."""
+    plan_dir, plan_id = _r10_plan(repo, child=child)
+    a1 = _r10_volley(plan_dir, plan_id, "F001")
+    data = json.loads(a1.read_text())
+    data["completed_at"] = completed_at
+    a1.write_text(json.dumps(data))
+    _clear_pre_merge(plan_dir, plan_id)
+    assert not signoff_writer.signoff_path(plan_dir, plan_id).exists()
+    assert not os.path.lexists(signoff_writer.feature_signoff_dir(plan_dir))
+    return plan_dir, plan_id
+
+
+def _rr3_phase2_repo(repo: Path) -> Path:
+    r = repo.parent / "dp003i-repo-rr3-phase2"
+    r.mkdir()
+    projects_registry.add_project("dp003i-rr3-phase2", str(r))
+    return r
+
+
+@pytest.mark.parametrize("child", [False, True], ids=["top", "child"])
+def test_dpn012b_rr3_branch_c_one_full_precision_clock(
+    repo: Path, monkeypatch: pytest.MonkeyPatch, child: bool
+) -> None:
+    """Items 3+4 — branch (c) reads the clock ONCE at full precision, refuses a
+    completed_at later than that reading by any amount, and stamps the
+    reading truncated to the second.
+
+    Phase 1: clock T+0.7 s, completed_at T+0.2 s (same second, in the PAST) →
+    repairs, stamped decided_at == T, passes flips, re-run idempotent.
+    Phase 2 (separate plan): clock T+0.3 s, completed_at T+0.3 s + 1 µs (the
+    FUTURE by 1 µs) → signoff_stale, nothing written, features.json
+    byte-unchanged."""
+    t = _rr3_whole_second()
+    t_iso = t.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    # Phase 1 — past completed_at in the same wall-clock second repairs.
+    plan_dir, plan_id = _r11_legacy_branch_c(
+        repo, child=child, completed_at=_rr3_z(t + dt.timedelta(milliseconds=200))
+    )
+    calls = _rr3_pin_clock(monkeypatch, t + dt.timedelta(milliseconds=700))
+    fin = signed_off_finalizer.finalize_signed_off_feature(plan_dir, plan_id=plan_id, feature_id="F001")
+    assert fin.signoff_repaired is True and fin.features_passes_flipped is True
+    assert fin.signoff_path == _r10_fsig(plan_dir, plan_id)
+    assert json.loads(_r10_fsig(plan_dir, plan_id).read_text())["decided_at"] == t_iso
+    assert _r10_passes(plan_dir, "F001") is True
+    assert len(calls) == 1
+    again = signed_off_finalizer.finalize_signed_off_feature(plan_dir, plan_id=plan_id, feature_id="F001")
+    assert again.already_finalized is True
+
+    # Phase 2 — completed_at 1 µs after the clock reading is refused.
+    clock = t + dt.timedelta(milliseconds=300)
+    plan_dir2, plan_id2 = _r11_legacy_branch_c(
+        _rr3_phase2_repo(repo), child=child, completed_at=_rr3_z(clock + dt.timedelta(microseconds=1))
+    )
+    calls2 = _rr3_pin_clock(monkeypatch, clock)
+    plan_sp = signoff_writer.signoff_path(plan_dir2, plan_id2)
+    plan_side = signoff_writer.charter_compliance_path(plan_dir2, plan_id2)
+    plan_before = plan_sp.read_bytes()
+    side_before = plan_side.read_bytes() if child else None
+    features_before = (plan_dir2 / "features.json").read_bytes()
+
+    _r10_assert_refused(plan_dir2, plan_id2, "signoff_stale")
+
+    assert len(calls2) == 1
+    assert not _r10_fsig(plan_dir2, plan_id2).exists()
+    assert not _r10_fside(plan_dir2, plan_id2).exists()
+    assert not os.path.lexists(signoff_writer.feature_signoff_dir(plan_dir2))
+    assert plan_sp.read_bytes() == plan_before
+    if child:
+        assert plan_side.read_bytes() == side_before
+    assert (plan_dir2 / "features.json").read_bytes() == features_before
+
+
+@pytest.mark.parametrize("child", [False, True], ids=["top", "child"])
+def test_dpn012b_rr3_branch_d_one_full_precision_clock(
+    repo: Path, monkeypatch: pytest.MonkeyPatch, child: bool
+) -> None:
+    """Items 3+4 — branch (d), same single full-precision clock rule as
+    branch (c). Phase 1: clock T+0.7 s, completed_at T+0.2 s → repairs both
+    pairs, both stamped decided_at == T, passes flips, re-run idempotent.
+    Phase 2 (separate plan): clock T+0.3 s, completed_at T+0.3 s + 1 µs →
+    signoff_stale; no plan-level / per-feature signoff or side-car written,
+    no feature-signoffs/ created, features.json byte-unchanged."""
+    t = _rr3_whole_second()
+    t_iso = t.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    # Phase 1 — past completed_at in the same wall-clock second repairs.
+    plan_dir, plan_id = _rr3_branch_d_plan(
+        repo, child=child, completed_at=_rr3_z(t + dt.timedelta(milliseconds=200))
+    )
+    calls = _rr3_pin_clock(monkeypatch, t + dt.timedelta(milliseconds=700))
+    fin = signed_off_finalizer.finalize_signed_off_feature(plan_dir, plan_id=plan_id, feature_id="F001")
+    assert fin.signoff_repaired is True and fin.features_passes_flipped is True
+    assert fin.signoff_path == _r10_fsig(plan_dir, plan_id)
+    assert json.loads(_r10_fsig(plan_dir, plan_id).read_text())["decided_at"] == t_iso
+    assert json.loads(signoff_writer.signoff_path(plan_dir, plan_id).read_text())["decided_at"] == t_iso
+    assert _r10_passes(plan_dir, "F001") is True
+    assert len(calls) == 1
+    again = signed_off_finalizer.finalize_signed_off_feature(plan_dir, plan_id=plan_id, feature_id="F001")
+    assert again.already_finalized is True
+
+    # Phase 2 — completed_at 1 µs after the clock reading is refused.
+    clock = t + dt.timedelta(milliseconds=300)
+    plan_dir2, plan_id2 = _rr3_branch_d_plan(
+        _rr3_phase2_repo(repo), child=child, completed_at=_rr3_z(clock + dt.timedelta(microseconds=1))
+    )
+    calls2 = _rr3_pin_clock(monkeypatch, clock)
+    features_before = (plan_dir2 / "features.json").read_bytes()
+
+    _r10_assert_refused(plan_dir2, plan_id2, "signoff_stale")
+
+    assert len(calls2) == 1
+    assert not signoff_writer.signoff_path(plan_dir2, plan_id2).exists()
+    assert not signoff_writer.charter_compliance_path(plan_dir2, plan_id2).exists()
+    assert not os.path.lexists(signoff_writer.feature_signoff_dir(plan_dir2))
+    assert (plan_dir2 / "features.json").read_bytes() == features_before
 
 
 # Item 2 — successor evidence is read no-follow; a symlinked sibling never counts ─

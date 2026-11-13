@@ -42,8 +42,18 @@ class SignoffWriteError(RuntimeError):
     pass
 
 
+def _now() -> dt.datetime:
+    """The writer clock: aware UTC, full precision (microseconds kept)."""
+    return dt.datetime.now(dt.timezone.utc)
+
+
+def _iso_seconds(moment: dt.datetime) -> str:
+    """``moment`` as the signoff ``decided_at`` text (whole second, ``Z``)."""
+    return moment.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
 def _now_iso() -> str:
-    return dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return _iso_seconds(_now())
 
 
 def _next_action_for(volley_status: str, signed_off: bool) -> str:
