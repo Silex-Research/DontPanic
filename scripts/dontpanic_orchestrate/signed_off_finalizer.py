@@ -711,8 +711,10 @@ def _is_satisfied_successor(sibling_dir: Path, *, parent_plan_id: str, acceptanc
 
 class _NoLatestAuditor(Exception):
     """A feature's latest auditor envelope cannot be determined (an auditor
-    envelope with a missing/unparseable/zone-less ``completed_at``, or two
-    different envelopes sharing the newest ``completed_at`` second)."""
+    envelope that cannot be read, is not valid UTF-8, is not valid JSON or is
+    not a JSON object; one with a missing/unparseable/zone-less
+    ``completed_at``; or two different envelopes sharing the newest
+    ``completed_at`` second)."""
 
 
 def _utc_second(t: dt.datetime) -> dt.datetime:
@@ -726,14 +728,19 @@ def _latest_auditor_by_completed_at(audit_paths: list[Path]) -> tuple[Path, dict
     wins. File timestamps (mtime) are never consulted, so a touch, same-bytes
     rewrite, copy, clone or branch switch cannot reorder envelopes, and a
     redispatch that reuses an ``-iN`` filename is ordered by when the verdict
-    was actually made. Returns None when there is no readable auditor
-    envelope; raises :class:`_NoLatestAuditor` when ANY readable auditor
-    envelope has a missing or unparseable ``completed_at`` (fail closed), or
-    when the highest ``completed_at`` (whole second, UTC) is shared by two or
-    more DIFFERENT auditor envelope paths — the latest verdict is then
-    ambiguous, so iteration / name never break a tie at the newest second
-    (ties among older envelopes are harmless). Unreadable / non-object files
-    are skipped. Used only by :func:`_successor_signoff_is_current`."""
+    was actually made. Returns None when there is no auditor envelope.
+
+    Raises :class:`_NoLatestAuditor` (fail closed) when ANY auditor envelope
+    cannot be read (``OSError``), is not valid UTF-8 (decoded explicitly as
+    UTF-8, never the platform locale encoding), is not valid JSON (e.g. a torn
+    or truncated in-place write) or is not a JSON object — that envelope may
+    be the latest verdict, so the latest verdict is unknown and such files are
+    NEVER skipped; when ANY auditor envelope has a missing or unparseable
+    ``completed_at``; or when the highest ``completed_at`` (whole second,
+    UTC) is shared by two or more DIFFERENT auditor envelope paths — the
+    latest verdict is then ambiguous, so iteration / name never break a tie at
+    the newest second (ties among older envelopes are harmless). Used only by
+    :func:`_successor_signoff_is_current`."""
     best: tuple[Path, dict[str, Any]] | None = None
     best_key: tuple[dt.datetime, int, str] | None = None
     at_second: dict[dt.datetime, set[Path]] = {}
@@ -741,11 +748,19 @@ def _latest_auditor_by_completed_at(audit_paths: list[Path]) -> tuple[Path, dict
         if "auditor" not in path.name:
             continue
         try:
-            data = json.loads(path.read_text())
-        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
-            continue
+            raw = path.read_bytes()
+        except OSError as exc:
+            raise _NoLatestAuditor(f"{path} cannot be read: {exc}") from exc
+        try:
+            text = raw.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise _NoLatestAuditor(f"{path} is not valid UTF-8: {exc}") from exc
+        try:
+            data = json.loads(text)
+        except json.JSONDecodeError as exc:
+            raise _NoLatestAuditor(f"{path} is not valid JSON (torn/truncated?): {exc}") from exc
         if not isinstance(data, dict):
-            continue
+            raise _NoLatestAuditor(f"{path} is not a JSON object ({type(data).__name__})")
         completed = _parse_iso(data.get("completed_at"))
         if completed is None:
             raise _NoLatestAuditor(f"{path} has a missing or unparseable completed_at")
@@ -822,7 +837,10 @@ def _successor_signoff_is_current(sibling_dir: Path, signoff: dict[str, Any]) ->
     "Latest" is ranked by the envelope's ``completed_at``, then iteration
     index, then file name (:func:`_latest_auditor_by_completed_at`); file
     timestamps are never used, a missing/unparseable/zone-less
-    ``completed_at`` on any auditor envelope disqualifies, and a tie at the
+    ``completed_at`` on any auditor envelope disqualifies, an auditor
+    envelope that cannot be read, is not valid UTF-8, is not valid JSON
+    (torn/truncated) or is not a JSON object disqualifies (it is never
+    skipped — it may be the latest verdict), and a tie at the
     newest ``completed_at`` second disqualifies. A later blocked / needs_changes audit
     for ANY feature (e.g. after the writer refused a blocked rewrite and left
     the old pair on disk), or a feature with no auditor envelope, therefore

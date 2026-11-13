@@ -149,8 +149,10 @@ Surfaces affected: <comma-separated list — see docs/RELEASE_IMPACT.md>
   envelope's `completed_at`, then iteration index, then file name — never by
   file timestamps, so touching, copying, cloning or switching branches cannot
   change the result. An auditor envelope with a missing or unparseable
-  `completed_at` disqualifies the successor. Unreadable or truncated auditor
-  files are still skipped when picking each feature's latest one.
+  `completed_at` disqualifies the successor. An auditor envelope that cannot
+  be read, is not valid UTF-8, is truncated or is not a JSON object now
+  disqualifies the successor instead of being skipped when picking each
+  feature's latest one.
 - A successor's signoff must also be at least as new as the latest auditor
   envelope it lists for its own feature — the same rule `dontpanic finalize`
   already applies to an existing signoff (`decided_at` not earlier than the
@@ -164,6 +166,9 @@ Surfaces affected: <comma-separated list — see docs/RELEASE_IMPACT.md>
   latest cannot be told apart and the successor does not count. Timestamps
   without an explicit UTC offset or `Z` (including date-only values) are now
   refused wherever the finalizer reads them, instead of being read as UTC.
+- If the success announcement (INBOX event or notification) fails after
+  `signoff.json` was written, the dispatch stays `signed_off`, a warning is
+  printed, and the signoff is no longer rewritten as `blocked`.
 
 Surfaces affected: cli, mcp, inbox, notify, root_changelog
 
