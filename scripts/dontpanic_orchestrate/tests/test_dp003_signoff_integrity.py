@@ -3559,3 +3559,201 @@ def test_dpn012b_branch_d_single_clock_read(
     assert checked == [t_iso]
     again = signed_off_finalizer.finalize_signed_off_feature(plan_dir, plan_id=plan_id, feature_id="F001")
     assert again.already_finalized is True
+
+
+# ───────── DPN-012b review round 2 (Sentinel 5887156723) — no symlink is followed ─────────
+#
+# Every case asserts the refusal AND that nothing is written outside the plan
+# tree: a sibling "outside" directory under tmp_path stays identical (files,
+# directories and links), and no ``passes`` flips.
+
+
+def _rr2_snapshot(root: Path) -> dict[str, Any]:
+    """Every entry under ``root`` (links NOT followed): files → bytes, dirs →
+    ``"<dir>"``, symlinks → ``("<link>", target)``."""
+    snap: dict[str, Any] = {}
+    for dirpath, dirnames, filenames in os.walk(root, followlinks=False):
+        for name in dirnames + filenames:
+            p = Path(dirpath) / name
+            rel = str(p.relative_to(root))
+            if p.is_symlink():
+                snap[rel] = ("<link>", os.readlink(p))
+            elif p.is_dir():
+                snap[rel] = "<dir>"
+            else:
+                snap[rel] = p.read_bytes()
+    return snap
+
+
+def _rr2_outside(repo: Path) -> Path:
+    outside = repo.parent / "rr2-outside"
+    outside.mkdir()
+    (outside / "keep.txt").write_bytes(b"untouched\n")
+    return outside
+
+
+def _rr2_finalize_refused(plan_dir: Path, plan_id: str, code: str) -> signed_off_finalizer.FinalizeError:
+    before_features = (plan_dir / "features.json").read_bytes()
+    with pytest.raises(signed_off_finalizer.FinalizeError) as exc:
+        signed_off_finalizer.finalize_signed_off_feature(plan_dir, plan_id=plan_id, feature_id="F001")
+    assert exc.value.code == code, (exc.value.code, str(exc.value))
+    assert _r10_passes(plan_dir, "F001") is False
+    assert (plan_dir / "features.json").read_bytes() == before_features
+    return exc.value
+
+
+@pytest.mark.parametrize("child", [False, True], ids=["top", "child"])
+@pytest.mark.parametrize("actor", ["writer_per_feature", "writer_plan_level_only", "finalizer"])
+def test_dpn012b_rr2_linked_audit_parent_refused_nothing_outside(
+    repo: Path, actor: str, child: bool
+) -> None:
+    """(a) ``audit/`` itself is a symlink to a directory outside the plan tree
+    (holding the plan's real audit envelopes + gate state). The per-feature
+    write, the plan-level-only write and the finalizer all refuse; nothing
+    is written through the link."""
+    plan_dir, plan_id = _r10_plan(repo, child=child)
+    a1 = _r10_volley(plan_dir, plan_id, "F001")
+    _clear_pre_merge(plan_dir, plan_id)
+    outside = _rr2_outside(repo)
+    os.rename(plan_dir / "audit", outside / "audit")
+    os.symlink(outside / "audit", plan_dir / "audit")
+    assert a1.is_file()  # the envelope is still readable through the link
+    before = _rr2_snapshot(outside)
+
+    if actor == "finalizer":
+        _rr2_finalize_refused(plan_dir, plan_id, "signoff_unreadable")
+    else:
+        fid = "F001" if actor == "writer_per_feature" else None
+        with pytest.raises(signoff_writer.SignoffWriteError, match=r"is a symlink; refusing"):
+            _r10_sign(plan_dir, plan_id, a1, feature_id=fid, child=child)
+
+    assert _rr2_snapshot(outside) == before
+    assert (plan_dir / "audit").is_symlink()
+    assert _r10_passes(plan_dir, "F001") is False
+
+
+@pytest.mark.parametrize("swapped", ["audit", "feature-signoffs"])
+@pytest.mark.parametrize("child", [False, True], ids=["top", "child"])
+def test_dpn012b_rr2_swap_race_link_after_check_writes_nothing_outside(
+    repo: Path, monkeypatch: pytest.MonkeyPatch, swapped: str, child: bool
+) -> None:
+    """(b) A link swapped in AFTER the writer's up-front directory check and
+    BEFORE any evidence byte lands: the hook wraps
+    ``signoff_writer.build_signoff_dict``, which ``write_signoff`` calls after
+    its refusal checks (and, at this head, after the evidence directories are
+    opened no-follow and held) and before the first temp file is created. On
+    its return the real ``audit/`` (or ``feature-signoffs/``) is renamed aside
+    and a symlink to an outside directory is put in its place. Nothing may
+    land outside: the write either refuses or lands in the directory it
+    checked (now the renamed-aside one)."""
+    plan_dir, plan_id = _r10_plan(repo, child=child)
+    a1 = _r10_volley(plan_dir, plan_id, "F001")
+    fdir = signoff_writer.feature_signoff_dir(plan_dir)
+    if swapped == "feature-signoffs":
+        fdir.mkdir()
+    original = plan_dir / "audit" if swapped == "audit" else fdir
+    aside = original.with_name(original.name + "-aside")
+    outside = _rr2_outside(repo)
+    before = _rr2_snapshot(outside)
+    real_build = signoff_writer.build_signoff_dict
+    swaps: list[Path] = []
+
+    def _build_then_swap(**kwargs: Any) -> dict[str, Any]:
+        payload = real_build(**kwargs)
+        if not swaps:
+            os.rename(original, aside)
+            os.symlink(outside, original)
+            swaps.append(original)
+        return payload
+
+    monkeypatch.setattr(signoff_writer, "build_signoff_dict", _build_then_swap)
+    try:
+        _r10_sign(plan_dir, plan_id, a1, feature_id="F001", child=child)
+    except signoff_writer.SignoffWriteError:
+        pass
+
+    assert swaps == [original]
+    assert _rr2_snapshot(outside) == before
+    assert original.is_symlink() and Path(os.readlink(original)) == outside
+
+
+@pytest.mark.parametrize("actor", ["finalizer", "writer"])
+def test_dpn012b_rr2_linked_feature_signoff_file_refused(repo: Path, actor: str) -> None:
+    """(c) The per-feature signoff FILE is a symlink to a valid signoff copy
+    outside the tree. The finalizer refuses ``signoff_unreadable`` (never
+    reads rule (a) evidence through it); the writer refuses rather than
+    silently replacing the link; the outside target is unchanged."""
+    plan_dir, plan_id = _r10_plan(repo, child=False)
+    a1 = _r10_volley(plan_dir, plan_id, "F001")
+    _r10_sign(plan_dir, plan_id, a1, feature_id="F001")
+    _clear_pre_merge(plan_dir, plan_id)
+    outside = _rr2_outside(repo)
+    fsig = _r10_fsig(plan_dir, plan_id)
+    os.rename(fsig, outside / fsig.name)
+    os.symlink(outside / fsig.name, fsig)
+    before = _rr2_snapshot(outside)
+
+    if actor == "finalizer":
+        _rr2_finalize_refused(plan_dir, plan_id, "signoff_unreadable")
+    else:
+        with pytest.raises(signoff_writer.SignoffWriteError, match=r"is a symlink; refusing"):
+            _r10_sign(plan_dir, plan_id, a1, feature_id="F001")
+
+    assert _rr2_snapshot(outside) == before
+    assert fsig.is_symlink()
+    assert _r10_passes(plan_dir, "F001") is False
+
+
+@pytest.mark.parametrize("actor", ["finalizer", "writer"])
+def test_dpn012b_rr2_linked_feature_side_car_file_refused(repo: Path, actor: str) -> None:
+    """(d) Child plan: the per-feature charter-compliance side-car FILE is a
+    symlink to a valid side-car outside the tree. The finalizer refuses
+    ``signoff_unreadable`` (the no-follow read refuses the link itself —
+    a link is not a missing side-car, so not ``child_signoff_missing``); the
+    writer refuses; the outside target is unchanged."""
+    plan_dir, plan_id = _r10_plan(repo, child=True)
+    a1 = _r10_volley(plan_dir, plan_id, "F001")
+    _r10_sign(plan_dir, plan_id, a1, feature_id="F001", child=True)
+    _clear_pre_merge(plan_dir, plan_id)
+    outside = _rr2_outside(repo)
+    fside = _r10_fside(plan_dir, plan_id)
+    os.rename(fside, outside / fside.name)
+    os.symlink(outside / fside.name, fside)
+    before = _rr2_snapshot(outside)
+
+    if actor == "finalizer":
+        _rr2_finalize_refused(plan_dir, plan_id, "signoff_unreadable")
+    else:
+        with pytest.raises(signoff_writer.SignoffWriteError, match=r"is a symlink; refusing"):
+            _r10_sign(plan_dir, plan_id, a1, feature_id="F001", child=True)
+
+    assert _rr2_snapshot(outside) == before
+    assert fside.is_symlink()
+    assert _r10_passes(plan_dir, "F001") is False
+
+
+@pytest.mark.parametrize("actor", ["finalizer", "writer"])
+def test_dpn012b_rr2_linked_plan_level_signoff_refused(repo: Path, actor: str) -> None:
+    """(e) The plan-level ``signoff-<plan>.json`` is a symlink to a valid
+    signoff outside the tree (no per-feature evidence). A plan-level-only
+    write refuses and leaves the outside file unchanged; the finalizer's
+    validation of it refuses ``signoff_unreadable``."""
+    plan_dir, plan_id = _r10_plan(repo, child=False)
+    a1 = _r10_volley(plan_dir, plan_id, "F001")
+    sp = _r10_sign(plan_dir, plan_id, a1, feature_id=None)
+    _clear_pre_merge(plan_dir, plan_id)
+    assert not os.path.lexists(signoff_writer.feature_signoff_dir(plan_dir))
+    outside = _rr2_outside(repo)
+    os.rename(sp, outside / sp.name)
+    os.symlink(outside / sp.name, sp)
+    before = _rr2_snapshot(outside)
+
+    if actor == "finalizer":
+        _rr2_finalize_refused(plan_dir, plan_id, "signoff_unreadable")
+    else:
+        with pytest.raises(signoff_writer.SignoffWriteError, match=r"is a symlink; refusing"):
+            _r10_sign(plan_dir, plan_id, a1, feature_id=None)
+
+    assert _rr2_snapshot(outside) == before
+    assert sp.is_symlink()
+    assert _r10_passes(plan_dir, "F001") is False

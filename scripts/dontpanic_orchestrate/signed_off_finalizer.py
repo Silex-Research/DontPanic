@@ -334,6 +334,20 @@ def _signoff_lists_audit(audits: list[Any], auditor_path: Path, plan_dir: Path) 
     return bool(_listed_entries(audits, auditor_path, plan_dir))
 
 
+def _read_evidence_bytes(plan_dir: Path, path: Path) -> bytes | None:
+    """DPN-012b review round 2 — read a signoff / side-car file through the
+    shared no-follow helper (:func:`signoff_writer._safe_read_bytes`),
+    relative to ``plan_dir``: ``None`` when absent or not a regular file; a
+    symlink at the file or at any component below ``plan_dir`` raises
+    ``SignoffWriteError``. A path outside ``plan_dir`` is read relative to its
+    own parent (the leaf is still never followed)."""
+    try:
+        rel = path.relative_to(plan_dir).parts
+    except ValueError:
+        return signoff_writer._safe_read_bytes(path.parent, path.name)
+    return signoff_writer._safe_read_bytes(plan_dir, *rel)
+
+
 def _validate_existing_signoff(
     out_path: Path,
     *,
@@ -358,7 +372,9 @@ def _validate_existing_signoff(
       * ``signoff_unreadable``  — empty, torn/unparseable JSON, not an object,
         or fails the agent-conventions ``Signoff`` schema (the post-validation
         ``patch_completeness`` / ``audit_digests`` sibling keys are ignored for
-        the schema check).
+        the schema check); or (DPN-012b review round 2) the signoff or the
+        child side-car is a symlink or sits under a symlinked ``audit/`` /
+        ``feature-signoffs/`` component (read no-follow, never through it).
       * ``signoff_wrong_plan``  — ``task_id`` != the plan being finalized.
       * ``signoff_not_success`` — ``signoff`` is not ``true`` or
         ``next_action`` != ``merge`` (a non-success terminal record).
@@ -390,9 +406,16 @@ def _validate_existing_signoff(
     from pydantic import ValidationError
 
     try:
-        raw = out_path.read_text()
-        data = json.loads(raw)
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raw = _read_evidence_bytes(plan_dir, out_path)
+        if raw is None:
+            raise FileNotFoundError(f"{out_path} is missing or not a regular file")
+        data = json.loads(raw.decode("utf-8"))
+    except (
+        OSError,
+        UnicodeDecodeError,
+        json.JSONDecodeError,
+        signoff_writer.SignoffWriteError,
+    ) as exc:
         raise FinalizeError(
             "signoff_unreadable",
             f"existing signoff {out_path} is empty or unparseable ({exc}); "
@@ -462,12 +485,24 @@ def _validate_existing_signoff(
         )
         problem: str | None = None
         compliance: Any = None
-        if not side_car.is_file():
+        side_car_bytes: bytes | None = None
+        try:
+            side_car_bytes = _read_evidence_bytes(plan_dir, side_car)
+        except signoff_writer.SignoffWriteError as exc:
+            # DPN-012b review round 2 — never read a side-car through a link.
+            raise FinalizeError(
+                "signoff_unreadable",
+                f"plan {plan_id} charter-compliance side-car {side_car} cannot be "
+                f"trusted: {exc}; refusing to finalize.",
+            ) from exc
+        except OSError as exc:
+            problem = f"side-car is unparseable ({exc})"
+        if problem is None and side_car_bytes is None:
             problem = "side-car is missing"
-        else:
+        elif problem is None and side_car_bytes is not None:
             try:
-                compliance = json.loads(side_car.read_text())
-            except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+                compliance = json.loads(side_car_bytes.decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError) as exc:
                 problem = f"side-car is unparseable ({exc})"
         if problem is None and not isinstance(compliance, dict):
             problem = "side-car is not a JSON object"
@@ -895,8 +930,16 @@ def _plan_signoff_belongs_to_other_features(
     )
 
     try:
-        data = json.loads(out_path.read_text())
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        raw = _read_evidence_bytes(plan_dir, out_path)
+        if raw is None:
+            return False
+        data = json.loads(raw.decode("utf-8"))
+    except (
+        OSError,
+        UnicodeDecodeError,
+        json.JSONDecodeError,
+        signoff_writer.SignoffWriteError,
+    ):
         return False
     if not isinstance(data, dict):
         return False
