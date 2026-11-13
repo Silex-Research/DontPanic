@@ -65,11 +65,17 @@ target_project: none
 
 
 def _write_auditor(
-    audit_dir: Path, feature_id: str, iteration: int, *, status: str, mtime: float
+    audit_dir: Path,
+    feature_id: str,
+    iteration: int,
+    *,
+    status: str,
+    mtime: float,
+    completed_at: str | None = None,
 ) -> Path:
     audit_dir.mkdir(parents=True, exist_ok=True)
     p = audit_dir / f"codex-auditor-{feature_id}-i{iteration}.json"
-    p.write_text(json.dumps({
+    envelope = {
         "audit_id": f"{PLAN_ID}#codex#{iteration}",
         "agent": "codex",
         "agent_role": "auditor",
@@ -77,7 +83,10 @@ def _write_auditor(
         "audit_status": status,
         "findings": [],
         "summary": f"verdict {status} at i{iteration}",
-    }))
+    }
+    if completed_at is not None:
+        envelope["completed_at"] = completed_at
+    p.write_text(json.dumps(envelope))
     os.utime(p, (mtime, mtime))
     return p
 
@@ -168,8 +177,16 @@ def test_finalize_uses_fresh_low_index_signed_off(tmp_path):
     (audit_dir / "claude-implementer-F001-i0.json").write_text(
         json.dumps({"agent": "claude", "agent_role": "implementer", "iteration": 0})
     )
-    _write_auditor(audit_dir, "F001", 1, status="needs_changes", mtime=1000.0)
-    _write_auditor(audit_dir, "F001", 0, status="signed_off", mtime=2000.0)
+    # DPN-012b item 6: branch (d) requires a datable envelope, so give each a
+    # zone-aware past completed_at matching its mtime (i1 older than i0).
+    _write_auditor(
+        audit_dir, "F001", 1, status="needs_changes", mtime=1000.0,
+        completed_at="1970-01-01T00:16:40Z",
+    )
+    _write_auditor(
+        audit_dir, "F001", 0, status="signed_off", mtime=2000.0,
+        completed_at="1970-01-01T00:33:20Z",
+    )
 
     gate_pause.approve_gate(plan_dir, "pre_impl", plan_id=PLAN_ID)
     # F1: pre_merge is only approvable while the pre_merge stage is pending.
