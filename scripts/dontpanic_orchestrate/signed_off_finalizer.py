@@ -1101,14 +1101,21 @@ def finalize_signed_off_feature(
             # (c) legacy multi-feature plan: the plan-level signoff is another
             # feature's — repair ONLY this feature's per-feature pair, and only
             # from an envelope whose completed_at _freshness_problem can parse.
-            if envelope is None or _parse_iso(envelope.get("completed_at")) is None:
+            # The repair's decided_at (writer clock) must already pass the
+            # same _freshness_problem the next run applies (no future envelope).
+            prospective = {"decided_at": signoff_writer._now_iso()}
+            stale = (
+                "no signed_off auditor envelope"
+                if envelope is None
+                else _freshness_problem(envelope, prospective, auditor_path)
+            )
+            if stale is not None:
                 raise FinalizeError(
                     "signoff_stale",
-                    f"signed_off auditor envelope {auditor_path} has a missing or "
-                    f"unparseable completed_at "
-                    f"({(envelope or {}).get('completed_at')!r}); refusing the "
-                    f"legacy per-feature signoff repair for {feature_id!r} — no "
-                    f"signoff is repaired and passes is not flipped.",
+                    f"signed_off auditor envelope {auditor_path}: {stale}; "
+                    f"refusing the legacy per-feature signoff repair for "
+                    f"{feature_id!r} — no signoff is repaired and passes is not "
+                    f"flipped.",
                 )
             out_path = _repair_signoff(
                 plan_dir, evidence_feature_id=feature_id, plan_level=False, **repair_kwargs

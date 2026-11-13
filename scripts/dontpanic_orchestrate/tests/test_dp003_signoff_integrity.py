@@ -2820,6 +2820,33 @@ def test_r11_legacy_repair_with_zone_aware_completed_at_still_repairs(repo: Path
     assert again.already_finalized is True
 
 
+@pytest.mark.parametrize("child", [False, True], ids=["top", "child"])
+def test_r12_legacy_repair_refused_when_envelope_completed_at_in_future(repo: Path, child: bool) -> None:
+    """Sentinel 5886142259 — a zone-aware completed_at later than the
+    finalizer's clock must not let branch (c) repair a per-feature signoff
+    (and flip passes) that the next finalize's freshness check calls stale."""
+    future = dt.datetime.now(dt.timezone.utc).replace(microsecond=0) + dt.timedelta(hours=1)
+    plan_dir, plan_id = _r11_legacy_branch_c(
+        repo, child=child, completed_at=future.isoformat().replace("+00:00", "Z")
+    )
+    plan_sp = signoff_writer.signoff_path(plan_dir, plan_id)
+    plan_side = signoff_writer.charter_compliance_path(plan_dir, plan_id)
+    plan_before = plan_sp.read_bytes()
+    side_before = plan_side.read_bytes() if child else None
+
+    _r10_assert_refused(plan_dir, plan_id, "signoff_stale")
+
+    assert not _r10_fsig(plan_dir, plan_id).exists()
+    assert not _r10_fside(plan_dir, plan_id).exists()
+    assert not signoff_writer.feature_signoff_dir(plan_dir).exists()
+    assert plan_sp.read_bytes() == plan_before
+    if child:
+        assert plan_side.read_bytes() == side_before
+    with pytest.raises(signed_off_finalizer.FinalizeError) as exc:
+        signed_off_finalizer.finalize_signed_off_feature(plan_dir, plan_id=plan_id, feature_id="F001")
+    assert "auditor envelope" in str(exc.value) and "predates" in str(exc.value)
+
+
 def test_r10_repair_with_no_signoff_writes_both_pairs(repo: Path) -> None:
     plan_dir, plan_id = _r10_plan(repo, child=True)
     _r10_volley(plan_dir, plan_id, "F001")
