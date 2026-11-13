@@ -10,6 +10,11 @@ Per the F008 AC, signoff.json is required on signed_off; for non-signoff
 terminal states the writer can still produce a record (with signoff=false
 and an appropriate next_action) so operators get a single artifact summary
 of the volley regardless of outcome.
+
+DPN-012: when the volley's ``feature_id`` is passed, the same signoff (and
+child-plan compliance side-car) is also recorded as that feature's own durable
+evidence under ``<plan_dir>/audit/feature-signoffs/`` so another feature's
+later volley cannot overwrite it.
 """
 
 from __future__ import annotations
@@ -19,6 +24,7 @@ import datetime as dt
 import hashlib
 import json
 import os
+import re
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -269,18 +275,39 @@ def _commit_signoff_pair(
     its side-car, never a new side-car paired with the old signoff, never a
     torn file. If a rollback restore itself fails, that file is removed
     (absence is never treated as success by any consumer)."""
-    prev_signoff = _read_bytes_if_file(out)
-    prev_side_car = _read_bytes_if_file(side_car) if side_car is not None else None
-    try:
-        if prev_signoff is not None:
-            out.unlink()
-        if side_car is not None and compliance is not None:
-            _atomic_write_json(side_car, compliance)
-        _atomic_write_json(out, payload)
-    except BaseException:
+    _commit_signoff_pairs([(out, payload, side_car, compliance)])
+
+
+def _commit_signoff_pairs(
+    pairs: list[tuple[Path, dict[str, Any], Path | None, dict[str, Any] | None]],
+) -> None:
+    """DPN-012 — commit one or more ``(signoff, payload, side_car, compliance)``
+    pairs as ONE all-or-nothing transaction (generalises
+    :func:`_commit_signoff_pair`; a single pair behaves exactly as before).
+
+    Order: snapshot every target's previous bytes, RETIRE every previous
+    signoff (unlink), then for each pair in order write its side-car and then
+    its signoff — each atomically. Callers list the plan-level pair LAST so
+    the plan-level signoff is the final write. If any step fails, EVERY
+    target (all signoffs and side-cars) is restored to its previous bytes (or
+    absence) and the original error is re-raised."""
+    targets: list[Path] = []
+    for out, _payload, side_car, _compliance in pairs:
+        targets.append(out)
         if side_car is not None:
-            _restore(side_car, prev_side_car)
-        _restore(out, prev_signoff)
+            targets.append(side_car)
+    previous = {t: _read_bytes_if_file(t) for t in targets}
+    try:
+        for out, _payload, _side_car, _compliance in pairs:
+            if previous[out] is not None:
+                out.unlink()
+        for out, payload, side_car, compliance in pairs:
+            if side_car is not None and compliance is not None:
+                _atomic_write_json(side_car, compliance)
+            _atomic_write_json(out, payload)
+    except BaseException:
+        for target in reversed(targets):
+            _restore(target, previous[target])
         raise
 
 
@@ -292,6 +319,45 @@ def charter_compliance_path(plan_dir: Path, plan_id: str) -> Path:
     """Plan 2026-05-02-003 F002: side-car compliance file path. Lives next
     to the signoff envelope so operators see both artifacts together."""
     return plan_dir / "audit" / f"charter-compliance-{plan_id}.json"
+
+
+# DPN-012 — per-feature durable signoff evidence. Lives in a SUBDIRECTORY of
+# ``audit/`` so top-level ``audit/*.json`` scanners (e.g.
+# ``closeout._audit_paths_for_feature``, which splits names on ``-``) never
+# mistake it for an audit envelope.
+FEATURE_SIGNOFF_DIRNAME = "feature-signoffs"
+# Real feature ids are ``F<digits>``; no ``/``, no ``..`` and no ``-`` so the
+# ``--`` separator in the per-feature file name stays unambiguous.
+_FEATURE_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.]*$")
+
+
+def _require_feature_id(feature_id: Any) -> str:
+    if (
+        not isinstance(feature_id, str)
+        or not _FEATURE_ID_RE.fullmatch(feature_id)
+        or ".." in feature_id
+    ):
+        raise SignoffWriteError(
+            f"invalid feature_id {feature_id!r} for per-feature signoff evidence "
+            f"(must match {_FEATURE_ID_RE.pattern} with no '..')"
+        )
+    return feature_id
+
+
+def feature_signoff_dir(plan_dir: Path) -> Path:
+    return plan_dir / "audit" / FEATURE_SIGNOFF_DIRNAME
+
+
+def feature_signoff_path(plan_dir: Path, plan_id: str, feature_id: str) -> Path:
+    """DPN-012: per-feature signoff written alongside the plan-level one."""
+    fid = _require_feature_id(feature_id)
+    return feature_signoff_dir(plan_dir) / f"signoff-{plan_id}--{fid}.json"
+
+
+def feature_charter_compliance_path(plan_dir: Path, plan_id: str, feature_id: str) -> Path:
+    """DPN-012: per-feature child charter-compliance side-car."""
+    fid = _require_feature_id(feature_id)
+    return feature_signoff_dir(plan_dir) / f"charter-compliance-{plan_id}--{fid}.json"
 
 
 def write_signoff(
@@ -309,8 +375,23 @@ def write_signoff(
     modified_files: list[str] | None = None,
     orchestration: Any = None,
     patch_completeness: dict[str, Any] | None = None,
+    feature_id: str | None = None,
+    plan_level: bool = True,
 ) -> Path:
     """Build, validate, and write the signoff.json closeout. Returns the path.
+
+    DPN-012 — per-feature evidence. When ``feature_id`` is given, the same
+    payload (same bytes, same ``signoff_id``) and, for child plans, the same
+    compliance side-car are ALSO written to
+    :func:`feature_signoff_path` / :func:`feature_charter_compliance_path`,
+    for every volley outcome (success and non-success), in one all-or-nothing
+    transaction with the plan-level pair (any failure restores all four files
+    to their previous bytes or absence). ``plan_level=False`` (requires
+    ``feature_id``) writes ONLY the per-feature pair and never touches the
+    plan-level pair; the returned path is then the per-feature signoff. With
+    ``feature_id=None`` behaviour is byte-for-byte unchanged. An invalid
+    ``feature_id`` raises :class:`SignoffWriteError` before anything is
+    written.
 
     Plan 2026-05-02-003 F002: when both ``child_charter`` and ``commit_policy``
     are passed, runs ``check_child_charter_compliance`` BEFORE persisting any
@@ -324,6 +405,11 @@ def write_signoff(
     output lives in the side-car, matching F001's pop-orchestration-block
     schema-discipline pattern (D006-style).
     """
+    if feature_id is not None:
+        _require_feature_id(feature_id)
+    elif not plan_level:
+        raise SignoffWriteError("plan_level=False requires a feature_id")
+
     payload = build_signoff_dict(
         plan_id=plan_id,
         tier=tier,
@@ -354,12 +440,47 @@ def write_signoff(
 
     out = signoff_path(plan_dir, plan_id)
     out.parent.mkdir(parents=True, exist_ok=True)
-    _commit_signoff_pair(
-        out,
-        payload,
-        charter_compliance_path(plan_dir, plan_id) if compliance is not None else None,
-        compliance,
-    )
+    if feature_id is None:
+        _commit_signoff_pair(
+            out,
+            payload,
+            charter_compliance_path(plan_dir, plan_id) if compliance is not None else None,
+            compliance,
+        )
+    else:
+        feature_out = feature_signoff_path(plan_dir, plan_id, feature_id)
+        pairs: list[tuple[Path, dict[str, Any], Path | None, dict[str, Any] | None]] = [
+            (
+                feature_out,
+                payload,
+                feature_charter_compliance_path(plan_dir, plan_id, feature_id)
+                if compliance is not None
+                else None,
+                compliance,
+            )
+        ]
+        if plan_level:
+            # Plan-level pair LAST: its signoff is the transaction's final write.
+            pairs.append(
+                (
+                    out,
+                    payload,
+                    charter_compliance_path(plan_dir, plan_id) if compliance is not None else None,
+                    compliance,
+                )
+            )
+        else:
+            out = feature_out
+        feature_dir = feature_out.parent
+        created_dir = not feature_dir.exists()
+        feature_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            _commit_signoff_pairs(pairs)
+        except BaseException:
+            if created_dir:
+                with contextlib.suppress(OSError):
+                    feature_dir.rmdir()
+            raise
 
     # Plan 2026-05-02-003 F003: when this signoff is for a child plan,
     # record a best-effort volley.return_to_parent trace on the child's
@@ -389,7 +510,11 @@ __all__ = [
     "SignoffWriteError",
     "VALID_TIERS",
     "build_signoff_dict",
+    "FEATURE_SIGNOFF_DIRNAME",
     "charter_compliance_path",
+    "feature_charter_compliance_path",
+    "feature_signoff_dir",
+    "feature_signoff_path",
     "signoff_path",
     "write_signoff",
 ]

@@ -1739,6 +1739,10 @@ def _emit_volley_terminal(
                 # events.jsonl. None for top-level plans.
                 orchestration=loaded.orchestration,
                 patch_completeness=patch_completeness_block,
+                # DPN-012: also record this volley's signoff (and child
+                # side-car) as the feature's own durable evidence so a later
+                # volley of another feature cannot strand its finalize.
+                feature_id=feature_id,
             )
         except (
             signoff_writer.SignoffWriteError,
