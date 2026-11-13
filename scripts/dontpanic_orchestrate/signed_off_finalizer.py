@@ -225,6 +225,31 @@ def _parse_iso(value: Any) -> dt.datetime | None:
     return parsed
 
 
+def _require_datable_auditor_envelope(
+    envelope: dict[str, Any], auditor_path: Path | None, feature_id: str
+) -> None:
+    """DPN-012b item 6 — before branch (d) repairs a signoff from scratch, the
+    selected signed_off auditor envelope must be locatable and datable: a
+    repaired signoff could never be shown fresh against an envelope whose
+    ``completed_at`` is missing / unparseable / zone-less (the same
+    :func:`_parse_iso` rule :func:`_freshness_problem` applies). Refuses with
+    ``signoff_stale`` so nothing is written and nothing is flipped."""
+    if auditor_path is None:
+        raise FinalizeError(
+            "signoff_stale",
+            f"no signed_off auditor envelope path could be selected for {feature_id}; "
+            f"a repaired signoff could not be bound to it, refusing to finalize.",
+        )
+    if _parse_iso(envelope.get("completed_at")) is None:
+        raise FinalizeError(
+            "signoff_stale",
+            f"signed_off auditor envelope {auditor_path} for {feature_id} has a "
+            f"missing or unparseable completed_at "
+            f"({envelope.get('completed_at')!r}); a repaired signoff's freshness "
+            f"could not be verified, refusing to finalize.",
+        )
+
+
 def _freshness_problem(
     envelope: dict[str, Any], signoff: dict[str, Any], auditor_path: Path | None
 ) -> str | None:
@@ -1085,6 +1110,7 @@ def finalize_signed_off_feature(
             _validate_existing_signoff(plan_out, **validate_kwargs)
             out_path = plan_out
     else:
+        _require_datable_auditor_envelope(envelope, auditor_path, feature_id)
         # (d) no signoff at all (the pre_merge pause skipped
         # _emit_volley_terminal) — repair both pairs. The feature's own copy
         # is the evidence every later run selects (rule a), so it is the one

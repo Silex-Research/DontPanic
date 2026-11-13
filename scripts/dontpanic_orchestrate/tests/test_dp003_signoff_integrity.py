@@ -3256,7 +3256,9 @@ def test_r11_writer_symlinked_feature_dir_refused_target_unchanged(repo: Path, t
     link = signoff_writer.feature_signoff_dir(plan_dir)
     os.symlink(outside if target == "dir" else repo.parent / "missing-dir", link)
     before = _r10_tree(plan_dir)
-    with pytest.raises(signoff_writer.SignoffWriteError, match="symlink"):
+    # Only the symlink refusal says "is a symlink; refusing" (the tmp dir name
+    # itself contains "symlinked", so a bare "symlink" match proves nothing).
+    with pytest.raises(signoff_writer.SignoffWriteError, match=r"is a symlink; refusing"):
         _r10_sign(plan_dir, plan_id, a1, feature_id="F001", child=True)
     assert _r11_dir_bytes(outside) == {"keep.txt": b"untouched\n"}
     assert sorted(os.listdir(outside)) == ["keep.txt"]
@@ -3308,3 +3310,44 @@ def test_r11_finalizer_case_colliding_feature_evidence_refused(repo: Path) -> No
     assert _r10_passes(plan_dir, "F001") is False
     assert (plan_dir / "features.json").read_bytes() == before_features
     assert _r10_tree(plan_dir) == before_tree
+
+
+# Item 6 (Thanos ruling) — branch (d) refuses an undatable auditor envelope ─
+
+
+@pytest.mark.parametrize("child", [False, True], ids=["top", "child"])
+@pytest.mark.parametrize(
+    "completed_at",
+    [None, "2026-11-12T10:00:00", "2026-11-12", "not-a-timestamp"],
+    ids=["missing", "zone_less", "date_only", "unparseable"],
+)
+def test_r11_branch_d_undatable_auditor_envelope_refused_nothing_written(
+    repo: Path, child: bool, completed_at: str | None
+) -> None:
+    """No signoff anywhere (rule d) + a signed_off auditor envelope whose
+    ``completed_at`` cannot be dated: refused ``signoff_stale`` before any
+    repair — no plan-level or per-feature signoff / side-car written, no
+    ``feature-signoffs/`` created, no ``passes`` flipped."""
+    plan_dir, plan_id = _r10_plan(repo, child=child)
+    a1 = _r10_volley(plan_dir, plan_id, "F001")
+    data = json.loads(a1.read_text())
+    if completed_at is None:
+        del data["completed_at"]
+    else:
+        data["completed_at"] = completed_at
+    a1.write_text(json.dumps(data))
+    # The edited envelope is still the one the finalizer selects.
+    audit_paths = signed_off_finalizer.closeout._audit_paths_for_feature(plan_dir.resolve(), "F001")
+    assert signed_off_finalizer._latest_auditor_path(audit_paths) == a1.resolve()
+    assert signed_off_finalizer.closeout._latest_auditor_envelope(audit_paths) == data
+    _clear_pre_merge(plan_dir, plan_id)
+    plan_sig = signoff_writer.signoff_path(plan_dir, plan_id)
+    plan_side = signoff_writer.charter_compliance_path(plan_dir, plan_id)
+    fdir = signoff_writer.feature_signoff_dir(plan_dir)
+    assert not plan_sig.exists() and not plan_side.exists() and not os.path.lexists(fdir)
+
+    _r10_assert_refused(plan_dir, plan_id, "signoff_stale")
+
+    assert not plan_sig.exists() and not plan_side.exists()
+    assert not os.path.lexists(fdir)
+    assert _r10_passes(plan_dir, "F002") is False
