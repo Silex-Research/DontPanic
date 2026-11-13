@@ -2487,17 +2487,22 @@ def test_r4_cli_finalize_refusals_exit_with_their_distinct_code(
     plan_dir = _make_plan(repo, TOP_ID)
     _clear_pre_merge(plan_dir, TOP_ID)
     assert supervisor.dispatch_volley(plan_dir, "F001", max_iterations=1).final_status == "signed_off"
-    sp = signoff_writer.signoff_path(plan_dir, TOP_ID)
-    data = json.loads(sp.read_text())
-    if corrupt == "empty":
-        sp.write_text("")
-    elif corrupt == "stale":
-        data["decided_at"] = "2020-01-01T00:00:00Z"
-        sp.write_text(json.dumps(data, indent=2) + "\n")
-    else:
-        data["signoff"] = False
-        data["next_action"] = "remediate"
-        sp.write_text(json.dumps(data, indent=2) + "\n")
+    # DPN-012: the volley wrote the plan-level signoff AND F001's own copy;
+    # the finalizer selects F001's own copy, so corrupt both.
+    for sp in (
+        signoff_writer.signoff_path(plan_dir, TOP_ID),
+        signoff_writer.feature_signoff_path(plan_dir, TOP_ID, "F001"),
+    ):
+        data = json.loads(sp.read_text())
+        if corrupt == "empty":
+            sp.write_text("")
+        elif corrupt == "stale":
+            data["decided_at"] = "2020-01-01T00:00:00Z"
+            sp.write_text(json.dumps(data, indent=2) + "\n")
+        else:
+            data["signoff"] = False
+            data["next_action"] = "remediate"
+            sp.write_text(json.dumps(data, indent=2) + "\n")
     capsys.readouterr()
 
     rc = cli.main(["finalize", str(plan_dir), "--feature", "F001"])
@@ -2524,3 +2529,561 @@ def test_r4_cli_finalize_blocked_child_exits_child_not_satisfied(
     err = capsys.readouterr().err
     assert rc == signed_off_finalizer.REFUSAL_EXIT_CODES["child_not_satisfied"] == 15, err[-400:]
     assert _passes(plan_dir) is False
+
+
+# ───────── DPN-012 — per-feature durable signoff evidence (finalizer:314) ─────────
+
+
+def _r10_features() -> list[dict[str, Any]]:
+    return [_feature("F001", "First independent feature."), _feature("F002", "Second independent feature.")]
+
+
+def _r10_plan(repo: Path, *, child: bool) -> tuple[Path, str]:
+    """Two independent features; a child plan gets a satisfied close-out memo."""
+    if not child:
+        return _make_plan(repo, TOP_ID, features=_r10_features()), TOP_ID
+    if not (repo / "docs" / "plans" / PARENT_ID).is_dir():
+        _make_plan(repo, PARENT_ID)
+    plan_dir = _make_plan(repo, CHILD_ID, child=True, features=_r10_features())
+    (plan_dir / "evidence").mkdir(parents=True, exist_ok=True)
+    (plan_dir / "evidence" / "closeout-memo.md").write_text(
+        "# Close-out\n\n## Return Condition\n\nstatus: satisfied\n"
+    )
+    return plan_dir, CHILD_ID
+
+
+def _r10_volley(
+    plan_dir: Path,
+    plan_id: str,
+    fid: str,
+    *,
+    iteration: int = 0,
+    audit_status: str = "signed_off",
+    offset: int = 0,
+) -> Path:
+    """Implementer + auditor envelopes for ``fid`` completed ``offset`` seconds
+    after a past base time. Returns the auditor envelope."""
+    impl = plan_dir / "audit" / f"claude-implementer-{fid}-i{iteration}.json"
+    impl.parent.mkdir(parents=True, exist_ok=True)
+    impl.write_text(json.dumps({"agent": "claude", "agent_role": "implementer", "iteration": iteration}))
+    return _auditor_envelope_for(
+        plan_dir,
+        plan_id,
+        fid,
+        iteration=iteration,
+        audit_status=audit_status,
+        newer_than=None,
+        completed_at=_base_time() + dt.timedelta(seconds=offset),
+    )
+
+
+def _r10_sign(
+    plan_dir: Path,
+    plan_id: str,
+    auditor: Path,
+    *,
+    feature_id: str | None,
+    iteration: int = 0,
+    volley_status: str = "signed_off",
+    child: bool = False,
+    plan_level: bool = True,
+) -> Path:
+    """The REAL writer, exactly as the supervisor calls it for one volley."""
+    loaded = plan_loader.load(plan_dir) if child else None
+    kwargs: dict[str, Any] = {}
+    if feature_id is not None:
+        kwargs["feature_id"] = feature_id
+    if not plan_level:
+        kwargs["plan_level"] = False
+    return signoff_writer.write_signoff(
+        plan_id=plan_id,
+        tier="trivial",
+        iteration=iteration,
+        agents_in_panel=["claude", "codex"],
+        audit_paths=[auditor],
+        plan_dir=plan_dir,
+        volley_status=volley_status,
+        child_charter=loaded.child_charter if loaded else None,
+        commit_policy=loaded.commit_policy if loaded else None,
+        **kwargs,
+    )
+
+
+def _r10_passes(plan_dir: Path, fid: str) -> bool:
+    data = json.loads((plan_dir / "features.json").read_text())
+    return bool(next(f for f in data["features"] if f["id"] == fid)["passes"])
+
+
+def _r10_refs(plan_dir: Path, fid: str) -> list[str]:
+    data = json.loads((plan_dir / "features.json").read_text())
+    feat = next(f for f in data["features"] if f["id"] == fid)
+    return [r.get("uri") for r in feat.get("evidence_refs") or []]
+
+
+def _r10_tree(plan_dir: Path) -> dict[str, bytes]:
+    """Every file under ``audit/`` (recursively), relative path → bytes."""
+    audit = plan_dir / "audit"
+    return {str(p.relative_to(audit)): p.read_bytes() for p in sorted(audit.rglob("*")) if p.is_file()}
+
+
+def _r10_fsig(plan_dir: Path, plan_id: str, fid: str = "F001") -> Path:
+    return signoff_writer.feature_signoff_path(plan_dir, plan_id, fid)
+
+
+def _r10_fside(plan_dir: Path, plan_id: str, fid: str = "F001") -> Path:
+    return signoff_writer.feature_charter_compliance_path(plan_dir, plan_id, fid)
+
+
+def _r10_assert_refused(plan_dir: Path, plan_id: str, code: str, fid: str = "F001") -> None:
+    """Finalize ``fid`` refuses with ``code``; no passes flip, no file under
+    ``audit/`` (including ``feature-signoffs/``) created or changed."""
+    before_tree = _r10_tree(plan_dir)
+    before_features = (plan_dir / "features.json").read_bytes()
+    with pytest.raises(signed_off_finalizer.FinalizeError) as exc:
+        signed_off_finalizer.finalize_signed_off_feature(plan_dir, plan_id=plan_id, feature_id=fid)
+    assert exc.value.code == code, (exc.value.code, str(exc.value))
+    assert _r10_passes(plan_dir, fid) is False
+    assert (plan_dir / "features.json").read_bytes() == before_features
+    assert _r10_tree(plan_dir) == before_tree
+
+
+def _r10_two_volleys(plan_dir: Path, plan_id: str, *, child: bool) -> tuple[Path, Path]:
+    """F001 volley signed_off → signoff(F001); then F002 volley signed_off →
+    signoff(F002), which replaces the plan-level pair with F002's evidence."""
+    a1 = _r10_volley(plan_dir, plan_id, "F001", offset=0)
+    _r10_sign(plan_dir, plan_id, a1, feature_id="F001", child=child)
+    a2 = _r10_volley(plan_dir, plan_id, "F002", offset=10)
+    _r10_sign(plan_dir, plan_id, a2, feature_id="F002", child=child)
+    plan_level = json.loads(signoff_writer.signoff_path(plan_dir, plan_id).read_text())
+    assert plan_level["audits"] == [str(a2.relative_to(plan_dir))]
+    return a1, a2
+
+
+# (a) two-feature regression ─────────────────────────────────────────────
+
+
+@pytest.mark.parametrize("child", [False, True], ids=["top", "child"])
+def test_r10_two_feature_finalize_selects_each_features_own_signoff(repo: Path, child: bool) -> None:
+    plan_dir, plan_id = _r10_plan(repo, child=child)
+    _r10_two_volleys(plan_dir, plan_id, child=child)
+    _clear_pre_merge(plan_dir, plan_id)
+    plan_sp = signoff_writer.signoff_path(plan_dir, plan_id)
+    plan_side = signoff_writer.charter_compliance_path(plan_dir, plan_id)
+    plan_before = plan_sp.read_bytes()
+    side_before = plan_side.read_bytes() if child else None
+    if child:
+        assert _r10_fside(plan_dir, plan_id, "F001").is_file()
+        assert _r10_fside(plan_dir, plan_id, "F002").is_file()
+
+    for fid in ("F001", "F002"):
+        fsig = _r10_fsig(plan_dir, plan_id, fid)
+        fsig_before = fsig.read_bytes()
+        fin = signed_off_finalizer.finalize_signed_off_feature(plan_dir, plan_id=plan_id, feature_id=fid)
+        assert fin.features_passes_flipped is True, fid
+        assert fin.signoff_repaired is False, fid
+        assert fin.signoff_path == fsig, fid
+        assert _r10_passes(plan_dir, fid) is True
+        assert str(fsig.relative_to(plan_dir)) in _r10_refs(plan_dir, fid)
+        assert fsig.read_bytes() == fsig_before
+
+    assert plan_sp.read_bytes() == plan_before
+    if child:
+        assert plan_side.read_bytes() == side_before
+
+
+def test_r10_two_feature_finalize_through_real_supervisor_volleys(
+    repo: Path, captured: list[Any]
+) -> None:
+    """Real ``dispatch_volley`` for F001 then F002 (the second rewrites the
+    plan-level signoff); finalizing F001 then F002 both succeed."""
+    plan_dir, plan_id = _r10_plan(repo, child=False)
+    _clear_pre_merge(plan_dir, plan_id)
+    assert supervisor.dispatch_volley(plan_dir, "F001", max_iterations=1).final_status == "signed_off"
+    f001_evidence = _r10_fsig(plan_dir, plan_id, "F001").read_bytes()
+    assert supervisor.dispatch_volley(plan_dir, "F002", max_iterations=1).final_status == "signed_off"
+    plan_level = json.loads(signoff_writer.signoff_path(plan_dir, plan_id).read_text())
+    assert all("F002" in a for a in plan_level["audits"]), plan_level["audits"]
+    assert _r10_fsig(plan_dir, plan_id, "F001").read_bytes() == f001_evidence
+
+    for fid in ("F001", "F002"):
+        fin = signed_off_finalizer.finalize_signed_off_feature(plan_dir, plan_id=plan_id, feature_id=fid)
+        assert fin.features_passes_flipped is True, fid
+        assert fin.signoff_repaired is False, fid
+        assert fin.signoff_path == _r10_fsig(plan_dir, plan_id, fid)
+
+
+# (b) legacy repair ──────────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize("child", [False, True], ids=["top", "child"])
+def test_r10_legacy_plan_level_of_other_feature_repairs_only_feature_pair(
+    repo: Path, child: bool
+) -> None:
+    plan_dir, plan_id = _r10_plan(repo, child=child)
+    a1 = _r10_volley(plan_dir, plan_id, "F001", offset=0)
+    a2 = _r10_volley(plan_dir, plan_id, "F002", offset=10)
+    _r10_sign(plan_dir, plan_id, a2, feature_id=None, child=child)  # pre-DPN-012 writer call
+    assert not signoff_writer.feature_signoff_dir(plan_dir).exists()
+    _clear_pre_merge(plan_dir, plan_id)
+    plan_sp = signoff_writer.signoff_path(plan_dir, plan_id)
+    plan_side = signoff_writer.charter_compliance_path(plan_dir, plan_id)
+    plan_before = plan_sp.read_bytes()
+    side_before = plan_side.read_bytes() if child else None
+
+    fin = signed_off_finalizer.finalize_signed_off_feature(plan_dir, plan_id=plan_id, feature_id="F001")
+
+    assert fin.features_passes_flipped is True
+    assert fin.signoff_repaired is True
+    fsig = _r10_fsig(plan_dir, plan_id)
+    assert fin.signoff_path == fsig
+    data = json.loads(fsig.read_text())
+    assert data["signoff"] is True and data["task_id"] == plan_id
+    assert data["audits"] == [str(p.relative_to(plan_dir)) for p in [a1.parent / "claude-implementer-F001-i0.json", a1]]
+    assert str(fsig.relative_to(plan_dir)) in _r10_refs(plan_dir, "F001")
+    # The plan-level pair (F002's evidence) is byte-for-byte untouched.
+    assert plan_sp.read_bytes() == plan_before
+    if child:
+        assert plan_side.read_bytes() == side_before
+        side = json.loads(_r10_fside(plan_dir, plan_id).read_text())
+        assert side["signoff_id"] == data["signoff_id"]
+        assert side["return_condition_status"] == "satisfied"
+    else:
+        assert not _r10_fside(plan_dir, plan_id).exists()
+    # Re-run is idempotent and now selects the repaired per-feature signoff.
+    again = signed_off_finalizer.finalize_signed_off_feature(plan_dir, plan_id=plan_id, feature_id="F001")
+    assert again.already_finalized is True and again.signoff_path == fsig
+
+
+def test_r10_repair_with_no_signoff_writes_both_pairs(repo: Path) -> None:
+    plan_dir, plan_id = _r10_plan(repo, child=True)
+    _r10_volley(plan_dir, plan_id, "F001")
+    _clear_pre_merge(plan_dir, plan_id)
+
+    fin = signed_off_finalizer.finalize_signed_off_feature(plan_dir, plan_id=plan_id, feature_id="F001")
+
+    assert fin.signoff_repaired is True and fin.features_passes_flipped is True
+    assert fin.signoff_path == _r10_fsig(plan_dir, plan_id)
+    assert signoff_writer.signoff_path(plan_dir, plan_id).read_bytes() == _r10_fsig(plan_dir, plan_id).read_bytes()
+    assert (
+        signoff_writer.charter_compliance_path(plan_dir, plan_id).read_bytes()
+        == _r10_fside(plan_dir, plan_id).read_bytes()
+    )
+
+
+# (c) refusals that must survive ─────────────────────────────────────────
+
+
+def test_r10_feature_signoff_same_path_overwritten_later_is_stale(repo: Path) -> None:
+    plan_dir, plan_id = _r10_plan(repo, child=False)
+    a1, _a2 = _r10_two_volleys(plan_dir, plan_id, child=False)
+    # Re-dispatch rewrote F001's -i0 envelope AFTER its per-feature signoff.
+    later = dt.datetime.now(dt.timezone.utc) + dt.timedelta(hours=1)
+    _auditor_envelope_for(
+        plan_dir, plan_id, "F001", iteration=0, audit_status="signed_off",
+        newer_than=None, completed_at=later,
+    )
+    assert a1.is_file()
+    _clear_pre_merge(plan_dir, plan_id)
+    _r10_assert_refused(plan_dir, plan_id, "signoff_stale")
+
+
+def test_r10_feature_signoff_iteration_mismatch_is_stale(repo: Path) -> None:
+    plan_dir, plan_id = _r10_plan(repo, child=False)
+    _r10_two_volleys(plan_dir, plan_id, child=False)
+    # A newer signed_off F001 verdict (i1) without a matching signoff.
+    _r10_volley(plan_dir, plan_id, "F001", iteration=1, offset=20)
+    _clear_pre_merge(plan_dir, plan_id)
+    _r10_assert_refused(plan_dir, plan_id, "signoff_stale")
+
+
+def test_r10_feature_signoff_listing_another_features_audit_is_stale(repo: Path) -> None:
+    plan_dir, plan_id = _r10_plan(repo, child=False)
+    _r10_two_volleys(plan_dir, plan_id, child=False)
+    # F001's per-feature file now carries F002's (valid, same-iteration) signoff.
+    _r10_fsig(plan_dir, plan_id, "F001").write_bytes(_r10_fsig(plan_dir, plan_id, "F002").read_bytes())
+    _clear_pre_merge(plan_dir, plan_id)
+    _r10_assert_refused(plan_dir, plan_id, "signoff_stale")
+
+
+def test_r10_later_non_success_feature_signoff_refused_not_repaired(repo: Path) -> None:
+    """F001 signed_off evidence is replaced by a later F001 volley whose
+    signoff was blocked (auditor still signed_off); F002 then rewrites the
+    plan-level signoff. Finalizing F001 is refused ``signoff_not_success`` —
+    never repaired over."""
+    plan_dir, plan_id = _r10_plan(repo, child=False)
+    a1 = _r10_volley(plan_dir, plan_id, "F001", offset=0)
+    _r10_sign(plan_dir, plan_id, a1, feature_id="F001")
+    assert json.loads(_r10_fsig(plan_dir, plan_id).read_text())["signoff"] is True
+    _r10_sign(plan_dir, plan_id, a1, feature_id="F001", volley_status="blocked")
+    assert json.loads(_r10_fsig(plan_dir, plan_id).read_text())["signoff"] is False
+    a2 = _r10_volley(plan_dir, plan_id, "F002", offset=10)
+    _r10_sign(plan_dir, plan_id, a2, feature_id="F002")
+    _clear_pre_merge(plan_dir, plan_id)
+    _r10_assert_refused(plan_dir, plan_id, "signoff_not_success")
+
+
+@pytest.mark.parametrize("how", ["decided_before_verdict", "older_iteration"])
+def test_r10_stale_plan_level_listing_this_feature_still_refused_no_repair(
+    repo: Path, how: str
+) -> None:
+    """No per-feature file; the plan-level signoff lists F001's audit but is
+    stale → still ``signoff_stale`` and NO per-feature file is written."""
+    plan_dir, plan_id = _r10_plan(repo, child=False)
+    a0 = _r10_volley(plan_dir, plan_id, "F001", offset=0)
+    sp = _r10_sign(plan_dir, plan_id, a0, feature_id=None)
+    if how == "decided_before_verdict":
+        data = json.loads(sp.read_text())
+        data["decided_at"] = "2020-01-01T00:00:00Z"
+        sp.write_text(json.dumps(data, indent=2) + "\n")
+    else:
+        _r10_volley(plan_dir, plan_id, "F001", iteration=1, offset=20)
+    _clear_pre_merge(plan_dir, plan_id)
+    _r10_assert_refused(plan_dir, plan_id, "signoff_stale")
+    assert not signoff_writer.feature_signoff_dir(plan_dir).exists()
+
+
+def test_r10_plan_level_listing_this_feature_by_unresolvable_path_still_refused(repo: Path) -> None:
+    """A plan-level signoff naming an F001 envelope that no longer resolves
+    (moved / deleted) is still this feature's — validated, never repaired."""
+    plan_dir, plan_id = _r10_plan(repo, child=False)
+    a0 = _r10_volley(plan_dir, plan_id, "F001", offset=0)
+    sp = _r10_sign(plan_dir, plan_id, a0, feature_id=None)
+    data = json.loads(sp.read_text())
+    data["audits"] = ["/elsewhere/old-checkout/audit/codex-auditor-F001-i0.json"]
+    sp.write_text(json.dumps(data, indent=2) + "\n")
+    _clear_pre_merge(plan_dir, plan_id)
+    _r10_assert_refused(plan_dir, plan_id, "signoff_stale")
+    assert not signoff_writer.feature_signoff_dir(plan_dir).exists()
+
+
+@pytest.mark.parametrize(
+    ("corrupt", "code"),
+    [
+        ("empty", "signoff_unreadable"),
+        ("torn", "signoff_unreadable"),
+        ("not_object", "signoff_unreadable"),
+        ("schema", "signoff_unreadable"),
+        ("other_plan", "signoff_wrong_plan"),
+    ],
+)
+def test_r10_unusable_plan_level_still_refused_no_repair(repo: Path, corrupt: str, code: str) -> None:
+    """A plan-level signoff that cannot be shown to belong to other features
+    (here: F002's, corrupted) is validated exactly as before — no repair."""
+    plan_dir, plan_id = _r10_plan(repo, child=False)
+    _r10_volley(plan_dir, plan_id, "F001", offset=0)
+    a2 = _r10_volley(plan_dir, plan_id, "F002", offset=10)
+    sp = _r10_sign(plan_dir, plan_id, a2, feature_id=None)
+    data = json.loads(sp.read_text())
+    if corrupt == "empty":
+        sp.write_text("")
+    elif corrupt == "torn":
+        sp.write_text(sp.read_text()[:40])
+    elif corrupt == "not_object":
+        sp.write_text(json.dumps([data]))
+    elif corrupt == "schema":
+        del data["signoff_id"]
+        sp.write_text(json.dumps(data, indent=2) + "\n")
+    else:
+        data["task_id"] = "2026-11-12-499-some-other-plan"
+        sp.write_text(json.dumps(data, indent=2) + "\n")
+    _clear_pre_merge(plan_dir, plan_id)
+    _r10_assert_refused(plan_dir, plan_id, code)
+    assert not signoff_writer.feature_signoff_dir(plan_dir).exists()
+
+
+def test_r10_child_feature_sidecar_missing_refused(repo: Path) -> None:
+    """Only F001 dispatched: the plan-level pair is F001's and valid, so the
+    per-feature side-car is the ONLY thing missing → ``child_signoff_missing``."""
+    plan_dir, plan_id = _r10_plan(repo, child=True)
+    a1 = _r10_volley(plan_dir, plan_id, "F001")
+    _r10_sign(plan_dir, plan_id, a1, feature_id="F001", child=True)
+    assert signoff_writer.charter_compliance_path(plan_dir, plan_id).is_file()
+    _r10_fside(plan_dir, plan_id).unlink()
+    _clear_pre_merge(plan_dir, plan_id)
+    _r10_assert_refused(plan_dir, plan_id, "child_signoff_missing")
+
+
+def test_r10_child_feature_sidecar_bound_to_other_signoff_refused(repo: Path) -> None:
+    plan_dir, plan_id = _r10_plan(repo, child=True)
+    _r10_two_volleys(plan_dir, plan_id, child=True)
+    # F001's side-car replaced by F002's (bound to F002's signoff/audits).
+    _r10_fside(plan_dir, plan_id, "F001").write_bytes(_r10_fside(plan_dir, plan_id, "F002").read_bytes())
+    _clear_pre_merge(plan_dir, plan_id)
+    _r10_assert_refused(plan_dir, plan_id, "child_signoff_stale")
+
+
+def test_r10_feature_signoff_wrong_task_id_refused(repo: Path) -> None:
+    plan_dir, plan_id = _r10_plan(repo, child=False)
+    _r10_two_volleys(plan_dir, plan_id, child=False)
+    fsig = _r10_fsig(plan_dir, plan_id)
+    data = json.loads(fsig.read_text())
+    data["task_id"] = "2026-11-12-499-some-other-plan"
+    fsig.write_text(json.dumps(data, indent=2) + "\n")
+    _clear_pre_merge(plan_dir, plan_id)
+    _r10_assert_refused(plan_dir, plan_id, "signoff_wrong_plan")
+
+
+def test_r10_torn_feature_signoff_refused_even_with_valid_plan_level(repo: Path) -> None:
+    """Rule (a): an existing per-feature signoff is authoritative — a torn one
+    is refused even though the plan-level signoff would validate."""
+    plan_dir, plan_id = _r10_plan(repo, child=False)
+    a1 = _r10_volley(plan_dir, plan_id, "F001")
+    _r10_sign(plan_dir, plan_id, a1, feature_id="F001")
+    _r10_fsig(plan_dir, plan_id).write_text("{")
+    _clear_pre_merge(plan_dir, plan_id)
+    _r10_assert_refused(plan_dir, plan_id, "signoff_unreadable")
+
+
+# (d) writer ─────────────────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize("volley_status", ["signed_off", "blocked", "stopped_cap"])
+def test_r10_writer_writes_feature_pair_for_every_outcome(repo: Path, volley_status: str) -> None:
+    plan_dir, plan_id = _r10_plan(repo, child=True)
+    a1 = _r10_volley(plan_dir, plan_id, "F001")
+    out = _r10_sign(plan_dir, plan_id, a1, feature_id="F001", volley_status=volley_status, child=True)
+    assert out == signoff_writer.signoff_path(plan_dir, plan_id)
+    fsig, fside = _r10_fsig(plan_dir, plan_id), _r10_fside(plan_dir, plan_id)
+    assert fsig.parent == plan_dir / "audit" / "feature-signoffs"
+    assert fsig.name == f"signoff-{plan_id}--F001.json"
+    assert fside.name == f"charter-compliance-{plan_id}--F001.json"
+    assert fsig.read_bytes() == out.read_bytes()
+    assert fside.read_bytes() == signoff_writer.charter_compliance_path(plan_dir, plan_id).read_bytes()
+    assert json.loads(fsig.read_text())["signoff"] is (volley_status == "signed_off")
+
+
+def test_r10_writer_later_blocked_volley_replaces_feature_success_evidence(repo: Path) -> None:
+    plan_dir, plan_id = _r10_plan(repo, child=False)
+    a1 = _r10_volley(plan_dir, plan_id, "F001")
+    _r10_sign(plan_dir, plan_id, a1, feature_id="F001")
+    _r10_sign(plan_dir, plan_id, a1, feature_id="F001", volley_status="blocked")
+    data = json.loads(_r10_fsig(plan_dir, plan_id).read_text())
+    assert data["signoff"] is False and data["next_action"] == "blocked_awaiting_human"
+
+
+def _r10_fail_nth_write(monkeypatch: pytest.MonkeyPatch, n: int) -> list[Path]:
+    real = signoff_writer._atomic_write_json
+    calls: list[Path] = []
+
+    def _faulty(path: Path, obj: dict[str, Any]) -> None:
+        calls.append(Path(path))
+        if len(calls) == n:
+            raise OSError(28, "No space left on device (injected)")
+        real(path, obj)
+
+    monkeypatch.setattr(signoff_writer, "_atomic_write_json", _faulty)
+    return calls
+
+
+@pytest.mark.parametrize("previous", [True, False], ids=["overwrite", "fresh"])
+@pytest.mark.parametrize("fail_at", [1, 2, 3, 4])
+def test_r10_writer_four_file_transaction_rolls_back(
+    repo: Path, monkeypatch: pytest.MonkeyPatch, previous: bool, fail_at: int
+) -> None:
+    plan_dir, plan_id = _r10_plan(repo, child=True)
+    a0 = _r10_volley(plan_dir, plan_id, "F001", iteration=0)
+    if previous:
+        _r10_sign(plan_dir, plan_id, a0, feature_id="F001", child=True)
+    four = [
+        signoff_writer.signoff_path(plan_dir, plan_id),
+        signoff_writer.charter_compliance_path(plan_dir, plan_id),
+        _r10_fsig(plan_dir, plan_id),
+        _r10_fside(plan_dir, plan_id),
+    ]
+    before = {p: (p.read_bytes() if p.is_file() else None) for p in four}
+    assert all(v is not None for v in before.values()) is previous
+    a1 = _r10_volley(plan_dir, plan_id, "F001", iteration=1, offset=5)
+    calls = _r10_fail_nth_write(monkeypatch, fail_at)
+
+    with pytest.raises(OSError):
+        _r10_sign(plan_dir, plan_id, a1, feature_id="F001", iteration=1, child=True)
+
+    assert len(calls) == fail_at
+    if fail_at == 4:
+        # The LAST write of the transaction is the plan-level signoff.
+        assert calls[-1] == four[0]
+    for p in four:
+        assert (p.read_bytes() if p.is_file() else None) == before[p], (fail_at, p.name)
+    if not previous:
+        assert not signoff_writer.feature_signoff_dir(plan_dir).exists()
+    leftovers = [p.name for p in (plan_dir / "audit").rglob("*.tmp")]
+    assert leftovers == []
+
+
+def test_r10_writer_without_feature_id_writes_only_plan_level_pair(repo: Path) -> None:
+    plan_dir, plan_id = _r10_plan(repo, child=True)
+    a1 = _r10_volley(plan_dir, plan_id, "F001")
+    before = set(_r10_tree(plan_dir))
+    out = _r10_sign(plan_dir, plan_id, a1, feature_id=None, child=True)
+    added = set(_r10_tree(plan_dir)) - before
+    assert added == {f"signoff-{plan_id}.json", f"charter-compliance-{plan_id}.json"}
+    assert out == signoff_writer.signoff_path(plan_dir, plan_id)
+    assert not signoff_writer.feature_signoff_dir(plan_dir).exists()
+
+
+def test_r10_writer_feature_only_mode_never_touches_plan_level_pair(repo: Path) -> None:
+    plan_dir, plan_id = _r10_plan(repo, child=True)
+    _r10_volley(plan_dir, plan_id, "F001", offset=0)
+    a2 = _r10_volley(plan_dir, plan_id, "F002", offset=10)
+    _r10_sign(plan_dir, plan_id, a2, feature_id=None, child=True)
+    plan_pair = {
+        p: p.read_bytes()
+        for p in (
+            signoff_writer.signoff_path(plan_dir, plan_id),
+            signoff_writer.charter_compliance_path(plan_dir, plan_id),
+        )
+    }
+    a1 = plan_dir / "audit" / "codex-auditor-F001-i0.json"
+    out = _r10_sign(plan_dir, plan_id, a1, feature_id="F001", child=True, plan_level=False)
+    assert out == _r10_fsig(plan_dir, plan_id)
+    assert _r10_fside(plan_dir, plan_id).is_file()
+    for p, b in plan_pair.items():
+        assert p.read_bytes() == b
+    with pytest.raises(signoff_writer.SignoffWriteError):
+        _r10_sign(plan_dir, plan_id, a1, feature_id=None, plan_level=False)
+
+
+@pytest.mark.parametrize("bad", ["../x", "F-1", "", "a/b", "F1..2", ".F1", "F1\n", "F 1"])
+def test_r10_writer_refuses_invalid_feature_id_and_writes_nothing(repo: Path, bad: str) -> None:
+    plan_dir, plan_id = _r10_plan(repo, child=True)
+    a1 = _r10_volley(plan_dir, plan_id, "F001")
+    before = _r10_tree(plan_dir)
+    with pytest.raises(signoff_writer.SignoffWriteError):
+        _r10_sign(plan_dir, plan_id, a1, feature_id=bad, child=True)
+    assert _r10_tree(plan_dir) == before
+    assert not signoff_writer.feature_signoff_dir(plan_dir).exists()
+    for fn in (signoff_writer.feature_signoff_path, signoff_writer.feature_charter_compliance_path):
+        with pytest.raises(signoff_writer.SignoffWriteError):
+            fn(plan_dir, plan_id, bad)
+
+
+def test_r10_real_feature_ids_are_accepted() -> None:
+    """Every feature id committed under docs/plans is a valid per-feature id."""
+    plans = HERE.parents[3] / "docs" / "plans"
+    ids = set()
+    for fj in plans.rglob("features.json"):
+        try:
+            data = json.loads(fj.read_text())
+        except (OSError, json.JSONDecodeError):
+            continue
+        for f in (data.get("features") or []) if isinstance(data, dict) else []:
+            if isinstance(f, dict) and isinstance(f.get("id"), str):
+                ids.add(f["id"])
+    assert ids
+    for fid in ids:
+        assert signoff_writer.feature_signoff_path(Path("/p"), "plan", fid).name == f"signoff-plan--{fid}.json"
+
+
+# (e) closeout ignores the subdirectory ───────────────────────────────────
+
+
+def test_r10_audit_paths_for_feature_ignores_feature_signoffs_dir(repo: Path) -> None:
+    from dontpanic_orchestrate import closeout
+
+    plan_dir, plan_id = _r10_plan(repo, child=True)
+    a1 = _r10_volley(plan_dir, plan_id, "F001")
+    _r10_sign(plan_dir, plan_id, a1, feature_id="F001", child=True)
+    assert _r10_fsig(plan_dir, plan_id).is_file() and _r10_fside(plan_dir, plan_id).is_file()
+    paths = closeout._audit_paths_for_feature(plan_dir, "F001")
+    assert [p.name for p in paths] == ["claude-implementer-F001-i0.json", "codex-auditor-F001-i0.json"]
+    assert closeout._audit_paths_for_feature(plan_dir, "F002") == []
