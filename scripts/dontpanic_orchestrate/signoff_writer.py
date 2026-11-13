@@ -141,7 +141,9 @@ def build_signoff_dict(
     volley_status: str,
     signoff_reason: str | None = None,
     patch_completeness: dict[str, Any] | None = None,
+    decided_at: str | None = None,
 ) -> dict[str, Any]:
+    """``decided_at`` (default: read the clock) lets a caller stamp a value it already checked."""
     if not audit_paths:
         raise SignoffWriteError("cannot write signoff: no audit paths")
     if tier not in VALID_TIERS:
@@ -161,7 +163,7 @@ def build_signoff_dict(
         "signoff_reason": signoff_reason
         or (f"volley_status={volley_status}; final iteration={iteration}"),
         "next_action": _next_action_for(volley_status, signed_off),
-        "decided_at": _now_iso(),
+        "decided_at": decided_at if decided_at is not None else _now_iso(),
     }
     quota = _quota_totals(audit_paths)
     if quota:
@@ -377,6 +379,7 @@ def write_signoff(
     patch_completeness: dict[str, Any] | None = None,
     feature_id: str | None = None,
     plan_level: bool = True,
+    decided_at: str | None = None,
 ) -> Path:
     """Build, validate, and write the signoff.json closeout. Returns the path.
 
@@ -420,6 +423,7 @@ def write_signoff(
         volley_status=volley_status,
         signoff_reason=signoff_reason,
         patch_completeness=patch_completeness,
+        decided_at=decided_at,
     )
 
     compliance: dict[str, Any] | None = None
