@@ -60,6 +60,19 @@ behavioral surface change with the date, a short summary, and a
 Surfaces affected: <comma-separated list — see docs/RELEASE_IMPACT.md>
 ```
 
+## Unreleased
+
+### Fixed
+
+- Finalizing one feature of a multi-feature plan no longer fails
+  `signoff_stale` after another feature's volley rewrote the plan-level
+  signoff. Each volley now also records its signoff (and, for child plans, the
+  charter-compliance side-car) under `audit/feature-signoffs/`, and
+  `dontpanic finalize` selects the finalized feature's own evidence. A plan
+  whose plan-level signoff belongs only to other features gets that feature's
+  evidence repaired without paid calls and without touching the plan-level
+  signoff.
+
 ## 2026-11-12 — 0.2.1: Gate and signoff correctness fixes
 
 ### Fixed

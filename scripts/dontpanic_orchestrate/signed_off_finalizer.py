@@ -16,6 +16,24 @@ repairs the signoff envelope if missing, and flips ONLY that feature's
 ``passes: true`` with an evidence ref. It never imports or calls
 ``supervisor.dispatch_volley`` / any executor.
 
+Signoff evidence selection (DPN-012). Each volley writes the plan-level
+signoff ``audit/signoff-<plan_id>.json`` AND the feature's own copy under
+``audit/feature-signoffs/`` (:func:`signoff_writer.feature_signoff_path`), so
+another feature's later volley cannot strand this feature. The finalizer uses,
+in order:
+
+  a. the feature's own signoff when it exists — fully validated
+     (:func:`_validate_existing_signoff`, with the per-feature child side-car);
+     the plan-level signoff is then not consulted;
+  b. else the plan-level signoff when it lists any of this feature's audit
+     envelopes, or is unreadable / not an object / fails the schema / is for
+     another plan — validated exactly as before (every refusal kept);
+  c. else (a readable plan-level signoff for this plan that belongs only to
+     OTHER features) a no-paid repair of ONLY this feature's per-feature pair,
+     behind the same guards as (d); the plan-level pair is never touched;
+  d. else (no plan-level signoff) the original repair, now writing both the
+     plan-level and the per-feature pair.
+
 Refusals (each a distinct ``FinalizeError.code`` for distinct CLI exit codes):
   - ``no_audit``            — no auditor envelope exists for the feature.
   - ``not_signed_off``      — latest auditor verdict is not ``signed_off``.
@@ -279,9 +297,14 @@ def _validate_existing_signoff(
     child_charter: Any,
     commit_policy: Any,
     parent_plan_id: str | None = None,
+    side_car_path: Path | None = None,
 ) -> None:
     """Refuse (``FinalizeError``) unless the existing signoff envelope is a
     durable, successful signoff for THIS plan and THIS signed_off verdict.
+
+    ``side_car_path`` is the child charter-compliance side-car bound to
+    ``out_path`` (DPN-012: the per-feature side-car for a per-feature
+    signoff); None means the plan-level side-car.
 
     Read-only: never writes. Checks, in order (each a distinct stable code):
 
@@ -385,7 +408,11 @@ def _validate_existing_signoff(
         )
 
     if child_charter is not None:
-        side_car = signoff_writer.charter_compliance_path(plan_dir, plan_id)
+        side_car = (
+            side_car_path
+            if side_car_path is not None
+            else signoff_writer.charter_compliance_path(plan_dir, plan_id)
+        )
         problem: str | None = None
         compliance: Any = None
         if not side_car.is_file():
@@ -799,6 +826,133 @@ def _require_child_satisfied(
     )
 
 
+def _entry_names_feature(entry: str, feature_id: str) -> bool:
+    """True when an ``audits`` entry's file name follows the audit-envelope
+    convention (``<vendor>-<role>-<feature_id>-i<N>.json``, as parsed by
+    :func:`closeout._audit_paths_for_feature`) for ``feature_id`` — even when
+    the path no longer resolves (moved repo, deleted envelope)."""
+    name = Path(entry).name
+    if not name.endswith(".json"):
+        return False
+    parts = name[:-5].split("-")
+    return (
+        len(parts) >= 4
+        and feature_id in parts
+        and any(part in {"implementer", "auditor"} for part in parts)
+    )
+
+
+def _plan_signoff_belongs_to_other_features(
+    out_path: Path,
+    *,
+    plan_dir: Path,
+    plan_id: str,
+    feature_id: str,
+    feature_audit_paths: list[Path],
+) -> bool:
+    """DPN-012 rule (c): True ONLY when the plan-level signoff at ``out_path``
+    is a readable JSON object that passes the ``Signoff`` schema, is for THIS
+    plan, and lists NONE of this feature's audit envelopes (neither an entry
+    resolving to one of ``feature_audit_paths`` nor an entry whose file name
+    names this feature). Anything else — unreadable, torn, not an object,
+    schema failure, another plan, or any listing of this feature — is False,
+    so the caller validates it exactly as before (and refuses). Read-only."""
+    from pydantic import ValidationError
+
+    from dontpanic_orchestrate.agent_conventions.schemas.v1_0.models.signoff_model import (
+        Signoff,
+    )
+
+    try:
+        data = json.loads(out_path.read_text())
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return False
+    if not isinstance(data, dict):
+        return False
+    try:
+        Signoff.model_validate({k: v for k, v in data.items() if k not in _SIGNOFF_SIBLING_KEYS})
+    except ValidationError:
+        return False
+    if data.get("task_id") != plan_id:
+        return False
+    audits = data.get("audits")
+    if not isinstance(audits, list):
+        return False
+    if any(isinstance(e, str) and _entry_names_feature(e, feature_id) for e in audits):
+        return False
+    return not any(_signoff_lists_audit(audits, p, plan_dir) for p in feature_audit_paths)
+
+
+def _repair_signoff(
+    plan_dir: Path,
+    *,
+    plan_id: str,
+    feature_id: str,
+    iteration: int,
+    audit_paths: list[Path],
+    child_charter: Any,
+    commit_policy: Any,
+    orchestration: Any,
+    parent_plan_id: str | None,
+    evidence_feature_id: str | None,
+    plan_level: bool,
+    decided_at: str | None = None,
+) -> Path:
+    """No-paid signoff repair behind the Thanos / charter guards. Writes the
+    plan-level pair (``plan_level=True``) and, when ``evidence_feature_id`` is
+    given, the feature's own per-feature pair in the same transaction;
+    ``plan_level=False`` writes ONLY the per-feature pair. Returns the path
+    ``signoff_writer.write_signoff`` returns."""
+    # Thanos guard on the repair path: read the recorded return condition
+    # (the same memo write_signoff records) BEFORE any write so a blocked /
+    # unsuperseded child never gets a signoff written or passes flipped.
+    # A missing/malformed memo falls through to write_signoff, which
+    # raises the real ChildCharterViolation below.
+    if child_charter is not None:
+        try:
+            recorded = nested_orchestration.parse_return_condition_section(
+                plan_dir / "evidence" / "closeout-memo.md"
+            )
+        except nested_orchestration.ReturnConditionError:
+            recorded = None
+        if recorded is not None:
+            _require_child_satisfied(
+                plan_dir,
+                plan_id=plan_id,
+                status=recorded,
+                child_charter=child_charter,
+                parent_plan_id=parent_plan_id,
+            )
+    # A violation refuses finalization (no signoff, no passes flip)
+    # instead of writing an unchecked one.
+    try:
+        return signoff_writer.write_signoff(
+            plan_id=plan_id,
+            tier=_read_plan_tier(plan_dir),
+            iteration=iteration,
+            agents_in_panel=_agents_in_panel(audit_paths),
+            audit_paths=audit_paths,
+            plan_dir=plan_dir,
+            volley_status=SIGNED_OFF_VERDICT,
+            signoff_reason=(
+                f"no-paid finalize of signed_off feature {feature_id} "
+                f"(pre_merge cleared); F007 finalizer"
+            ),
+            child_charter=child_charter,
+            commit_policy=commit_policy,
+            orchestration=orchestration,
+            feature_id=evidence_feature_id,
+            plan_level=plan_level,
+            decided_at=decided_at,
+        )
+    except nested_orchestration.ChildCharterViolation as exc:
+        raise FinalizeError(
+            "child_charter_violation",
+            f"child charter compliance failed for {plan_id}; refusing to "
+            f"repair the signoff or flip passes: {exc}",
+        ) from exc
+
+
 def finalize_signed_off_feature(
     plan_dir: Path,
     *,
@@ -812,8 +966,13 @@ def finalize_signed_off_feature(
       2. Require the latest auditor verdict == ``signed_off`` (else
          ``not_signed_off``).
       3. Require ``pre_merge`` cleared (else ``pre_merge_uncleared``).
-      4. Repair the signoff envelope if missing (the pre_merge pause skips
-         ``_emit_volley_terminal``), reusing ``signoff_writer.write_signoff``.
+      4. Select THIS feature's signoff evidence (DPN-012, see the module
+         docstring rules a-d): validate the feature's own signoff if present,
+         else validate the plan-level signoff if it concerns this feature (or
+         is unreadable / for another plan), else repair — the per-feature pair
+         only when the plan-level signoff belongs to other features, both
+         pairs when there is none — reusing ``signoff_writer.write_signoff``
+         (the pre_merge pause skips ``_emit_volley_terminal``).
       5. Flip ONLY this feature's ``passes: true`` + evidence ref, idempotently.
 
     Never invokes ``dispatch_volley`` or any executor.
@@ -856,69 +1015,99 @@ def finalize_signed_off_feature(
     child_charter, commit_policy, orchestration = _load_charter_context(plan_dir, plan_id)
     parent_plan_id = getattr(orchestration, "parent_plan_id", None)
 
-    # Step 4 — repair signoff envelope only if missing (the pre_merge pause
-    # skipped _emit_volley_terminal). Never clobber an existing one, but never
-    # trust it blindly either: an existing envelope must validate against the
-    # selected signed_off audit envelope before anything is flipped.
-    out_path = signoff_writer.signoff_path(plan_dir, plan_id)
+    # Step 4 — select THIS feature's signoff evidence (DPN-012 rules a-d).
+    # Never clobber an existing signoff, but never trust one blindly either:
+    # an existing envelope must validate against the selected signed_off audit
+    # envelope before anything is flipped.
+    plan_out = signoff_writer.signoff_path(plan_dir, plan_id)
+    try:
+        feature_out: Path | None = signoff_writer.feature_signoff_path(plan_dir, plan_id, feature_id)
+        feature_side_car: Path | None = signoff_writer.feature_charter_compliance_path(
+            plan_dir, plan_id, feature_id
+        )
+    except signoff_writer.SignoffWriteError:
+        # A feature id that cannot name per-feature evidence keeps the
+        # pre-DPN-012 plan-level-only behaviour.
+        feature_out = feature_side_car = None
+    validate_kwargs: dict[str, Any] = {
+        "plan_dir": plan_dir,
+        "plan_id": plan_id,
+        "iteration": iteration,
+        "auditor_path": auditor_path,
+        "child_charter": child_charter,
+        "commit_policy": commit_policy,
+        "parent_plan_id": parent_plan_id,
+    }
+    repair_kwargs: dict[str, Any] = {
+        "plan_id": plan_id,
+        "feature_id": feature_id,
+        "iteration": iteration,
+        "audit_paths": audit_paths,
+        "child_charter": child_charter,
+        "commit_policy": commit_policy,
+        "orchestration": orchestration,
+        "parent_plan_id": parent_plan_id,
+    }
     signoff_repaired = False
-    if out_path.is_file():
-        _validate_existing_signoff(
-            out_path,
+    if feature_out is not None and (feature_out.exists() or feature_out.is_symlink()):
+        # (a) the feature's own evidence — fully validated, per-feature side-car.
+        _validate_existing_signoff(feature_out, side_car_path=feature_side_car, **validate_kwargs)
+        out_path = feature_out
+    elif plan_out.is_file():
+        if feature_out is not None and _plan_signoff_belongs_to_other_features(
+            plan_out,
             plan_dir=plan_dir,
             plan_id=plan_id,
-            iteration=iteration,
-            auditor_path=auditor_path,
-            child_charter=child_charter,
-            commit_policy=commit_policy,
-            parent_plan_id=parent_plan_id,
-        )
-    else:
-        # Thanos guard on the repair path: read the recorded return condition
-        # (the same memo write_signoff records) BEFORE any write so a blocked /
-        # unsuperseded child never gets a signoff written or passes flipped.
-        # A missing/malformed memo falls through to write_signoff, which
-        # raises the real ChildCharterViolation below.
-        if child_charter is not None:
-            try:
-                recorded = nested_orchestration.parse_return_condition_section(
-                    plan_dir / "evidence" / "closeout-memo.md"
-                )
-            except nested_orchestration.ReturnConditionError:
-                recorded = None
-            if recorded is not None:
-                _require_child_satisfied(
-                    plan_dir,
-                    plan_id=plan_id,
-                    status=recorded,
-                    child_charter=child_charter,
-                    parent_plan_id=parent_plan_id,
-                )
-        # A violation refuses finalization (no signoff, no passes flip)
-        # instead of writing an unchecked one.
-        try:
-            out_path = signoff_writer.write_signoff(
-                plan_id=plan_id,
-                tier=_read_plan_tier(plan_dir),
-                iteration=iteration,
-                agents_in_panel=_agents_in_panel(audit_paths),
-                audit_paths=audit_paths,
-                plan_dir=plan_dir,
-                volley_status=SIGNED_OFF_VERDICT,
-                signoff_reason=(
-                    f"no-paid finalize of signed_off feature {feature_id} "
-                    f"(pre_merge cleared); F007 finalizer"
-                ),
-                child_charter=child_charter,
-                commit_policy=commit_policy,
-                orchestration=orchestration,
+            feature_id=feature_id,
+            feature_audit_paths=audit_paths,
+        ):
+            # (c) legacy multi-feature plan: the plan-level signoff is another
+            # feature's — repair ONLY this feature's per-feature pair, and only
+            # from an envelope whose completed_at _freshness_problem can parse.
+            # The repair's decided_at (writer clock) must already pass the
+            # same _freshness_problem the next run applies (no future envelope).
+            # One clock read: the writer stamps the decided_at checked here.
+            decided_at = signoff_writer._now_iso()
+            prospective = {"decided_at": decided_at}
+            stale = (
+                "no signed_off auditor envelope"
+                if envelope is None
+                else _freshness_problem(envelope, prospective, auditor_path)
             )
-        except nested_orchestration.ChildCharterViolation as exc:
-            raise FinalizeError(
-                "child_charter_violation",
-                f"child charter compliance failed for {plan_id}; refusing to "
-                f"repair the signoff or flip passes: {exc}",
-            ) from exc
+            if stale is not None:
+                raise FinalizeError(
+                    "signoff_stale",
+                    f"signed_off auditor envelope {auditor_path}: {stale}; "
+                    f"refusing the legacy per-feature signoff repair for "
+                    f"{feature_id!r} — no signoff is repaired and passes is not "
+                    f"flipped.",
+                )
+            out_path = _repair_signoff(
+                plan_dir,
+                evidence_feature_id=feature_id,
+                plan_level=False,
+                decided_at=decided_at,
+                **repair_kwargs,
+            )
+            signoff_repaired = True
+        else:
+            # (b) the plan-level signoff concerns this feature (or cannot be
+            # shown not to) — validated exactly as before.
+            _validate_existing_signoff(plan_out, **validate_kwargs)
+            out_path = plan_out
+    else:
+        # (d) no signoff at all (the pre_merge pause skipped
+        # _emit_volley_terminal) — repair both pairs. The feature's own copy
+        # is the evidence every later run selects (rule a), so it is the one
+        # recorded as authorizing the flip (keeps re-runs idempotent).
+        out_path = _repair_signoff(
+            plan_dir,
+            evidence_feature_id=feature_id if feature_out is not None else None,
+            plan_level=True,
+            **repair_kwargs,
+        )
+        if feature_out is not None:
+            out_path = feature_out
         signoff_repaired = True
 
     # Step 5 — flip only this feature, idempotently. The PRIMARY evidence ref
