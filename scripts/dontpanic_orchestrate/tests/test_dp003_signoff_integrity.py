@@ -3506,3 +3506,56 @@ def test_dpn012b_branch_d_past_zone_aware_completed_at_still_repairs(repo: Path,
     assert signoff_writer.signoff_path(plan_dir, plan_id).is_file()
     again = signed_off_finalizer.finalize_signed_off_feature(plan_dir, plan_id=plan_id, feature_id="F001")
     assert again.already_finalized is True
+
+
+@pytest.mark.parametrize("child", [False, True], ids=["top", "child"])
+def test_dpn012b_branch_d_single_clock_read(
+    repo: Path, child: bool, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Item 6 (Codex finding at b1b9daa5) — branch (d) must stamp the
+    decided_at its freshness guard checked (one clock read), so a backward
+    clock step between guard and write cannot persist a plan-level /
+    per-feature signoff the next finalize calls stale."""
+    fmt = "%Y-%m-%dT%H:%M:%SZ"
+    t = dt.datetime.now(dt.timezone.utc).replace(microsecond=0)
+    t_iso = t.strftime(fmt)
+    plan_dir, plan_id = _r10_plan(repo, child=child)
+    a1 = _r10_volley(plan_dir, plan_id, "F001")
+    data = json.loads(a1.read_text())
+    data["completed_at"] = (t - dt.timedelta(hours=1)).strftime(fmt)
+    a1.write_text(json.dumps(data))
+    _clear_pre_merge(plan_dir, plan_id)
+    plan_sig = signoff_writer.signoff_path(plan_dir, plan_id)
+    assert not plan_sig.exists()
+    assert not os.path.lexists(signoff_writer.feature_signoff_dir(plan_dir))
+    calls: list[str] = []
+
+    def fake_now_iso() -> str:
+        value = t_iso if not calls else (t - dt.timedelta(hours=2)).strftime(fmt)
+        calls.append(value)
+        return value
+
+    monkeypatch.setattr(signoff_writer, "_now_iso", fake_now_iso)
+    # The guard must check the very value the repair stamps.
+    checked: list[str] = []
+    real_freshness_problem = signed_off_finalizer._freshness_problem
+
+    def spy_freshness_problem(
+        envelope: dict[str, Any], signoff: dict[str, Any], auditor_path: Path | None
+    ) -> str | None:
+        checked.append(signoff["decided_at"])
+        return real_freshness_problem(envelope, signoff, auditor_path)
+
+    monkeypatch.setattr(signed_off_finalizer, "_freshness_problem", spy_freshness_problem)
+
+    fin = signed_off_finalizer.finalize_signed_off_feature(plan_dir, plan_id=plan_id, feature_id="F001")
+    assert fin.signoff_repaired is True
+    assert fin.features_passes_flipped is True
+    assert fin.signoff_path == _r10_fsig(plan_dir, plan_id)
+    assert json.loads(_r10_fsig(plan_dir, plan_id).read_text())["decided_at"] == t_iso
+    assert json.loads(plan_sig.read_text())["decided_at"] == t_iso
+    assert _r10_passes(plan_dir, "F001") is True
+    assert calls == [t_iso]
+    assert checked == [t_iso]
+    again = signed_off_finalizer.finalize_signed_off_feature(plan_dir, plan_id=plan_id, feature_id="F001")
+    assert again.already_finalized is True

@@ -226,12 +226,16 @@ def _parse_iso(value: Any) -> dt.datetime | None:
 
 
 def _require_datable_auditor_envelope(
-    envelope: dict[str, Any] | None, auditor_path: Path | None, feature_id: str
+    envelope: dict[str, Any] | None,
+    auditor_path: Path | None,
+    feature_id: str,
+    decided_at: str,
 ) -> None:
     """DPN-012b item 6 — before branch (d) repairs a signoff from scratch, the
     selected signed_off auditor envelope must be locatable and datable under
     the SAME rule branch (c) applies: :func:`_freshness_problem` against a
-    prospective ``decided_at`` from the writer clock. That refuses a missing /
+    prospective ``decided_at`` — the caller's single writer-clock read, which
+    the repair then stamps (no clock read here). That refuses a missing /
     unparseable / zone-less / date-only ``completed_at`` AND one later than
     the finalizer's clock (a repair the next run would reject as stale).
     Refuses with ``signoff_stale`` so nothing is written and nothing is
@@ -242,7 +246,7 @@ def _require_datable_auditor_envelope(
             f"no signed_off auditor envelope path could be selected for {feature_id}; "
             f"a repaired signoff could not be bound to it, refusing to finalize.",
         )
-    prospective = {"decided_at": signoff_writer._now_iso()}
+    prospective = {"decided_at": decided_at}
     stale = (
         "no signed_off auditor envelope"
         if envelope is None
@@ -1142,7 +1146,9 @@ def finalize_signed_off_feature(
             _validate_existing_signoff(plan_out, **validate_kwargs)
             out_path = plan_out
     else:
-        _require_datable_auditor_envelope(envelope, auditor_path, feature_id)
+        # One clock read: the writer stamps the decided_at checked here.
+        decided_at = signoff_writer._now_iso()
+        _require_datable_auditor_envelope(envelope, auditor_path, feature_id, decided_at)
         # (d) no signoff at all (the pre_merge pause skipped
         # _emit_volley_terminal) — repair both pairs. The feature's own copy
         # is the evidence every later run selects (rule a), so it is the one
@@ -1151,6 +1157,7 @@ def finalize_signed_off_feature(
             plan_dir,
             evidence_feature_id=feature_id if feature_out is not None else None,
             plan_level=True,
+            decided_at=decided_at,
             **repair_kwargs,
         )
         if feature_out is not None:
