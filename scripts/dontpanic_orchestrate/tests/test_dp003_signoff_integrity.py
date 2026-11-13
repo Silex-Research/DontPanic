@@ -3087,3 +3087,224 @@ def test_r10_audit_paths_for_feature_ignores_feature_signoffs_dir(repo: Path) ->
     paths = closeout._audit_paths_for_feature(plan_dir, "F001")
     assert [p.name for p in paths] == ["claude-implementer-F001-i0.json", "codex-auditor-F001-i0.json"]
     assert closeout._audit_paths_for_feature(plan_dir, "F002") == []
+
+
+# ───────── DPN-012b — hardening of per-feature signoff evidence (Sentinel #104 LOWs) ─────────
+
+
+def _r11_non_success_plan_level_listing(plan_dir: Path, plan_id: str, entry: str) -> None:
+    """F001 + F002 signed_off volleys; the plan-level signoff is a NON-success
+    (blocked) record for F002, hand-edited to ALSO list ``entry`` (an alias of
+    F001's auditor envelope). No per-feature evidence exists."""
+    _r10_volley(plan_dir, plan_id, "F001", offset=0)
+    a2 = _r10_volley(plan_dir, plan_id, "F002", offset=10)
+    sp = _r10_sign(plan_dir, plan_id, a2, feature_id=None, volley_status="blocked")
+    data = json.loads(sp.read_text())
+    data["audits"] = [str(a2.relative_to(plan_dir)), entry]
+    sp.write_text(json.dumps(data, indent=2) + "\n")
+    assert not signoff_writer.feature_signoff_dir(plan_dir).exists()
+
+
+def test_r11_canonical_name_non_success_plan_level_baseline(repo: Path) -> None:
+    """Baseline the alias cases must match: the canonical (unresolvable) name
+    is this feature's (rule b) → ``signoff_not_success``, no repair."""
+    plan_dir, plan_id = _r10_plan(repo, child=False)
+    _r11_non_success_plan_level_listing(
+        plan_dir, plan_id, "/elsewhere/old-checkout/audit/codex-auditor-F001-i0.json"
+    )
+    _clear_pre_merge(plan_dir, plan_id)
+    _r10_assert_refused(plan_dir, plan_id, "signoff_not_success")
+    assert not signoff_writer.feature_signoff_dir(plan_dir).exists()
+
+
+def test_r11_lower_cased_name_listing_this_feature_is_rule_b(repo: Path) -> None:
+    """Fix 1(a): a lower-cased envelope name names F001. The path does NOT
+    exist (moved absolute prefix), so neither ``resolve()`` nor ``samefile``
+    can match it on any volume — only the case-insensitive name match does."""
+    plan_dir, plan_id = _r10_plan(repo, child=False)
+    entry = "/elsewhere/old-checkout/audit/codex-auditor-f001-i0.json"
+    assert not Path(entry).exists()
+    _r11_non_success_plan_level_listing(plan_dir, plan_id, entry)
+    _clear_pre_merge(plan_dir, plan_id)
+    _r10_assert_refused(plan_dir, plan_id, "signoff_not_success")
+    assert not signoff_writer.feature_signoff_dir(plan_dir).exists()
+
+
+def test_r11_entry_names_feature_is_case_insensitive() -> None:
+    names = signed_off_finalizer._entry_names_feature
+    assert names("audit/codex-auditor-f001-i0.json", "F001")
+    assert names("audit/CODEX-AUDITOR-F001-I0.JSON", "F001")
+    assert names("audit/codex-auditor-F001-i0.json", "f001")
+    assert not names("audit/codex-auditor-f0010-i0.json", "F001")
+
+
+def test_r11_hard_link_alias_listing_this_feature_is_rule_b(repo: Path) -> None:
+    """Fix 1(b): a hard link to F001's auditor envelope under a neutral name
+    (``audit/alias.json``) is matched by ``samefile`` → this feature's."""
+    plan_dir, plan_id = _r10_plan(repo, child=False)
+    alias = plan_dir / "audit" / "alias.json"
+    _r10_volley(plan_dir, plan_id, "F001", offset=0)
+    os.link(plan_dir / "audit" / "codex-auditor-F001-i0.json", alias)
+    _r11_non_success_plan_level_listing(plan_dir, plan_id, "audit/alias.json")
+    assert alias.resolve() != (plan_dir / "audit" / "codex-auditor-F001-i0.json").resolve()
+    _clear_pre_merge(plan_dir, plan_id)
+    _r10_assert_refused(plan_dir, plan_id, "signoff_not_success")
+    assert not signoff_writer.feature_signoff_dir(plan_dir).exists()
+
+
+# Fix 2 — a stray regular FILE at audit/feature-signoffs ──────────────────
+
+
+def _r11_stray_file(plan_dir: Path) -> Path:
+    stray = signoff_writer.feature_signoff_dir(plan_dir)
+    stray.parent.mkdir(parents=True, exist_ok=True)
+    stray.write_bytes(b"stray, not a directory\n")
+    return stray
+
+
+@pytest.mark.parametrize("feature_id", ["F001", None], ids=["per_feature", "plan_level_only"])
+def test_r11_writer_stray_file_raises_signoff_write_error_writes_nothing(
+    repo: Path, feature_id: str | None
+) -> None:
+    plan_dir, plan_id = _r10_plan(repo, child=True)
+    a1 = _r10_volley(plan_dir, plan_id, "F001")
+    _r11_stray_file(plan_dir)
+    before = _r10_tree(plan_dir)
+    with pytest.raises(signoff_writer.SignoffWriteError, match="not a directory"):
+        _r10_sign(plan_dir, plan_id, a1, feature_id=feature_id, child=True)
+    assert _r10_tree(plan_dir) == before
+    assert not signoff_writer.signoff_path(plan_dir, plan_id).exists()
+    assert not signoff_writer.charter_compliance_path(plan_dir, plan_id).exists()
+
+
+def test_r11_supervisor_stray_file_is_caught_signoff_not_written(
+    repo: Path, captured: list[Any]
+) -> None:
+    """The writer's refusal is the exception type the supervisor catches
+    (``SignoffWriteError``): the volley ends ``blocked`` instead of crashing."""
+    plan_dir, plan_id = _r10_plan(repo, child=False)
+    _clear_pre_merge(plan_dir, plan_id)
+    stray = _r11_stray_file(plan_dir)
+    result = supervisor.dispatch_volley(plan_dir, "F001", max_iterations=1)
+    assert result.final_status == "blocked"
+    assert "SignoffWriteError" in result.reason
+    assert stray.read_bytes() == b"stray, not a directory\n"
+    assert not signoff_writer.signoff_path(plan_dir, plan_id).exists()
+
+
+@pytest.mark.parametrize("state", ["no_signoff", "valid_plan_level"])
+def test_r11_finalizer_stray_file_refused_signoff_unreadable(repo: Path, state: str) -> None:
+    plan_dir, plan_id = _r10_plan(repo, child=False)
+    a1 = _r10_volley(plan_dir, plan_id, "F001")
+    if state == "valid_plan_level":
+        _r10_sign(plan_dir, plan_id, a1, feature_id=None)
+    stray = _r11_stray_file(plan_dir)
+    _clear_pre_merge(plan_dir, plan_id)
+    _r10_assert_refused(plan_dir, plan_id, "signoff_unreadable")
+    assert stray.read_bytes() == b"stray, not a directory\n"
+
+
+def test_r11_repair_writer_error_becomes_signoff_unreadable(
+    repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """No ``SignoffWriteError`` from the writer escapes the finalizer."""
+    plan_dir, plan_id = _r10_plan(repo, child=False)
+    _r10_volley(plan_dir, plan_id, "F001")
+    _clear_pre_merge(plan_dir, plan_id)
+
+    def _refuse(**_kwargs: Any) -> Path:
+        raise signoff_writer.SignoffWriteError("injected writer refusal")
+
+    monkeypatch.setattr(signoff_writer, "write_signoff", _refuse)
+    _r10_assert_refused(plan_dir, plan_id, "signoff_unreadable")
+
+
+# Fix 3 — a symlinked feature-signoffs/ directory ────────────────────────
+
+
+def _r11_dir_bytes(d: Path) -> dict[str, bytes]:
+    return {str(p.relative_to(d)): p.read_bytes() for p in sorted(d.rglob("*")) if p.is_file()}
+
+
+@pytest.mark.parametrize("target", ["dir_with_valid_evidence", "dangling"])
+def test_r11_finalizer_symlinked_feature_dir_refused(repo: Path, target: str) -> None:
+    plan_dir, plan_id = _r10_plan(repo, child=False)
+    a1 = _r10_volley(plan_dir, plan_id, "F001")
+    _r10_sign(plan_dir, plan_id, a1, feature_id="F001")
+    real = signoff_writer.feature_signoff_dir(plan_dir)
+    outside = repo.parent / "outside-feature-signoffs"
+    os.rename(real, outside)
+    if target == "dangling":
+        os.symlink(repo.parent / "missing-feature-signoffs", real)
+    else:
+        os.symlink(outside, real)
+        assert _r10_fsig(plan_dir, plan_id).is_file()  # valid evidence readable through it
+    outside_before = _r11_dir_bytes(outside)
+    _clear_pre_merge(plan_dir, plan_id)
+    _r10_assert_refused(plan_dir, plan_id, "signoff_unreadable")
+    assert _r11_dir_bytes(outside) == outside_before
+    assert real.is_symlink()
+
+
+@pytest.mark.parametrize("target", ["dir", "dangling"])
+def test_r11_writer_symlinked_feature_dir_refused_target_unchanged(repo: Path, target: str) -> None:
+    plan_dir, plan_id = _r10_plan(repo, child=True)
+    a1 = _r10_volley(plan_dir, plan_id, "F001")
+    outside = repo.parent / "outside-feature-signoffs"
+    outside.mkdir()
+    (outside / "keep.txt").write_bytes(b"untouched\n")
+    link = signoff_writer.feature_signoff_dir(plan_dir)
+    os.symlink(outside if target == "dir" else repo.parent / "missing-dir", link)
+    before = _r10_tree(plan_dir)
+    with pytest.raises(signoff_writer.SignoffWriteError, match="symlink"):
+        _r10_sign(plan_dir, plan_id, a1, feature_id="F001", child=True)
+    assert _r11_dir_bytes(outside) == {"keep.txt": b"untouched\n"}
+    assert sorted(os.listdir(outside)) == ["keep.txt"]
+    assert _r10_tree(plan_dir) == before
+    assert not signoff_writer.signoff_path(plan_dir, plan_id).exists()
+    assert link.is_symlink()
+
+
+# Fix 4 — feature ids that differ only by case collide ───────────────────
+
+
+@pytest.mark.parametrize("child", [False, True], ids=["top", "child"])
+def test_r11_writer_case_colliding_feature_id_refused(repo: Path, child: bool) -> None:
+    plan_dir, plan_id = _r10_plan(repo, child=child)
+    a1 = _r10_volley(plan_dir, plan_id, "F001")
+    _r10_sign(plan_dir, plan_id, a1, feature_id="F1", child=child)
+    f1 = _r10_fsig(plan_dir, plan_id, "F1")
+    assert f1.name in os.listdir(f1.parent)
+    before = _r10_tree(plan_dir)
+    with pytest.raises(signoff_writer.SignoffWriteError, match="case-collides"):
+        _r10_sign(plan_dir, plan_id, a1, feature_id="f1", child=child)
+    assert _r10_tree(plan_dir) == before
+    assert f1.name in os.listdir(f1.parent)
+    assert _r10_fsig(plan_dir, plan_id, "f1").name not in os.listdir(f1.parent)
+
+
+def test_r11_finalizer_case_colliding_feature_evidence_refused(repo: Path) -> None:
+    """Finalizing ``F001`` while only the case-colliding ``f001`` per-feature
+    evidence exists is refused ``signoff_unreadable`` naming the collision —
+    never accepted as F001's (case-insensitive volume: rule a would read it)
+    nor repaired around (case-sensitive volume: rule d would repair). Plan
+    feature ids must match ``^F\\d{3}$``, so the loadable id is ``F001`` and
+    the stray evidence is the lower-cased one."""
+    plan_dir, plan_id = _r10_plan(repo, child=False)
+    a1 = _r10_volley(plan_dir, plan_id, "F001")
+    _r10_sign(plan_dir, plan_id, a1, feature_id="f001")
+    signoff_writer.signoff_path(plan_dir, plan_id).unlink()
+    stray_name = _r10_fsig(plan_dir, plan_id, "f001").name
+    assert os.listdir(signoff_writer.feature_signoff_dir(plan_dir)) == [stray_name]
+    _clear_pre_merge(plan_dir, plan_id)
+    before_tree = _r10_tree(plan_dir)
+    before_features = (plan_dir / "features.json").read_bytes()
+    with pytest.raises(signed_off_finalizer.FinalizeError) as exc:
+        signed_off_finalizer.finalize_signed_off_feature(
+            plan_dir, plan_id=plan_id, feature_id="F001"
+        )
+    assert exc.value.code == "signoff_unreadable", (exc.value.code, str(exc.value))
+    assert "case-collides" in str(exc.value) and stray_name in str(exc.value)
+    assert _r10_passes(plan_dir, "F001") is False
+    assert (plan_dir / "features.json").read_bytes() == before_features
+    assert _r10_tree(plan_dir) == before_tree

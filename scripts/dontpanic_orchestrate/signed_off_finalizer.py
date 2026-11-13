@@ -59,6 +59,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -267,7 +268,8 @@ _SIGNOFF_SIBLING_KEYS = frozenset({"patch_completeness", "audit_digests"})
 
 def _listed_entries(audits: list[Any], auditor_path: Path, plan_dir: Path) -> list[str]:
     """The signoff ``audits`` entries (plan-relative or absolute) that
-    resolve to ``auditor_path``."""
+    resolve to ``auditor_path`` — or name the same file through another
+    link (DPN-012b: a hard-link alias under a neutral name)."""
     target = auditor_path.resolve()
     found: list[str] = []
     for entry in audits:
@@ -276,9 +278,18 @@ def _listed_entries(audits: list[Any], auditor_path: Path, plan_dir: Path) -> li
         p = Path(entry)
         if not p.is_absolute():
             p = plan_dir / p
-        if p.resolve() == target:
+        if p.resolve() == target or _same_file(p, auditor_path):
             found.append(entry)
     return found
+
+
+def _same_file(a: Path, b: Path) -> bool:
+    """``os.path.samefile`` that treats any ``OSError`` (missing, unreadable)
+    as no match."""
+    try:
+        return os.path.samefile(a, b)
+    except OSError:
+        return False
 
 
 def _signoff_lists_audit(audits: list[Any], auditor_path: Path, plan_dir: Path) -> bool:
@@ -812,14 +823,16 @@ def _entry_names_feature(entry: str, feature_id: str) -> bool:
     """True when an ``audits`` entry's file name follows the audit-envelope
     convention (``<vendor>-<role>-<feature_id>-i<N>.json``, as parsed by
     :func:`closeout._audit_paths_for_feature`) for ``feature_id`` — even when
-    the path no longer resolves (moved repo, deleted envelope)."""
-    name = Path(entry).name
+    the path no longer resolves (moved repo, deleted envelope). Compared
+    case-insensitively (DPN-012b): ``codex-auditor-f001-i0.json`` names
+    ``F001``."""
+    name = Path(entry).name.casefold()
     if not name.endswith(".json"):
         return False
     parts = name[:-5].split("-")
     return (
         len(parts) >= 4
-        and feature_id in parts
+        and feature_id.casefold() in parts
         and any(part in {"implementer", "auditor"} for part in parts)
     )
 
@@ -931,6 +944,13 @@ def _repair_signoff(
             f"child charter compliance failed for {plan_id}; refusing to "
             f"repair the signoff or flip passes: {exc}",
         ) from exc
+    except signoff_writer.SignoffWriteError as exc:
+        # DPN-012b — no writer refusal escapes the finalizer uncaught.
+        raise FinalizeError(
+            "signoff_unreadable",
+            f"signoff repair for {plan_id} feature {feature_id} was refused by "
+            f"the signoff writer; refusing to flip passes: {exc}",
+        ) from exc
 
 
 def finalize_signed_off_feature(
@@ -1009,6 +1029,18 @@ def finalize_signed_off_feature(
         # A feature id that cannot name per-feature evidence keeps the
         # pre-DPN-012 plan-level-only behaviour.
         feature_out = feature_side_car = None
+    # DPN-012b — the per-feature evidence directory must be absent or a real
+    # (non-symlink) directory, and must hold no entry that only case-collides
+    # with this feature's evidence names; otherwise no rule can be trusted.
+    try:
+        signoff_writer._require_real_feature_signoff_dir(plan_dir)
+        if feature_out is not None:
+            signoff_writer._require_no_case_collision(plan_dir, plan_id, feature_id)
+    except signoff_writer.SignoffWriteError as exc:
+        raise FinalizeError(
+            "signoff_unreadable",
+            f"per-feature signoff evidence for {feature_id} cannot be trusted: {exc}",
+        ) from exc
     validate_kwargs: dict[str, Any] = {
         "plan_dir": plan_dir,
         "plan_id": plan_id,

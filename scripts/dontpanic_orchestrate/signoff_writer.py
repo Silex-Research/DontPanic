@@ -360,6 +360,54 @@ def feature_charter_compliance_path(plan_dir: Path, plan_id: str, feature_id: st
     return feature_signoff_dir(plan_dir) / f"charter-compliance-{plan_id}--{fid}.json"
 
 
+def _require_real_feature_signoff_dir(plan_dir: Path) -> Path:
+    """DPN-012b — return :func:`feature_signoff_dir` when it is absent or a
+    real directory. A symlink there (to a directory or dangling) or any other
+    non-directory (e.g. a stray regular file) raises
+    :class:`SignoffWriteError`: evidence is never written or read through it."""
+    d = feature_signoff_dir(plan_dir)
+    if d.is_symlink():
+        raise SignoffWriteError(
+            f"per-feature signoff directory {d} is a symlink; refusing to "
+            f"write or read signoff evidence through it"
+        )
+    if os.path.lexists(d) and not d.is_dir():
+        raise SignoffWriteError(
+            f"per-feature signoff path {d} exists but is not a directory; "
+            f"refusing to write or read signoff evidence"
+        )
+    return d
+
+
+def _require_no_case_collision(plan_dir: Path, plan_id: str, feature_id: str) -> None:
+    """DPN-012b — raise :class:`SignoffWriteError` when the per-feature
+    directory holds an entry whose name casefolds equal to this feature's
+    signoff or side-car name but is not identical to it (feature ids that
+    differ only by case, e.g. ``F1`` / ``f1``, collide on a case-insensitive
+    volume). Compares ``os.listdir`` names, so it behaves the same on
+    case-sensitive and case-insensitive volumes."""
+    d = feature_signoff_dir(plan_dir)
+    try:
+        entries = os.listdir(d)
+    except FileNotFoundError:
+        return
+    targets = {
+        p.name.casefold(): p.name
+        for p in (
+            feature_signoff_path(plan_dir, plan_id, feature_id),
+            feature_charter_compliance_path(plan_dir, plan_id, feature_id),
+        )
+    }
+    for entry in sorted(entries):
+        name = targets.get(entry.casefold())
+        if name is not None and entry != name:
+            raise SignoffWriteError(
+                f"per-feature signoff evidence {entry!r} in {d} case-collides with "
+                f"{name!r} for feature {feature_id!r}; feature ids that differ only "
+                f"by case cannot hold separate evidence"
+            )
+
+
 def write_signoff(
     *,
     plan_id: str,
@@ -409,6 +457,12 @@ def write_signoff(
         _require_feature_id(feature_id)
     elif not plan_level:
         raise SignoffWriteError("plan_level=False requires a feature_id")
+    # DPN-012b — refuse before ANY write when the per-feature evidence
+    # directory is a symlink / non-directory, or (per-feature) when another
+    # feature id's evidence case-collides with this one.
+    _require_real_feature_signoff_dir(plan_dir)
+    if feature_id is not None:
+        _require_no_case_collision(plan_dir, plan_id, feature_id)
 
     payload = build_signoff_dict(
         plan_id=plan_id,
