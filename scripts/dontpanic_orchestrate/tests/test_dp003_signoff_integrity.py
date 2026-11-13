@@ -2847,6 +2847,39 @@ def test_r12_legacy_repair_refused_when_envelope_completed_at_in_future(repo: Pa
     assert "auditor envelope" in str(exc.value) and "predates" in str(exc.value)
 
 
+@pytest.mark.parametrize("child", [False, True], ids=["top", "child"])
+def test_r13_legacy_repair_stamps_guarded_decided_at_across_backward_clock_jump(
+    repo: Path, child: bool, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Sentinel 5886471727 — branch (c) must stamp the decided_at its
+    freshness guard checked (one clock read), so a backward clock step between
+    guard and write cannot persist a signoff the next finalize calls stale."""
+    fmt = "%Y-%m-%dT%H:%M:%SZ"
+    t = dt.datetime.now(dt.timezone.utc).replace(microsecond=0)
+    t_iso = t.strftime(fmt)
+    plan_dir, plan_id = _r11_legacy_branch_c(
+        repo, child=child, completed_at=(t - dt.timedelta(hours=1)).strftime(fmt)
+    )
+    calls: list[str] = []
+
+    def fake_now_iso() -> str:
+        value = t_iso if not calls else (t - dt.timedelta(hours=2)).strftime(fmt)
+        calls.append(value)
+        return value
+
+    monkeypatch.setattr(signoff_writer, "_now_iso", fake_now_iso)
+
+    fin = signed_off_finalizer.finalize_signed_off_feature(plan_dir, plan_id=plan_id, feature_id="F001")
+    assert fin.signoff_repaired is True
+    assert fin.features_passes_flipped is True
+    assert fin.signoff_path == _r10_fsig(plan_dir, plan_id)
+    assert json.loads(_r10_fsig(plan_dir, plan_id).read_text())["decided_at"] == t_iso
+    assert _r10_passes(plan_dir, "F001") is True
+    assert calls == [t_iso]
+    again = signed_off_finalizer.finalize_signed_off_feature(plan_dir, plan_id=plan_id, feature_id="F001")
+    assert again.already_finalized is True
+
+
 def test_r10_repair_with_no_signoff_writes_both_pairs(repo: Path) -> None:
     plan_dir, plan_id = _r10_plan(repo, child=True)
     _r10_volley(plan_dir, plan_id, "F001")

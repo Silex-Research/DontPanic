@@ -923,6 +923,7 @@ def _repair_signoff(
     parent_plan_id: str | None,
     evidence_feature_id: str | None,
     plan_level: bool,
+    decided_at: str | None = None,
 ) -> Path:
     """No-paid signoff repair behind the Thanos / charter guards. Writes the
     plan-level pair (``plan_level=True``) and, when ``evidence_feature_id`` is
@@ -969,6 +970,7 @@ def _repair_signoff(
             orchestration=orchestration,
             feature_id=evidence_feature_id,
             plan_level=plan_level,
+            decided_at=decided_at,
         )
     except nested_orchestration.ChildCharterViolation as exc:
         raise FinalizeError(
@@ -1110,7 +1112,9 @@ def finalize_signed_off_feature(
             # from an envelope whose completed_at _freshness_problem can parse.
             # The repair's decided_at (writer clock) must already pass the
             # same _freshness_problem the next run applies (no future envelope).
-            prospective = {"decided_at": signoff_writer._now_iso()}
+            # One clock read: the writer stamps the decided_at checked here.
+            decided_at = signoff_writer._now_iso()
+            prospective = {"decided_at": decided_at}
             stale = (
                 "no signed_off auditor envelope"
                 if envelope is None
@@ -1125,7 +1129,11 @@ def finalize_signed_off_feature(
                     f"flipped.",
                 )
             out_path = _repair_signoff(
-                plan_dir, evidence_feature_id=feature_id, plan_level=False, **repair_kwargs
+                plan_dir,
+                evidence_feature_id=feature_id,
+                plan_level=False,
+                decided_at=decided_at,
+                **repair_kwargs,
             )
             signoff_repaired = True
         else:
