@@ -24,10 +24,13 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import sys
 import tempfile
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
+
+import pytest
 
 HERE = Path(__file__).resolve()
 sys.path.insert(0, str(HERE.parents[2]))
@@ -869,3 +872,70 @@ def test_atomic_signoff_committed_before_breaker_clear() -> None:
             )
         finally:
             closeout.gate_pause.approve_gate = original_approve  # type: ignore[assignment]
+
+
+def _rr3_snapshot(root: Path) -> dict[str, object]:
+    """Every entry under ``root`` (links NOT followed): files → bytes, dirs →
+    ``"<dir>"``, symlinks → ``("<link>", target)``."""
+    snap: dict[str, object] = {}
+    for dirpath, dirnames, filenames in os.walk(root, followlinks=False):
+        for name in dirnames + filenames:
+            p = Path(dirpath) / name
+            rel = str(p.relative_to(root))
+            if p.is_symlink():
+                snap[rel] = ("<link>", os.readlink(p))
+            elif p.is_dir():
+                snap[rel] = "<dir>"
+            else:
+                snap[rel] = p.read_bytes()
+    return snap
+
+
+def _rr3_link_signoff_target(tmp_path: Path, plan_dir: Path, plan_id: str, link: str) -> Path:
+    """``link == "audit_dir"``: the plan's real ``audit/`` (envelopes + gate
+    state) is moved to an outside dir and ``audit/`` becomes a symlink to it.
+    ``link == "signoff_file"``: ``audit/signoff-<plan>.json`` is a symlink to
+    an outside file. Returns the outside dir."""
+    outside = tmp_path / "rr3-outside"
+    outside.mkdir()
+    (outside / "keep.txt").write_bytes(b"untouched\n")
+    if link == "audit_dir":
+        os.rename(plan_dir / "audit", outside / "audit")
+        os.symlink(outside / "audit", plan_dir / "audit")
+    else:
+        target = outside / "signoff-target.json"
+        target.write_bytes(b'{"outside": "original"}\n')
+        os.symlink(target, plan_dir / "audit" / f"signoff-{plan_id}.json")
+    return outside
+
+
+@pytest.mark.parametrize("link", ["audit_dir", "signoff_file"])
+def test_dpn012b_rr3_closeout_run_close_out_refuses_linked_signoff(tmp_path: Path, link: str) -> None:
+    """DPN-012b review round 3 Item 1 — ``run_close_out`` writes the
+    plan-level signoff through the shared no-follow helper: a symlinked
+    ``audit/`` or a symlinked ``audit/signoff-<plan>.json`` is refused with
+    :class:`closeout.CloseoutError`; the outside dir/file is byte-unchanged,
+    the memo written just before is rolled back, features.json unchanged."""
+    plan_id = "2026-05-11-909-infra-v3-f004-rr3-link"
+    plan_dir = _make_plan(tmp_path, plan_id)
+    _seed_no_progress_state(plan_dir, plan_id)
+    outside = _rr3_link_signoff_target(tmp_path, plan_dir, plan_id, link)
+    before = _rr3_snapshot(outside)
+    features_before = (plan_dir / "features.json").read_bytes()
+    memo_path = plan_dir / closeout.closeout_memo_relpath("F001")
+
+    with pytest.raises(closeout.CloseoutError, match="symlink"):
+        closeout.run_close_out(
+            plan_dir=plan_dir,
+            plan_id=plan_id,
+            feature_id="F001",
+            reason_class="spec_ambiguity",
+            tier="trivial",
+            agents_in_panel=["claude", "codex"],
+        )
+
+    assert _rr3_snapshot(outside) == before
+    assert not memo_path.exists()
+    assert (plan_dir / "features.json").read_bytes() == features_before
+    linked = plan_dir / "audit" if link == "audit_dir" else plan_dir / "audit" / f"signoff-{plan_id}.json"
+    assert linked.is_symlink()
