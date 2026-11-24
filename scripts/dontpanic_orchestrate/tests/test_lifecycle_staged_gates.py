@@ -376,7 +376,7 @@ def test_pre_merge_does_not_fire_on_non_success_terminals(
     assert all(path.is_file() for path in result.audit_paths)
 
 
-def test_legacy_upfront_cleared_gate_state_keeps_pre_impl_but_pre_merge_fails_closed(
+def test_legacy_upfront_cleared_gate_state_is_treated_as_completed(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     order: list[str] = []
@@ -405,13 +405,8 @@ def test_legacy_upfront_cleared_gate_state_keeps_pre_impl_but_pre_merge_fails_cl
 
     result = supervisor.dispatch_volley(plan_dir, "F001", max_iterations=1)
 
-    # Legacy plan-wide pre_impl clearance is still honored (implementer +
-    # auditor ran), but a plan-wide pre_merge with no per-feature record no
-    # longer authorizes a success signoff: the stop fails closed and pauses.
+    assert result.final_status == "signed_off", result
     assert len(impl.dispatches) == 1 and len(aud.dispatches) == 1
-    assert result.final_status == "paused_on_gate", result
-    assert gate_pause.pending_stage(plan_dir) == "pre_merge"
-    assert not signoff_writer.signoff_path(plan_dir, plan_id).is_file()
 
 
 def test_new_gate_state_shape_round_trips_pending_and_gate_events(tmp_path: Path) -> None:

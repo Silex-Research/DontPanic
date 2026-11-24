@@ -132,4 +132,4 @@ def test_supervisor_f002_pauses_after_f001_pre_merge_approval(
     assert signoffs == []
     state = json.loads(gate_pause.gate_state_path(plan_dir).read_text())
     assert state["pending_stage"] == "pre_merge"
-    assert state["pending_feature_id"] == "F002"
+    assert state["pending_stage_features"] == {"pre_merge": ["F002"]}

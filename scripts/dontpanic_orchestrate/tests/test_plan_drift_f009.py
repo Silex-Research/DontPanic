@@ -103,7 +103,12 @@ def test_record_and_read_baseline_roundtrip(tmp_path):
     assert len(fp.decision_lines) == 1
     assert plan_drift._decision_id_of(fp.decision_lines[0]) == "D001"
     assert "F001" in fp.features_semantics["by_id"]
-    assert fp.gate_semantics == {"cleared_gates": [], "completed_stages": []}
+    assert fp.gate_semantics == {
+        "cleared_gates": [],
+        "completed_stages": [],
+        "completed_stage_features": {},
+        "legacy_upfront_pre_merge": False,
+    }
 
 
 def test_no_change_no_drift(tmp_path):

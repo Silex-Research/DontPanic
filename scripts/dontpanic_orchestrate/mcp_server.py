@@ -258,6 +258,9 @@ class ApproveGateInput(_StrictModel):
     plan: str
     gate: str
     confirm: bool = False
+    # Per-feature gates (pre_merge): the feature this approval credits.
+    # Required when more than one feature is paused on the gate.
+    feature_id: str | None = None
 
 
 class ReadEvidenceInput(_StrictModel):
@@ -449,13 +452,16 @@ def tool_approve_gate(args: dict[str, Any]) -> dict[str, Any]:
     plan_dir = _resolve_safe_path(inp.plan)
     loaded = plan_loader.load(plan_dir)
     is_cleared = gate_pause.is_gate_cleared(plan_dir, inp.gate)
-    eligible = gate_pause.is_gate_approval_eligible(plan_dir, inp.gate)
+    refusal = gate_pause.approval_refusal(plan_dir, inp.gate, inp.feature_id)
+    eligible = gate_pause.is_gate_approval_eligible(plan_dir, inp.gate) and refusal is None
     intent = {
         "plan_id": loaded.plan_id,
         "plan_dir": str(plan_dir),
         "gate": inp.gate,
         "currently_cleared": is_cleared,
         "would_clear": (not is_cleared) and eligible,
+        **({"feature_id": inp.feature_id} if inp.feature_id else {}),
+        **({"refused": refusal} if refusal else {}),
     }
     if not inp.confirm:
         return {
@@ -463,7 +469,9 @@ def tool_approve_gate(args: dict[str, Any]) -> dict[str, Any]:
             "intent": intent,
             "message": "dry-run; pass confirm=true to clear the gate.",
         }
-    changed = gate_pause.approve_gate(plan_dir, inp.gate, plan_id=loaded.plan_id)
+    changed = gate_pause.approve_gate(
+        plan_dir, inp.gate, plan_id=loaded.plan_id, feature_id=inp.feature_id
+    )
     return {
         "dry_run": False,
         "intent": intent,

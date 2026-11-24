@@ -152,15 +152,47 @@ def should_run_design_volley(
 # The review ledger lives in the plan dir; it lets a re-lock review only what
 # changed since the last design review instead of re-scanning the whole plan.
 LEDGER_RELPATH = Path("evidence") / "design-review" / "ledger.json"
-LEDGER_SCHEMA = 1
+LEDGER_SCHEMA = 2
+
+# Bump whenever the reviewer prompt (build_design_reviewer_prompt /
+# _scope_block) changes meaning: a ledger written under another prompt version
+# is ignored (full review).
+PROMPT_VERSION = "design-review-prompt-2026-11-23.2"
+
+# Only these verdicts are a completed review that may advance the ledger. A
+# ``blocked`` verdict (including an unknown verdict coerced to blocked), a parse
+# failure and a dispatch failure never do.
+LEDGER_VERDICTS: frozenset[str] = frozenset({"signed_off", "needs_changes"})
+
+_SHA256_RE = re.compile(r"\A[0-9a-f]{64}\Z")
+_LEDGER_KEYS: frozenset[str] = frozenset(
+    {
+        "schema",
+        "plan_id",
+        "reviewed_at",
+        "mode",
+        "feature_hashes",
+        "objective_contract_digest",
+        "reviewer",
+        "prompt_version",
+        "verdict",
+        "open_findings",
+        "out_of_scope_history",
+        "digest",
+    }
+)
+_FINDING_KEYS: frozenset[str] = frozenset({"kind", "severity", "feature_id", "evidence"})
 
 
 @dataclass(frozen=True)
 class ReviewScope:
     """What a design-review run looks at. ``mode == "full"`` reviews every
-    feature (no ledger, or ``--design-review-full``). ``"scoped"`` reviews only
-    ``in_scope`` = changed/new features + features with prior open findings
-    (+ features depending on a removed one)."""
+    feature (no usable ledger, or ``--design-review-full``). ``"scoped"``
+    reviews only ``in_scope`` = changed/new features + features with prior
+    open findings + every feature that depends (directly or transitively) on a
+    changed, new or removed feature. ``feature_ids`` is the plan's current
+    feature set: a finding whose ``feature_id`` is not in it is plan-level and
+    always stays in scope."""
 
     mode: Literal["full", "scoped"]
     in_scope: tuple[str, ...] = ()
@@ -169,6 +201,9 @@ class ReviewScope:
     removed: tuple[str, ...] = ()
     prior_open: tuple[dict, ...] = ()
     last_reviewed_at: str = ""
+    dependents: tuple[str, ...] = ()
+    feature_ids: tuple[str, ...] = ()
+    reason: str = ""
 
     @property
     def nothing_to_review(self) -> bool:
@@ -176,10 +211,12 @@ class ReviewScope:
 
     def describe(self) -> str:
         if self.mode == "full":
-            return "full"
+            return "full" + (f" ({self.reason})" if self.reason else "")
         parts = []
         if self.changed:
             parts.append(f"{','.join(self.changed)} (changed)")
+        if self.dependents:
+            parts.append(f"{','.join(self.dependents)} (depends on changed)")
         if self.prior_open_ids:
             parts.append(f"{','.join(self.prior_open_ids)} (prior open)")
         if self.removed:
@@ -190,50 +227,207 @@ class ReviewScope:
 FULL_SCOPE = ReviewScope(mode="full")
 
 
+def _canonical(obj: object) -> str:
+    return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+
+
 def feature_hash(feature: dict) -> str:
     """sha256 of the canonical JSON of one feature dict."""
-    canonical = json.dumps(feature, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
-    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+    return hashlib.sha256(_canonical(feature).encode("utf-8")).hexdigest()
 
 
-def load_ledger(path: Path) -> dict | None:
-    """The prior ledger, or None when absent/unreadable (-> full review)."""
+def objective_contract_digest(contract: dict | None) -> str | None:
+    """sha256 of the canonical objective_contract JSON, or None when absent."""
+    if contract is None:
+        return None
+    return hashlib.sha256(_canonical(contract).encode("utf-8")).hexdigest()
+
+
+def reviewer_identity(auditor: object) -> dict:
+    """The reviewer a ledger is bound to: executor agent name + model if known."""
+    model = getattr(auditor, "model", None)
+    return {
+        "agent": str(getattr(auditor, "agent_name", "") or type(auditor).__name__),
+        "model": str(model) if model else None,
+    }
+
+
+@dataclass(frozen=True)
+class LedgerBinding:
+    """The inputs a ledger must match to be reused for a scoped re-review."""
+
+    plan_id: str
+    objective_contract: dict | None
+    reviewer: dict
+
+
+def _ledger_digest(blob: dict) -> str:
+    """sha256 over the bound fields. This is INTEGRITY, not authentication:
+    anyone who can write the ledger can recompute it. It catches torn, stale,
+    hand-edited or schema-drifted ledgers; the zero-call shortcut additionally
+    requires a ``signed_off`` ledger with no open findings."""
+    bound = {
+        "schema": blob.get("schema"),
+        "plan_id": blob.get("plan_id"),
+        "feature_hashes": blob.get("feature_hashes"),
+        "objective_contract_digest": blob.get("objective_contract_digest"),
+        "reviewer": blob.get("reviewer"),
+        "prompt_version": blob.get("prompt_version"),
+        "verdict": blob.get("verdict"),
+        "open_findings": blob.get("open_findings"),
+    }
+    return hashlib.sha256(_canonical(bound).encode("utf-8")).hexdigest()
+
+
+def _is_str_or_none(value: object) -> bool:
+    return value is None or isinstance(value, str)
+
+
+def _structure_error(blob: object) -> str | None:
+    """Strict schema/type check of a ledger blob; a reason string or None."""
+    if not isinstance(blob, dict):
+        return "ledger is not a JSON object"
+    keys = set(blob)
+    if keys != _LEDGER_KEYS:
+        missing = sorted(_LEDGER_KEYS - keys)
+        extra = sorted(keys - _LEDGER_KEYS)
+        return f"ledger fields differ (missing={missing}, unknown={extra})"
+    if blob["schema"] != LEDGER_SCHEMA or isinstance(blob["schema"], bool):
+        return f"ledger schema {blob['schema']!r} != {LEDGER_SCHEMA}"
+    for key in ("plan_id", "reviewed_at", "prompt_version", "digest"):
+        if not isinstance(blob[key], str):
+            return f"ledger field {key!r} is not a string"
+    if blob["mode"] not in ("full", "scoped"):
+        return f"ledger mode {blob['mode']!r} is invalid"
+    hashes = blob["feature_hashes"]
+    if not isinstance(hashes, dict) or not all(
+        isinstance(k, str) and isinstance(v, str) and _SHA256_RE.match(v) for k, v in hashes.items()
+    ):
+        return "ledger feature_hashes is not a map of feature id -> sha256"
+    contract = blob["objective_contract_digest"]
+    if contract is not None and not (isinstance(contract, str) and _SHA256_RE.match(contract)):
+        return "ledger objective_contract_digest is not a sha256 or null"
+    reviewer = blob["reviewer"]
+    if not (
+        isinstance(reviewer, dict)
+        and set(reviewer) == {"agent", "model"}
+        and isinstance(reviewer["agent"], str)
+        and _is_str_or_none(reviewer["model"])
+    ):
+        return "ledger reviewer is not {agent, model}"
+    if blob["verdict"] not in LEDGER_VERDICTS:
+        return f"ledger verdict {blob['verdict']!r} is not a completed review"
+    findings = blob["open_findings"]
+    if not isinstance(findings, list) or not all(
+        isinstance(f, dict)
+        and set(f) == _FINDING_KEYS
+        and all(isinstance(f[k], str) for k in _FINDING_KEYS)
+        for f in findings
+    ):
+        return "ledger open_findings is not a list of findings"
+    if not isinstance(blob["out_of_scope_history"], list):
+        return "ledger out_of_scope_history is not a list"
+    return None
+
+
+def ledger_rejection(blob: object, binding: LedgerBinding) -> str | None:
+    """Why ``blob`` cannot be reused for ``binding`` (-> full review), or None."""
+    error = _structure_error(blob)
+    if error:
+        return error
+    if not isinstance(blob, dict):  # unreachable: _structure_error checked it
+        return "ledger is not a JSON object"
+    if blob["digest"] != _ledger_digest(blob):
+        return "ledger digest mismatch (edited or torn)"
+    if blob["plan_id"] != binding.plan_id:
+        return f"ledger is for plan {blob['plan_id']!r}, not {binding.plan_id!r}"
+    if blob["objective_contract_digest"] != objective_contract_digest(binding.objective_contract):
+        return "objective_contract.json changed since the last review"
+    if blob["reviewer"] != binding.reviewer:
+        return f"reviewer changed ({blob['reviewer']} -> {binding.reviewer})"
+    if blob["prompt_version"] != PROMPT_VERSION:
+        return f"reviewer prompt version changed ({blob['prompt_version']} -> {PROMPT_VERSION})"
+    return None
+
+
+def load_ledger_checked(path: Path, binding: LedgerBinding) -> tuple[dict | None, str]:
+    """``(ledger, "")`` when reusable, else ``(None, reason)`` -> full review."""
     try:
-        blob = json.loads(Path(path).read_text())
-    except (OSError, ValueError):
-        return None
-    if not isinstance(blob, dict) or not isinstance(blob.get("feature_hashes"), dict):
-        return None
-    return blob
+        text = Path(path).read_text()
+    except FileNotFoundError:
+        return None, "no ledger"
+    except OSError as exc:
+        return None, f"ledger unreadable ({exc.__class__.__name__})"
+    try:
+        blob = json.loads(text)
+    except ValueError:
+        return None, "ledger is not valid JSON"
+    reason = ledger_rejection(blob, binding)
+    if reason:
+        return None, reason
+    return blob, ""
+
+
+def load_ledger(path: Path, binding: LedgerBinding) -> dict | None:
+    """The prior ledger, or None when absent/invalid/unbound (-> full review)."""
+    return load_ledger_checked(path, binding)[0]
+
+
+def _transitive_dependents(current: dict[str, dict], roots: set[str]) -> tuple[str, ...]:
+    """Every current feature that depends, directly or transitively, on any of
+    ``roots`` (excluding the roots themselves), in plan order."""
+    reached: set[str] = set()
+    frontier = set(roots)
+    while frontier:
+        nxt = {
+            fid
+            for fid, f in current.items()
+            if fid not in reached
+            and fid not in roots
+            and set(map(str, f.get("depends_on") or [])) & frontier
+        }
+        reached |= nxt
+        frontier = nxt
+    return tuple(fid for fid in current if fid in reached)
 
 
 def compute_scope(features: Sequence[dict], ledger: dict | None) -> ReviewScope:
-    """Full scope without a ledger; otherwise the scoped re-review set."""
+    """Full scope without a usable ledger; otherwise the scoped re-review set.
+
+    Full review is forced when a prior open finding is plan-level (its
+    ``feature_id`` is not a current feature), so it is never silently dropped.
+    The zero-call shortcut (nothing in scope) is only taken from a
+    ``signed_off`` ledger with no open findings."""
     if ledger is None:
         return FULL_SCOPE
     prior_hashes: dict = ledger.get("feature_hashes") or {}
     current = {str(f.get("id", "")): f for f in features}
+    prior_open = tuple(f for f in ledger.get("open_findings") or [] if isinstance(f, dict))
+    plan_level = [f for f in prior_open if str(f.get("feature_id", "")) not in current]
+    if plan_level:
+        return ReviewScope(
+            mode="full",
+            reason=f"{len(plan_level)} open plan-level finding(s) from the last review",
+        )
     changed = tuple(
         fid for fid, f in current.items() if prior_hashes.get(fid) != feature_hash(f)
     )
     removed = tuple(sorted(fid for fid in prior_hashes if fid not in current))
-    prior_open = tuple(
-        f for f in ledger.get("open_findings") or [] if isinstance(f, dict)
-    )
     prior_open_ids = tuple(
         dict.fromkeys(
             str(f.get("feature_id", ""))
             for f in prior_open
-            if str(f.get("feature_id", "")) in current
-            and str(f.get("feature_id", "")) not in changed
+            if str(f.get("feature_id", "")) not in changed
         )
     )
     dependents = tuple(
         fid
-        for fid, f in current.items()
-        if set(map(str, f.get("depends_on") or [])) & set(removed)
+        for fid in _transitive_dependents(current, set(changed) | set(removed))
+        if fid not in changed
     )
-    in_scope = tuple(dict.fromkeys(changed + prior_open_ids + dependents))
+    in_scope = tuple(dict.fromkeys(changed + dependents + prior_open_ids))
+    if not in_scope and not removed and (ledger.get("verdict") != "signed_off" or prior_open):
+        return ReviewScope(mode="full", reason="last review did not sign off")
     return ReviewScope(
         mode="scoped",
         in_scope=in_scope,
@@ -242,18 +436,27 @@ def compute_scope(features: Sequence[dict], ledger: dict | None) -> ReviewScope:
         removed=removed,
         prior_open=prior_open,
         last_reviewed_at=str(ledger.get("reviewed_at", "")),
+        dependents=dependents,
+        feature_ids=tuple(current),
     )
 
 
 def apply_scope(envelope: DesignVolleyEnvelope, scope: ReviewScope) -> DesignVolleyEnvelope:
-    """Move findings on out-of-scope features into ``out_of_scope``. When the
-    reviewer said needs_changes and nothing in scope remains, the verdict is
-    downgraded to signed_off (recorded in ``scope_note``)."""
+    """Move findings on out-of-scope (unchanged, already-reviewed, not
+    dependent) features into ``out_of_scope``. Plan-level findings (feature id
+    not a current feature) always stay in scope. When the reviewer said
+    needs_changes and nothing in scope remains, the verdict is downgraded to
+    signed_off (recorded in ``scope_note``)."""
     if scope.mode == "full":
         return envelope
     allowed = set(scope.in_scope)
-    in_scope = [f for f in envelope.findings if f.feature_id in allowed]
-    out = [f.to_dict() for f in envelope.findings if f.feature_id not in allowed]
+    known = set(scope.feature_ids)
+
+    def keep(f: DesignFinding) -> bool:
+        return f.feature_id in allowed or f.feature_id not in known
+
+    in_scope = [f for f in envelope.findings if keep(f)]
+    out = [f.to_dict() for f in envelope.findings if not keep(f)]
     envelope.findings = in_scope
     envelope.out_of_scope.extend(out)
     if envelope.verdict == "needs_changes" and out and not in_scope:
@@ -265,31 +468,49 @@ def apply_scope(envelope: DesignVolleyEnvelope, scope: ReviewScope) -> DesignVol
     return envelope
 
 
+def ledger_advances(envelope: DesignVolleyEnvelope) -> bool:
+    """Only a completed review (parsed ``signed_off`` / ``needs_changes``)
+    advances the ledger; blocked / coerced / unparsed / skipped runs never do."""
+    return bool(envelope.reviewed) and envelope.verdict in LEDGER_VERDICTS
+
+
 def write_ledger(
     path: Path,
     features: Sequence[dict],
     envelope: DesignVolleyEnvelope,
     scope: ReviewScope,
     prior: dict | None,
-) -> None:
-    """Record this review. ``open_findings`` = this run's in-scope findings
-    (prior open findings not re-raised are resolved); out-of-scope findings are
-    appended to ``out_of_scope_history`` for audit. Raises OSError on failure."""
+    binding: LedgerBinding,
+) -> bool:
+    """Record this review, bound to ``binding``. Returns False (nothing
+    written) unless :func:`ledger_advances`. ``open_findings`` = this run's
+    in-scope findings incl. plan-level ones (prior open findings not re-raised
+    are resolved); out-of-scope findings are appended to
+    ``out_of_scope_history`` for audit. Raises OSError on write failure."""
+    if not ledger_advances(envelope):
+        return False
     reviewed_at = datetime.now(timezone.utc).isoformat()
     history = list((prior or {}).get("out_of_scope_history") or [])
     if envelope.out_of_scope:
         history.append({"reviewed_at": reviewed_at, "findings": list(envelope.out_of_scope)})
     blob = {
         "schema": LEDGER_SCHEMA,
+        "plan_id": binding.plan_id,
         "reviewed_at": reviewed_at,
         "mode": scope.mode,
         "feature_hashes": {str(f.get("id", "")): feature_hash(f) for f in features},
+        "objective_contract_digest": objective_contract_digest(binding.objective_contract),
+        "reviewer": dict(binding.reviewer),
+        "prompt_version": PROMPT_VERSION,
+        "verdict": envelope.verdict,
         "open_findings": [f.to_dict() for f in envelope.findings],
         "out_of_scope_history": history,
     }
+    blob["digest"] = _ledger_digest(blob)
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(blob, indent=2, sort_keys=True) + "\n")
+    return True
 
 
 # ─────────────────────────────── prompts ───────────────────────────────────
@@ -305,6 +526,10 @@ def _scope_block(scope: ReviewScope | None) -> str:
         f"  in-scope: {', '.join(scope.in_scope) or '(none)'}",
         f"  changed since last review: {', '.join(scope.changed) or '(none)'}",
     ]
+    if scope.dependents:
+        lines.append(
+            f"  depend on a changed feature: {', '.join(scope.dependents)}"
+        )
     if scope.removed:
         lines.append(f"  removed since last review: {', '.join(scope.removed)}")
     if scope.prior_open:
@@ -424,7 +649,10 @@ def parse_design_envelope(raw: str, *, rounds: int = 1) -> DesignVolleyEnvelope:
         return DesignVolleyEnvelope(verdict="blocked", rounds=rounds, reviewed=False)
 
     verdict = blob.get("verdict")
-    if verdict not in ("signed_off", "needs_changes", "blocked"):
+    # An unknown verdict is coerced to blocked and is NOT a completed review
+    # (it never advances the convergence ledger).
+    coerced = verdict not in ("signed_off", "needs_changes", "blocked")
+    if coerced:
         verdict = "blocked"
 
     findings: list[DesignFinding] = []
@@ -437,7 +665,11 @@ def parse_design_envelope(raw: str, *, rounds: int = 1) -> DesignVolleyEnvelope:
         else:
             unrecognized.append(dict(raw_finding))
     return DesignVolleyEnvelope(
-        verdict=verdict, findings=findings, rounds=rounds, unrecognized=unrecognized
+        verdict=verdict,
+        findings=findings,
+        rounds=rounds,
+        unrecognized=unrecognized,
+        reviewed=not coerced,
     )
 
 

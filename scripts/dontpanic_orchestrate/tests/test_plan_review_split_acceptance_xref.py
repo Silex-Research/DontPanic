@@ -66,7 +66,9 @@ def test_back_reference_does_not_split():
         ("   ", ()),
         ("", ()),
         ("Preamble here. (1) a (2) b", ("Preamble here.", "a", "b")),
-        ("(1)a(2)b(12)c", ("a", "b(12)c")),
+        # (12) is outside the run and does not read as a cross-reference, so
+        # the count is conservative (never below the plain split's 3).
+        ("(1)a(2)b(12)c", ("a", "b", "c")),
         # The first marker anchors the sequence whatever its number (split
         # children keep their parent's numbering).
         ("(3) C", ("C",)),

@@ -510,6 +510,17 @@ def process_approval(
             event_id=event_id,
         )
 
+    # Per-feature gates (pre_merge): the bridge event names no feature, so it
+    # may clear one only when exactly one feature is paused on it.
+    per_feature_refusal = gate_pause.approval_refusal(plan_dir, gate, None)
+    if per_feature_refusal:
+        return _refuse(
+            REFUSED_NOT_PENDING,
+            gate,
+            f"{per_feature_refusal}; approve from the CLI with --feature.",
+            event_id=event_id,
+        )
+
     actor = f"buzz:{pubkey}"
     changed = gate_pause.approve_gate(plan_dir, gate, plan_id=plan_id, actor=actor)
     if not changed:

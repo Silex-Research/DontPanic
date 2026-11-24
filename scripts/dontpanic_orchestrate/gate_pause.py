@@ -208,8 +208,43 @@ def _mark_stage_completed_if_done(state: dict[str, Any], stage: str) -> None:
 # F002 write a success signoff unreviewed. Its completion is keyed by feature in
 # ``completed_stage_features``; the plan-wide ``cleared_gates`` /
 # ``completed_stages`` entries are still written for other readers but never
-# authorize skipping the stop.
+# authorize skipping the stop for a staged-schema gate-state (see
+# :func:`_legacy_pre_merge_authority` for the one legacy exception).
 PER_FEATURE_STAGES: frozenset[str] = frozenset({"pre_merge"})
+
+# Keys that only the staged gate code writes. A gate-state carrying ANY of
+# them is in the staged schema and gets no plan-wide pre_merge authority.
+_STAGED_SCHEMA_KEYS: tuple[str, ...] = (
+    "gate_events",
+    "completed_stages",
+    "pending_stage",
+    "completed_stage_features",
+    "pending_stage_features",
+)
+
+# D004/D009 legacy-resume marker. Written ONLY by
+# :func:`record_legacy_upfront_pre_merge` while migrating a truly-legacy
+# upfront-cleared gate-state (it converts the file to the staged schema, so the
+# marker is what keeps later features of that same legacy plan honored). A
+# hand-added marker is gate-state drift (plan_drift projects it).
+LEGACY_UPFRONT_PRE_MERGE = "legacy_upfront_pre_merge"
+
+
+def _is_truly_legacy(state: dict[str, Any]) -> bool:
+    """True for a gate-state written before staged gates existed."""
+    return not any(k in state for k in _STAGED_SCHEMA_KEYS)
+
+
+def _legacy_pre_merge_authority(state: dict[str, Any]) -> bool:
+    """D004/D009: a truly-legacy upfront ``pre_merge`` clearance (or the marker
+    left by migrating one) keeps authorizing pre_merge for every feature. A
+    staged-schema plan-wide clearance never does."""
+    if state.get(LEGACY_UPFRONT_PRE_MERGE) is True:
+        return True
+    if not _is_truly_legacy(state):
+        return False
+    cleared = set(_coerce_cleared_gates(state.get("cleared_gates")))
+    return all(g in cleared for g in _STAGE_GATES["pre_merge"])
 
 
 def _completed_features(state: dict[str, Any], stage: str) -> list[str]:
@@ -220,14 +255,95 @@ def _completed_features(state: dict[str, Any], stage: str) -> list[str]:
     return [str(f) for f in done] if isinstance(done, list) else []
 
 
+def _pending_features(state: dict[str, Any], stage: str) -> list[str]:
+    """Features currently paused on per-feature ``stage``. Reads the list
+    ``pending_stage_features[stage]`` plus the older single
+    ``pending_feature_id`` slot (compat with gate-state written before the
+    list existed)."""
+    if stage not in PER_FEATURE_STAGES:
+        return []
+    out: list[str] = []
+    by_stage = state.get("pending_stage_features")
+    if isinstance(by_stage, dict) and isinstance(by_stage.get(stage), list):
+        out = [str(f) for f in by_stage[stage] if f]
+    legacy_slot = state.get("pending_feature_id")
+    if legacy_slot and state.get("pending_stage") == stage and str(legacy_slot) not in out:
+        out.append(str(legacy_slot))
+    return list(dict.fromkeys(out))
+
+
+def _set_pending_features(state: dict[str, Any], stage: str, features: list[str]) -> None:
+    by_stage = state.get("pending_stage_features")
+    by_stage = dict(by_stage) if isinstance(by_stage, dict) else {}
+    if features:
+        by_stage[stage] = list(dict.fromkeys(features))
+    else:
+        by_stage.pop(stage, None)
+    if by_stage:
+        state["pending_stage_features"] = by_stage
+    else:
+        state.pop("pending_stage_features", None)
+    # The single slot is folded into the list; never written any more.
+    state.pop("pending_feature_id", None)
+
+
+def pending_features(plan_dir: Path, stage: str = "pre_merge") -> list[str]:
+    """Features currently paused on per-feature ``stage`` (``pre_merge``)."""
+    return _pending_features(_read_state(plan_dir), stage)
+
+
+def _per_feature_approval_refusal(
+    state: dict[str, Any], stage: str, feature_id: str | None
+) -> str | None:
+    """Why approving per-feature ``stage`` for ``feature_id`` must be refused,
+    or None when it may proceed. One approval credits exactly one feature:
+
+      - a named feature must be one of the pending features;
+      - an unnamed approval is allowed only when exactly one feature is
+        pending (or none is recorded at all — an old-style feature-less pause,
+        which credits no feature and so authorizes no finalize)."""
+    if stage not in PER_FEATURE_STAGES:
+        return None
+    pending = _pending_features(state, stage)
+    if feature_id:
+        if str(feature_id) not in pending:
+            return (
+                f"feature {feature_id!r} is not paused on {stage} "
+                f"(pending: {pending or '(none)'})"
+            )
+        return None
+    if len(pending) > 1:
+        return (
+            f"{len(pending)} features are paused on {stage} ({', '.join(pending)}); "
+            f"name the one you approve with --feature"
+        )
+    return None
+
+
+def approval_refusal(plan_dir: Path, gate: Any, feature_id: str | None = None) -> str | None:
+    """Public pre-check for CLI / MCP / bridge: the reason :func:`approve_gate`
+    would refuse ``gate`` for ``feature_id`` on per-feature grounds, else None."""
+    gate_str = _stringify_gates([gate])[0]
+    stage = _stage_for_gate(gate_str)
+    if stage is None:
+        return None
+    return _per_feature_approval_refusal(_read_state(plan_dir), stage, feature_id)
+
+
 def _is_feature_stage_completed(state: dict[str, Any], stage: str, feature_id: str | None) -> bool:
-    """Fail closed: no feature id, or no per-feature record -> not completed."""
-    return bool(feature_id) and str(feature_id) in _completed_features(state, stage)
+    """Fail closed: no feature id, or no per-feature record -> not completed.
+    The only plan-wide exception is the D004/D009 legacy authority."""
+    if not feature_id:
+        return False
+    if str(feature_id) in _completed_features(state, stage):
+        return True
+    return stage == "pre_merge" and _legacy_pre_merge_authority(state)
 
 
-def _mark_feature_stage_completed(state: dict[str, Any], stage: str) -> None:
-    """Record ``stage`` complete for the feature that paused on it."""
-    feature_id = state.get("pending_feature_id")
+def _mark_feature_stage_completed(
+    state: dict[str, Any], stage: str, feature_id: str | None
+) -> None:
+    """Record ``stage`` complete for ``feature_id`` and drop it from pending."""
     if stage not in PER_FEATURE_STAGES or not feature_id:
         return
     by_stage = state.get("completed_stage_features")
@@ -237,6 +353,51 @@ def _mark_feature_stage_completed(state: dict[str, Any], stage: str) -> None:
         done.append(str(feature_id))
     by_stage[stage] = done
     state["completed_stage_features"] = by_stage
+    _set_pending_features(
+        state, stage, [f for f in _pending_features(state, stage) if f != str(feature_id)]
+    )
+
+
+def record_legacy_upfront_pre_merge(plan_dir: Path, *, plan_id: str, feature_id: str) -> bool:
+    """D004/D009 migration: the supervisor honored a legacy upfront
+    ``pre_merge`` clearance for ``feature_id``. Record the feature in
+    ``completed_stage_features`` (so the finalizer's per-feature check passes)
+    and, when the file is still truly legacy, set the
+    ``legacy_upfront_pre_merge`` marker so later features of the same legacy
+    plan stay honored after this write converts the file to the staged schema.
+    Returns True iff state changed. Never sets the marker on a staged file."""
+    if not feature_id:
+        return False
+    state = _read_state(plan_dir)
+    if not _legacy_pre_merge_authority(state):
+        return False
+    if str(feature_id) in _completed_features(state, "pre_merge") and state.get(
+        LEGACY_UPFRONT_PRE_MERGE
+    ) is True:
+        return False
+    if _is_truly_legacy(state):
+        state[LEGACY_UPFRONT_PRE_MERGE] = True
+    by_stage = state.get("completed_stage_features")
+    by_stage = dict(by_stage) if isinstance(by_stage, dict) else {}
+    done = _completed_features(state, "pre_merge")
+    if str(feature_id) not in done:
+        done.append(str(feature_id))
+    by_stage["pre_merge"] = done
+    state["completed_stage_features"] = by_stage
+    state["plan_id"] = plan_id
+    history = list(state.get("history") or [])
+    history.append(
+        {
+            "action": "legacy_upfront_pre_merge",
+            "gate": "pre_merge",
+            "feature_id": str(feature_id),
+            "at": _now_iso(),
+            "actor": "supervisor",
+        }
+    )
+    state["history"] = history
+    _write_state(plan_dir, state)
+    return True
 
 
 def is_stage_completed(plan_dir: Path, stage: str, *, feature_id: str | None = None) -> bool:
@@ -411,9 +572,23 @@ def is_gate_approval_eligible(plan_dir: Path, gate: Any) -> bool:
     return not _blocked_by_other_pending_stage(_read_state(plan_dir), gate_str)
 
 
-def approve_gate(plan_dir: Path, gate: Any, *, plan_id: str, actor: str = "operator") -> bool:
+def approve_gate(
+    plan_dir: Path,
+    gate: Any,
+    *,
+    plan_id: str,
+    actor: str = "operator",
+    feature_id: str | None = None,
+) -> bool:
     """Mark a single gate cleared. Idempotent — re-approving is a no-op
     (no INBOX append). Returns True if state changed.
+
+    ``pre_merge`` is per-feature: one approval credits exactly ONE pending
+    feature. ``feature_id`` names it and must be pending; omitted, it is
+    allowed only when exactly one feature is pending. Otherwise the call is
+    refused (returns False, nothing written). The stage stays pending (and
+    plan-wide ``pre_merge`` stays out of ``cleared_gates``) while any other
+    feature is still paused on it.
 
     Three lifecycles, distinguished by name prefix:
 
@@ -433,6 +608,14 @@ def approve_gate(plan_dir: Path, gate: Any, *, plan_id: str, actor: str = "opera
     gate_str = _stringify_gates([gate])[0]
     state = _read_state(plan_dir)
     state["plan_id"] = plan_id
+    stage = _stage_for_gate(gate_str)
+    per_feature = stage in PER_FEATURE_STAGES
+    pending_feats = _pending_features(state, stage) if per_feature and stage else []
+    if per_feature and stage and _per_feature_approval_refusal(state, stage, feature_id):
+        return False  # refuse: ambiguous or not-pending feature; nothing written
+    target_feature: str | None = None
+    if per_feature and pending_feats:
+        target_feature = str(feature_id) if feature_id else pending_feats[0]
     is_breaker = gate_str.startswith("breaker:")
     is_defer = gate_str.startswith("defer:")
     cleared = list(state.get("cleared_gates") or [])
@@ -446,7 +629,9 @@ def approve_gate(plan_dir: Path, gate: Any, *, plan_id: str, actor: str = "opera
         if gate_str not in active_defers_list:
             return False
     else:
-        if gate_str in cleared:
+        # A targeted per-feature approval is idempotent per feature (a credited
+        # feature is no longer pending), not on the plan-wide entry.
+        if target_feature is None and gate_str in cleared:
             return False
         # DP-002 — never pre-clear an unreached lifecycle stage (no mutation).
         if _blocked_by_other_pending_stage(state, gate_str):
@@ -460,9 +645,10 @@ def approve_gate(plan_dir: Path, gate: Any, *, plan_id: str, actor: str = "opera
     # Plan 2026-05-04-002 F001 D004 — record a per-clearance audit entry on
     # `gate_events` whenever a lifecycle-staged gate is cleared. Non-lifecycle
     # gates (on_escalation, breaker:*, defer:*) do not write `gate_events`.
-    stage = _stage_for_gate(gate_str)
     if stage is not None:
         _append_gate_event(state, gate_str, stage, actor, now)
+        if target_feature is not None:
+            state["gate_events"][-1]["feature_id"] = target_feature
 
     if is_breaker:
         # F006 transient lifecycle: pop from active_breakers; do NOT accumulate
@@ -483,8 +669,13 @@ def approve_gate(plan_dir: Path, gate: Any, *, plan_id: str, actor: str = "opera
         else:
             state.pop("active_defers", None)
         state["cleared_gates"] = [c for c in cleared if c != gate_str]
+    elif target_feature is not None and [f for f in pending_feats if f != target_feature]:
+        # Another feature is still paused on this per-feature stage: credit
+        # only the target; the plan-wide entry stays uncleared (stage pending).
+        state["cleared_gates"] = [c for c in cleared if c != gate_str]
     else:
-        cleared.append(gate_str)
+        if gate_str not in cleared:
+            cleared.append(gate_str)
         state["cleared_gates"] = cleared
 
     # Plan 2026-05-04-002 F001 — when a lifecycle gate is cleared, mark its
@@ -493,11 +684,9 @@ def approve_gate(plan_dir: Path, gate: Any, *, plan_id: str, actor: str = "opera
     # re-evaluating the stage (idempotency contract).
     if stage is not None:
         _mark_stage_completed_if_done(state, stage)
-        _mark_feature_stage_completed(state, stage)
+        _mark_feature_stage_completed(state, stage, target_feature)
 
     _maybe_clear_pause_marker(state)
-    if "pending_stage" not in state:
-        state.pop("pending_feature_id", None)
     _write_state(plan_dir, state)
     return True
 
@@ -550,6 +739,10 @@ def resume_all(
         stage_gates = set(_STAGE_GATES[pending_stage_value])
         pause_set = {g for g in pause_set if not is_lifecycle_gate(g) or g in stage_gates}
         pause_set |= stage_gates & declared_set
+        if _per_feature_approval_refusal(state, pending_stage_value, None):
+            # Several features paused on a per-feature stage: a bulk resume
+            # cannot pick one, so it clears none of them (use approve --feature).
+            pause_set -= stage_gates
     elif _pending_stage_invalid(state):
         # Sentinel 5870049314 MED-2 — invalid pending_stage: fail closed for
         # lifecycle gates (never clear pre_merge / pre_impl from pause_gates);
@@ -601,11 +794,11 @@ def resume_all(
     # Mark stage completion for any lifecycle stage whose gates just cleared.
     for stage_name in cleared_stages:
         _mark_stage_completed_if_done(state, stage_name)
-        _mark_feature_stage_completed(state, stage_name)
+        resumed = _pending_features(state, stage_name)
+        if len(resumed) == 1:
+            _mark_feature_stage_completed(state, stage_name, resumed[0])
     state["history"] = history
     _maybe_clear_pause_marker(state)
-    if "pending_stage" not in state:
-        state.pop("pending_feature_id", None)
     _write_state(plan_dir, state)
     return newly + pending_breakers + pending_defers
 
@@ -626,8 +819,8 @@ def record_pause(
     leaves ``pending_stage`` untouched (preserves the existing upfront-pause
     contract for transient breakers/defers and non-lifecycle human gates).
 
-    A per-feature stage (``pre_merge``) also records ``pending_feature_id`` and
-    re-arms the stage plan-wide: an earlier feature's ``pre_merge`` clearance
+    A per-feature stage (``pre_merge``) also appends ``feature_id`` to
+    ``pending_stage_features[stage]`` and re-arms the stage plan-wide: an earlier feature's ``pre_merge`` clearance
     is removed from ``cleared_gates`` / ``completed_stages`` so every approve
     path (CLI approve, resume, MCP, bridge) treats it as pending again. The
     earlier feature's own completion stays in ``completed_stage_features``.
@@ -642,10 +835,10 @@ def record_pause(
             raise ValueError(f"unknown lifecycle stage {stage!r}; valid: {list(LIFECYCLE_STAGES)}")
         state["pending_stage"] = stage
         if stage in PER_FEATURE_STAGES:
-            if feature_id:
-                state["pending_feature_id"] = str(feature_id)
-            else:
-                state.pop("pending_feature_id", None)
+            pending = _pending_features(state, stage)
+            if feature_id and str(feature_id) not in pending:
+                pending.append(str(feature_id))
+            _set_pending_features(state, stage, pending)
             stage_gates = set(_STAGE_GATES[stage])
             state["cleared_gates"] = [
                 g

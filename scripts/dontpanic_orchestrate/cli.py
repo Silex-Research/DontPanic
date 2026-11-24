@@ -375,8 +375,18 @@ def _approve_main(argv: list[str]) -> int:
         )
         return 0
 
+    # ``--feature <id>`` names the feature a per-feature gate (pre_merge)
+    # approval credits; one approval credits exactly one feature.
+    feature_id: str | None = None
+    if "--feature" in argv:
+        idx = argv.index("--feature")
+        if idx + 1 >= len(argv):
+            print("usage: dontpanic approve <plan-id> <gate> [--feature <id>]", file=sys.stderr)
+            return 2
+        feature_id = argv[idx + 1]
+        argv = argv[:idx] + argv[idx + 2 :]
     if len(argv) != 2:
-        print("usage: dontpanic approve <plan-id> <gate>", file=sys.stderr)
+        print("usage: dontpanic approve <plan-id> <gate> [--feature <id>]", file=sys.stderr)
         return 2
     plan_arg, gate = argv
     # F006: the global circuit breaker is hard-stop and intentionally has no
@@ -466,6 +476,10 @@ def _approve_main(argv: list[str]) -> int:
                 file=sys.stderr,
             )
             return 2
+    per_feature_refusal = gate_pause.approval_refusal(plan_dir, gate, feature_id)
+    if per_feature_refusal:
+        print(f"[approve] REFUSED gate {gate!r} — {per_feature_refusal}", file=sys.stderr)
+        return 2
     # Plan 2026-08-09-002 F007: show the pause snapshot before the clearance
     # line so the operator decides against the same three elements INBOX has.
     from dontpanic_orchestrate import brief_surfaces
@@ -473,13 +487,18 @@ def _approve_main(argv: list[str]) -> int:
     snapshot = brief_surfaces.load(plan_dir)
     if snapshot is not None:
         print(brief_surfaces.format_approve_prompt(snapshot))
-    changed = gate_pause.approve_gate(plan_dir, gate, plan_id=loaded.plan_id)
+    changed = gate_pause.approve_gate(
+        plan_dir, gate, plan_id=loaded.plan_id, feature_id=feature_id
+    )
     if changed:
         inbox.append_event(
             plan_dir,
             event="gate_cleared",
             plan_id=loaded.plan_id,
-            body=f"Operator cleared gate '{gate}' via 'approve'.",
+            body=(
+                f"Operator cleared gate '{gate}' via 'approve'"
+                + (f" for feature {feature_id}." if feature_id else ".")
+            ),
             gate=gate,
         )
         print(f"[approve] cleared gate {gate!r} for {loaded.plan_id}")
@@ -667,6 +686,14 @@ def _resume_main(argv: list[str]) -> int:
         metavar="<name>",
         help="Clear exactly one gate (parity with `approve <plan> <gate>`).",
     )
+    parser.add_argument(
+        "--feature",
+        default=None,
+        metavar="<id>",
+        dest="feature_id",
+        help="With --gate pre_merge: the feature this approval credits "
+        "(required when more than one feature is paused on pre_merge).",
+    )
     grp.add_argument(
         "--all",
         action="store_true",
@@ -771,6 +798,13 @@ def _resume_main(argv: list[str]) -> int:
                     file=sys.stderr,
                 )
                 return 2
+        per_feature_refusal = gate_pause.approval_refusal(plan_dir, gate, args.feature_id)
+        if per_feature_refusal:
+            print(
+                f"[resume --gate] REFUSED gate {gate!r} — {per_feature_refusal}",
+                file=sys.stderr,
+            )
+            return 2
         # Idempotent re-clear: approve_gate returns False when the gate is
         # already cleared (or — for transient breaker:* / defer:* — no longer
         # active). In that case we exit 0 with state untouched and emit no
@@ -782,7 +816,9 @@ def _resume_main(argv: list[str]) -> int:
         snapshot = brief_surfaces.load(plan_dir)
         if snapshot is not None:
             print(brief_surfaces.format_approve_prompt(snapshot))
-        changed = gate_pause.approve_gate(plan_dir, gate, plan_id=loaded.plan_id)
+        changed = gate_pause.approve_gate(
+            plan_dir, gate, plan_id=loaded.plan_id, feature_id=args.feature_id
+        )
         if not changed:
             print(f"[resume --gate] gate {gate!r} was already cleared")
             return 0
@@ -3952,8 +3988,19 @@ def _run_pre_lock_design_volley(
         # Convergence rule: with a ledger from an earlier review, re-review
         # only what changed (+ prior open findings); --design-review-full or
         # no ledger -> full review.
+        # The ledger is bound to this plan, objective_contract, reviewer and
+        # prompt version; any mismatch or a bad digest means a full review.
         ledger_path = plan_dir / design_review.LEDGER_RELPATH
-        ledger = None if full_review else design_review.load_ledger(ledger_path)
+        binding = design_review.LedgerBinding(
+            plan_id=loaded.plan_id,
+            objective_contract=contract,
+            reviewer=design_review.reviewer_identity(auditor),
+        )
+        ledger = None
+        if not full_review:
+            ledger, ledger_reason = design_review.load_ledger_checked(ledger_path, binding)
+            if ledger is None and ledger_reason != "no ledger":
+                print(f"[plan lock] design-review ledger ignored ({ledger_reason}); full review")
         scope = design_review.compute_scope(feature_dicts, ledger)
         print(f"[plan lock] design-review scope: {scope.describe()}")
         runner = run_volley if run_volley is not None else design_review.run_design_volley
@@ -3979,11 +4026,16 @@ def _run_pre_lock_design_volley(
                     f"  [{f.get('kind')}/{f.get('severity')}] "
                     f"{f.get('feature_id')}: {f.get('evidence')}"
                 )
-        # Only a real, parsed review advances the ledger (a skipped or
-        # unparseable run leaves the last good review in place).
-        if isinstance(envelope, design_review.DesignVolleyEnvelope) and envelope.reviewed:
+        # Only a completed review (signed_off / needs_changes) advances the
+        # ledger; blocked, coerced, unparseable, failed or skipped runs leave
+        # the last good review in place.
+        if isinstance(
+            envelope, design_review.DesignVolleyEnvelope
+        ) and design_review.ledger_advances(envelope):
             try:
-                design_review.write_ledger(ledger_path, feature_dicts, envelope, scope, ledger)
+                design_review.write_ledger(
+                    ledger_path, feature_dicts, envelope, scope, ledger, binding
+                )
             except OSError as exc:
                 print(f"[plan lock] WARN: design-review ledger not written ({exc!r})")
     except Exception as exc:  # noqa: BLE001 — advisory; never block the lock

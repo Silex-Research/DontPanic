@@ -180,7 +180,7 @@ def test_first_lock_is_full_and_writes_ledger(tmp_path):
     assert reviewer.calls == 1
     assert "design-review scope: full" in out
     ledger = _ledger(plan_dir)
-    assert ledger["schema"] == 1 and ledger["mode"] == "full"
+    assert ledger["schema"] == dr.LEDGER_SCHEMA and ledger["mode"] == "full"
     assert set(ledger["feature_hashes"]) == {"F002", "F009", "F010"}
     assert ledger["open_findings"] == []
 
@@ -197,7 +197,11 @@ def test_relock_on_unchanged_text_does_not_dispatch(tmp_path):
     assert "unchanged since last full review" in out
 
     # Same rule at the volley level, against a ledger of these exact dicts.
-    ledger = {"feature_hashes": {f["id"]: dr.feature_hash(f) for f in _FEATURES}}
+    ledger = {
+        "feature_hashes": {f["id"]: dr.feature_hash(f) for f in _FEATURES},
+        "verdict": "signed_off",
+        "open_findings": [],
+    }
     env = dr.run_design_volley(
         "p1", _FEATURES, auditor=second, scope=dr.compute_scope(_FEATURES, ledger)
     )
@@ -231,7 +235,12 @@ def test_changed_feature_scopes_review_and_quarantines_unchanged_findings(tmp_pa
         auditor=_CodexLikeReviewer(
             [{"verdict": "needs_changes", "findings": [_finding("F010"), _finding("F002")]}]
         ),
-        scope=dr.ReviewScope(mode="scoped", in_scope=("F010",), changed=("F010",)),
+        scope=dr.ReviewScope(
+            mode="scoped",
+            in_scope=("F010",),
+            changed=("F010",),
+            feature_ids=tuple(f["id"] for f in _FEATURES),
+        ),
     )
     assert [f.feature_id for f in env.findings] == ["F010"]
     assert env.out_of_scope == [_finding("F002")]
@@ -249,7 +258,12 @@ def test_only_out_of_scope_findings_downgrade_to_signed_off():
         "p1",
         _FEATURES,
         auditor=reviewer,
-        scope=dr.ReviewScope(mode="scoped", in_scope=("F010",), changed=("F010",)),
+        scope=dr.ReviewScope(
+            mode="scoped",
+            in_scope=("F010",),
+            changed=("F010",),
+            feature_ids=tuple(f["id"] for f in _FEATURES),
+        ),
     )
     assert env.verdict == "signed_off"
     assert env.findings == []

@@ -1139,17 +1139,16 @@ def finalize_signed_off_feature(
             f"'signed_off'; refuse to finalize. Address findings and re-audit first.",
         )
 
-    # pre_merge is per-feature: a later feature's pause re-arms the plan-wide
-    # entry, so this feature's own recorded approval also counts.
-    if not (
-        gate_pause.is_gate_cleared(plan_dir, PRE_MERGE_GATE)
-        or gate_pause.is_stage_completed(plan_dir, "pre_merge", feature_id=feature_id)
-    ):
+    # pre_merge is per-feature: only THIS feature's own recorded approval
+    # counts. A plan-wide ``cleared_gates`` entry never does (one approval must
+    # never finalize two features); the sole exception is the D004/D009
+    # truly-legacy upfront clearance, honored inside is_stage_completed.
+    if not gate_pause.is_stage_completed(plan_dir, "pre_merge", feature_id=feature_id):
         raise FinalizeError(
             "pre_merge_uncleared",
-            f"pre_merge gate is not cleared for {plan_id}; finalize requires the "
-            f"human pre_merge approval first "
-            f"(`dontpanic approve {plan_id} {PRE_MERGE_GATE}`).",
+            f"pre_merge gate is not cleared for {feature_id!r} in {plan_id}; "
+            f"finalize requires that feature's own human pre_merge approval first "
+            f"(`dontpanic approve {plan_id} {PRE_MERGE_GATE} --feature {feature_id}`).",
         )
 
     auditor = str(envelope.get("agent") or envelope.get("auditor") or "unknown")

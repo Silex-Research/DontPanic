@@ -214,7 +214,7 @@ def _clear_pre_merge(
         gate_pause.record_pause(
             plan_dir, plan_id=plan_id, pause_gates=["pre_merge"], stage="pre_merge", feature_id=fid
         )
-        assert gate_pause.approve_gate(plan_dir, "pre_merge", plan_id=plan_id)
+        assert gate_pause.approve_gate(plan_dir, "pre_merge", plan_id=plan_id, feature_id=fid)
         assert gate_pause.is_stage_completed(plan_dir, "pre_merge", feature_id=fid)
 
 
@@ -2680,7 +2680,11 @@ def _r10_two_volleys(plan_dir: Path, plan_id: str, *, child: bool) -> tuple[Path
 def test_r10_two_feature_finalize_selects_each_features_own_signoff(repo: Path, child: bool) -> None:
     plan_dir, plan_id = _r10_plan(repo, child=child)
     _r10_two_volleys(plan_dir, plan_id, child=child)
-    _clear_pre_merge(plan_dir, plan_id)
+    # Each feature gets its OWN pre_merge approval (no plan-wide clearance).
+    _clear_pre_merge(plan_dir, plan_id, ("F001", "F002"))
+    state = json.loads(gate_pause.gate_state_path(plan_dir).read_text())
+    assert state["completed_stage_features"] == {"pre_merge": ["F001", "F002"]}
+    assert "legacy_upfront_pre_merge" not in state
     plan_sp = signoff_writer.signoff_path(plan_dir, plan_id)
     plan_side = signoff_writer.charter_compliance_path(plan_dir, plan_id)
     plan_before = plan_sp.read_bytes()
@@ -2709,12 +2713,22 @@ def test_r10_two_feature_finalize_through_real_supervisor_volleys(
     repo: Path, captured: list[Any]
 ) -> None:
     """Real ``dispatch_volley`` for F001 then F002 (the second rewrites the
-    plan-level signoff); finalizing F001 then F002 both succeed."""
+    plan-level signoff); each feature pauses at its own pre_merge stop, is
+    approved by name, and finalizes through its own per-feature record."""
     plan_dir, plan_id = _r10_plan(repo, child=False)
-    _clear_pre_merge(plan_dir, plan_id, ("F001", "F002"))
-    assert supervisor.dispatch_volley(plan_dir, "F001", max_iterations=1).final_status == "signed_off"
-    f001_evidence = _r10_fsig(plan_dir, plan_id, "F001").read_bytes()
-    assert supervisor.dispatch_volley(plan_dir, "F002", max_iterations=1).final_status == "signed_off"
+    for fid in ("F001", "F002"):
+        paused = supervisor.dispatch_volley(plan_dir, fid, max_iterations=1)
+        assert paused.final_status == "paused_on_gate", (fid, paused)
+        assert gate_pause.pending_features(plan_dir) == [fid]
+        with pytest.raises(signed_off_finalizer.FinalizeError) as exc:
+            signed_off_finalizer.finalize_signed_off_feature(plan_dir, plan_id=plan_id, feature_id=fid)
+        assert exc.value.code == "pre_merge_uncleared"
+        assert gate_pause.approve_gate(plan_dir, "pre_merge", plan_id=plan_id, feature_id=fid)
+        if fid == "F001":
+            assert supervisor.dispatch_volley(plan_dir, fid, max_iterations=1).final_status == "signed_off"
+            f001_evidence = _r10_fsig(plan_dir, plan_id, "F001").read_bytes()
+        else:
+            assert supervisor.dispatch_volley(plan_dir, fid, max_iterations=1).final_status == "signed_off"
     plan_level = json.loads(signoff_writer.signoff_path(plan_dir, plan_id).read_text())
     assert all("F002" in a for a in plan_level["audits"]), plan_level["audits"]
     assert _r10_fsig(plan_dir, plan_id, "F001").read_bytes() == f001_evidence

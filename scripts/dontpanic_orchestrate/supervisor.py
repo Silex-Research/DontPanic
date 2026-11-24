@@ -2797,11 +2797,12 @@ def dispatch_volley(
                     # feature, skip evaluate_human_gates (audit-focus item 8).
                     # pre_merge is per-feature: F001's approval never lets
                     # F002 skip its own human stop.
+                    _pre_merge_done = gate_pause.is_stage_completed(
+                        loaded.plan_dir, "pre_merge", feature_id=feature_id
+                    )
                     pre_merge_info = (
                         None
-                        if gate_pause.is_stage_completed(
-                            loaded.plan_dir, "pre_merge", feature_id=feature_id
-                        )
+                        if _pre_merge_done
                         else gate_pause.evaluate_human_gates(
                             loaded.plan_dir,
                             declared_gates,
@@ -2873,6 +2874,20 @@ def dispatch_volley(
                     _drift_pause = _drift_pause_or_none(plan_drift.STAGE_SIGNOFF, iteration + 1)
                     if _drift_pause is not None:
                         return _drift_pause
+
+                    # D004/D009 — a truly-legacy upfront pre_merge clearance was
+                    # honored for this feature: migrate it into the per-feature
+                    # record (+ legacy marker) so the finalizer's per-feature
+                    # check passes. Done only AFTER the signoff drift check, so
+                    # a mid-run hand edit is caught before the supervisor folds
+                    # its own write into the drift baseline.
+                    if _pre_merge_done and declared_gates and "pre_merge" in [
+                        getattr(g, "value", g) for g in declared_gates
+                    ]:
+                        if gate_pause.record_legacy_upfront_pre_merge(
+                            loaded.plan_dir, plan_id=loaded.plan_id, feature_id=feature_id
+                        ):
+                            plan_drift.advance_gate_baseline(loaded.plan_dir)
 
                     # DP-003 — the transcript terminal is recorded AFTER
                     # _emit_volley_terminal (below) with its FINAL status, so a

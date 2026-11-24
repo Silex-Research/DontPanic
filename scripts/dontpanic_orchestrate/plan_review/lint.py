@@ -340,6 +340,56 @@ def tag_surfaces(text: str) -> tuple[str, ...]:
 
 
 _AC_MARKER_RE = re.compile(r"\((\d+)\)\s*")
+# A marker preceded by one of these words is a back-reference ("see (4)",
+# "in (2)", "per (3)") rather than a criterion boundary.
+_AC_XREF_BEFORE_RE = re.compile(
+    r"(?:\b(?:in|see|per|of|from|cf\.?|under|criterion|criteria|step|steps|item|items)"
+    r"|\(\d+\)\s*(?:[-\u2013\u2014]|to|through|and|or|,))\s*$",
+    re.IGNORECASE,
+)
+# A marker followed by a range dash opens a "(2)-(6)" range reference.
+_AC_RANGE_AFTER_RE = re.compile(r"\A\s*[-\u2013\u2014]\s*\(\d+\)")
+
+
+def _longest_ascending_run(numbers: list[int]) -> list[int]:
+    """Indices of the longest subsequence (in text order) whose numbers go up
+    by exactly one each step. Ties keep the run that starts earliest."""
+    best_len = [1] * len(numbers)
+    prev: list[int | None] = [None] * len(numbers)
+    for i, n in enumerate(numbers):
+        for j in range(i):
+            if numbers[j] == n - 1 and best_len[j] + 1 > best_len[i]:
+                best_len[i] = best_len[j] + 1
+                prev[i] = j
+    if not numbers:
+        return []
+    end = max(range(len(numbers)), key=lambda k: (best_len[k], -k))
+    run: list[int] = []
+    cursor: int | None = end
+    while cursor is not None:
+        run.append(cursor)
+        cursor = prev[cursor]
+    return run[::-1]
+
+
+def _is_cross_reference(text: str, marker: re.Match[str]) -> bool:
+    before = text[: marker.start()]
+    after = text[marker.start() :]
+    closing = after.find(")")
+    return bool(
+        _AC_XREF_BEFORE_RE.search(before)
+        or _AC_RANGE_AFTER_RE.match(after[closing + 1 :] if closing >= 0 else "")
+    )
+
+
+def _split_at(text: str, markers: list[re.Match[str]]) -> list[str]:
+    parts: list[str] = []
+    start = 0
+    for marker in markers:
+        parts.append(text[start : marker.start()])
+        start = marker.end()
+    parts.append(text[start:])
+    return [p.strip() for p in parts if p.strip()]
 
 
 def split_acceptance(acceptance: str) -> tuple[str, ...]:
@@ -349,26 +399,29 @@ def split_acceptance(acceptance: str) -> tuple[str, ...]:
     falls back to one criterion (the whole non-empty string) when no markers
     are present.
 
-    The first ``(n)`` marker opens a criterion whatever ``n`` is (it anchors
-    the sequence, so a split child starting at ``(3)`` still splits). After
-    that a marker opens a new criterion only when its number is the previous
-    marker's number + 1. Out-of-sequence markers are cross-references inside
-    a criterion (``"in (2)-(6)"``, ``"see (4)"``) and stay in its text.
+    Criterion boundaries are the LONGEST run of ``(n)`` markers whose numbers
+    go up by one (in text order), so a split child starting at ``(3)`` still
+    splits and an in-criterion cross-reference such as ``"in (2)-(6)"`` or
+    ``"see (4)"`` stays in its criterion's text. This count feeds the blocking
+    ``over_ac`` check, so it must never under-count: when a marker outside the
+    run does NOT read as a cross-reference (a range, or ``in / see / per / of
+    (n)``) — e.g. a skipped number ``(1) a (3) b`` or a leading ``See (9)`` the
+    pattern misses — the count is conservative: the larger of the run split and
+    the plain split at every marker.
     """
     text = acceptance.strip()
     if not text:
         return ()
-    parts: list[str] = []
-    start = 0
-    expected: int | None = None  # None until the first marker anchors it
-    for marker in _AC_MARKER_RE.finditer(text):
-        number = int(marker.group(1))
-        if expected is not None and number != expected:
-            continue  # cross-reference, not a criterion boundary
-        parts.append(text[start : marker.start()])
-        start = marker.end()
-        expected = number + 1
-    parts.append(text[start:])
+    markers = list(_AC_MARKER_RE.finditer(text))
+    run_idx = _longest_ascending_run([int(m.group(1)) for m in markers])
+    run_set = set(run_idx)
+    run_parts = _split_at(text, [markers[k] for k in run_idx])
+    outside = [m for k, m in enumerate(markers) if k not in run_set]
+    if any(not _is_cross_reference(text, m) for m in outside):
+        every_parts = _split_at(text, markers)
+        if len(every_parts) > len(run_parts):
+            run_parts = every_parts
+    parts = run_parts
     criteria = [p.strip() for p in parts if p.strip()]
     if criteria:
         return tuple(criteria)

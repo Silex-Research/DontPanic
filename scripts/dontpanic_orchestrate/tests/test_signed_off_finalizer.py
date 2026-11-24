@@ -98,8 +98,11 @@ def _plan_dir(tmp_path: Path, *, audit_status: str = "signed_off") -> Path:
 def _clear_pre_merge(plan_dir: Path) -> None:
     assert gate_pause.approve_gate(plan_dir, "pre_impl", plan_id=PLAN_ID)
     # F1: pre_merge is only approvable while the pre_merge stage is pending.
-    gate_pause.record_pause(plan_dir, plan_id=PLAN_ID, pause_gates=["pre_merge"], stage="pre_merge")
-    assert gate_pause.approve_gate(plan_dir, "pre_merge", plan_id=PLAN_ID)
+    # pre_merge is per-feature: approve it for F001 (the plan's only feature).
+    gate_pause.record_pause(
+        plan_dir, plan_id=PLAN_ID, pause_gates=["pre_merge"], stage="pre_merge", feature_id="F001"
+    )
+    assert gate_pause.approve_gate(plan_dir, "pre_merge", plan_id=PLAN_ID, feature_id="F001")
 
 
 # ───────────────────────────── AC(9) success ─────────────────────────────

@@ -72,25 +72,46 @@ Surfaces affected: <comma-separated list — see docs/RELEASE_IMPACT.md>
   whose plan-level signoff belongs only to other features gets that feature's
   evidence repaired without paid calls and without touching the plan-level
   signoff.
-- The `pre_merge` human stop is now per feature. Approving it for F001 no
-  longer lets F002 write a success signoff without its own stop; each feature
-  pauses and is approved separately. A plan whose gate state only records a
-  plan-wide `pre_merge` clearance pauses again rather than skipping, while
-  `pre_impl` stays plan-wide.
+- The `pre_merge` human stop is now per feature, and one approval credits
+  exactly one feature. When several features are paused on `pre_merge`,
+  `dontpanic approve <plan> pre_merge` refuses until you name one with
+  `--feature <id>` (also on `resume --gate`, the MCP `approve_gate` tool as
+  `feature_id`, and refused by the gate bridge, which cannot name a feature);
+  `resume --all` clears none of them. Approving F001 leaves the stop pending
+  for F002, and `dontpanic finalize` only accepts the feature's own approval,
+  never the plan-wide `cleared_gates` entry. A plan whose gate state was
+  written before staged gates (no `gate_events`, `completed_stages`,
+  `pending_stage` or `completed_stage_features`) and cleared `pre_merge`
+  upfront still resumes and finalizes every feature without a new stop; any
+  newer gate state gets no plan-wide `pre_merge` authority. `pre_impl` stays
+  plan-wide.
+- Plan-drift detection now covers the per-feature `pre_merge` record and the
+  legacy-resume marker, so adding a feature to `completed_stage_features` by
+  hand mid-run pauses the run (and `finalize` refuses) just as clearing a
+  gate by hand already did.
 - The plan-review lint no longer counts acceptance cross-references such as
-  "in (2)-(6)" or "see (4)" as extra criteria. The first `(n)` marker starts a
-  criterion whatever its number (so a split child beginning at `(3)` still
-  splits); after that a marker starts a new criterion only when it is the
-  previous number plus one, so a seven-criterion feature is no longer blocked
-  as having ten.
+  "in (2)-(6)", "see (4)" or "per (1)" as extra criteria, so a
+  seven-criterion feature is no longer blocked as having ten. Criteria are the
+  longest run of `(n)` markers counting up by one (a split child that starts
+  at `(3)` still splits). When another marker does not read as a
+  cross-reference (a skipped number, or a leading "See (9)" style reference),
+  the count never drops below the plain one-per-marker count, so the
+  ten-criteria block cannot be dodged.
 - The `--design-review` volley at `dontpanic plan lock` now reads the Codex
   reviewer's final message instead of its raw event stream, so its real verdict
-  and findings are printed instead of an empty `blocked`. Re-locks now review
-  only features that changed since the last review, plus any still-open
-  findings, using a ledger at `evidence/design-review/ledger.json`. Findings on
-  unchanged features are shown as advisory and never block, an unchanged plan
-  costs no reviewer call, and the new `--design-review-full` flag forces a full
-  review.
+  and findings are printed instead of an empty `blocked`. Re-locks review
+  only what changed since the last completed review, every feature that
+  depends on a changed feature, and any still-open findings, using a ledger at
+  `evidence/design-review/ledger.json`. Only a `signed_off` or `needs_changes`
+  review updates the ledger; a `blocked` or unrecognized verdict, an
+  unreadable reply or a failed call never does. A plan-level open finding
+  forces a full review. The ledger is tied to the plan, `objective_contract.json`,
+  the reviewer and the prompt version and carries a checksum; a mismatch or a
+  hand-edited ledger means a full review (the reason is printed). An
+  unchanged plan costs no reviewer call only when the last review signed off
+  with no open findings. Findings on unchanged, unrelated features are shown
+  as advisory and never block, and the new `--design-review-full` flag forces
+  a full review.
 
 ## 2026-11-12 — 0.2.1: Gate and signoff correctness fixes
 
