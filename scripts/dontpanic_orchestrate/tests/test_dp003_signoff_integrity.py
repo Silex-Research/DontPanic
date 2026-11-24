@@ -58,6 +58,7 @@ from dontpanic_orchestrate.executors.base import (  # noqa: E402
 )
 from dontpanic_orchestrate.patch_completeness_gate import PatchCompletenessError  # noqa: E402
 from dontpanic_orchestrate.plan_review.cross_feature import CrossFeatureEditError  # noqa: E402
+from dontpanic_orchestrate.tests._fixture_git import disable_fixture_signing  # noqa: E402
 
 PARENT_ID = "2026-11-12-400-infra-dp003i-parent"
 TOP_ID = "2026-11-12-401-infra-dp003i-top"
@@ -671,6 +672,7 @@ def test_item4b_dispatch_level_patch_gate_failure_announced_exactly_once(
     # a tracked one (so git lists it individually, not as a collapsed dir).
     git = ["git", "-C", str(plan_dir), "-c", "user.name=t", "-c", "user.email=t@example.invalid"]
     subprocess.run(["git", "init", "-q", str(plan_dir)], check=True)
+    disable_fixture_signing(plan_dir)
     (plan_dir / "tests").mkdir()
     (plan_dir / "tests" / "conftest.py").write_text("")
     subprocess.run([*git, "add", "tests/conftest.py"], check=True)
@@ -718,6 +720,7 @@ def test_r3b_dispatch_level_cross_feature_failure_announced_exactly_once(
     _clear_pre_merge(plan_dir, TOP_ID)
     git = ["git", "-C", str(plan_dir), "-c", "user.name=t", "-c", "user.email=t@example.invalid"]
     subprocess.run(["git", "init", "-q", str(plan_dir)], check=True)
+    disable_fixture_signing(plan_dir)
     (plan_dir / "src").mkdir()
     (plan_dir / "src" / "foreign_module.py").write_text("X = 1\n")
     subprocess.run([*git, "add", "src/foreign_module.py"], check=True)
