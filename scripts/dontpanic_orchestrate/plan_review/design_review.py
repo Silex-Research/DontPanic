@@ -32,9 +32,13 @@ neither touches a git diff nor runs patch-completeness. It reuses the
 
 from __future__ import annotations
 
+import hashlib
 import json
+import re
 from collections.abc import Sequence
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Literal
 
 from dontpanic_orchestrate.executors.base import (
@@ -99,6 +103,13 @@ class DesignVolleyEnvelope:
     findings: list[DesignFinding] = field(default_factory=list)
     rounds: int = 1
     unrecognized: list[dict] = field(default_factory=list)
+    # Scoped re-review (convergence rule): findings on unchanged, already
+    # reviewed features land here instead of ``findings`` and never block.
+    out_of_scope: list[dict] = field(default_factory=list)
+    scope_note: str = ""
+    # False when the reviewer produced no parseable envelope (or the dispatch
+    # failed / was skipped); such a run never advances the review ledger.
+    reviewed: bool = True
 
     def to_dict(self) -> dict:
         return {
@@ -106,6 +117,8 @@ class DesignVolleyEnvelope:
             "findings": [f.to_dict() for f in self.findings],
             "rounds": self.rounds,
             "unrecognized": list(self.unrecognized),
+            "out_of_scope": list(self.out_of_scope),
+            "scope_note": self.scope_note,
         }
 
     def findings_of_kind(self, kind: str) -> list[DesignFinding]:
@@ -134,17 +147,192 @@ def should_run_design_volley(
     return _has_warn_flag(report)
 
 
+# ─────────────────────────── convergence ledger ────────────────────────────
+
+# The review ledger lives in the plan dir; it lets a re-lock review only what
+# changed since the last design review instead of re-scanning the whole plan.
+LEDGER_RELPATH = Path("evidence") / "design-review" / "ledger.json"
+LEDGER_SCHEMA = 1
+
+
+@dataclass(frozen=True)
+class ReviewScope:
+    """What a design-review run looks at. ``mode == "full"`` reviews every
+    feature (no ledger, or ``--design-review-full``). ``"scoped"`` reviews only
+    ``in_scope`` = changed/new features + features with prior open findings
+    (+ features depending on a removed one)."""
+
+    mode: Literal["full", "scoped"]
+    in_scope: tuple[str, ...] = ()
+    changed: tuple[str, ...] = ()
+    prior_open_ids: tuple[str, ...] = ()
+    removed: tuple[str, ...] = ()
+    prior_open: tuple[dict, ...] = ()
+    last_reviewed_at: str = ""
+
+    @property
+    def nothing_to_review(self) -> bool:
+        return self.mode == "scoped" and not self.in_scope and not self.removed
+
+    def describe(self) -> str:
+        if self.mode == "full":
+            return "full"
+        parts = []
+        if self.changed:
+            parts.append(f"{','.join(self.changed)} (changed)")
+        if self.prior_open_ids:
+            parts.append(f"{','.join(self.prior_open_ids)} (prior open)")
+        if self.removed:
+            parts.append(f"{','.join(self.removed)} (removed)")
+        return "scoped: " + (", ".join(parts) or "nothing changed")
+
+
+FULL_SCOPE = ReviewScope(mode="full")
+
+
+def feature_hash(feature: dict) -> str:
+    """sha256 of the canonical JSON of one feature dict."""
+    canonical = json.dumps(feature, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def load_ledger(path: Path) -> dict | None:
+    """The prior ledger, or None when absent/unreadable (-> full review)."""
+    try:
+        blob = json.loads(Path(path).read_text())
+    except (OSError, ValueError):
+        return None
+    if not isinstance(blob, dict) or not isinstance(blob.get("feature_hashes"), dict):
+        return None
+    return blob
+
+
+def compute_scope(features: Sequence[dict], ledger: dict | None) -> ReviewScope:
+    """Full scope without a ledger; otherwise the scoped re-review set."""
+    if ledger is None:
+        return FULL_SCOPE
+    prior_hashes: dict = ledger.get("feature_hashes") or {}
+    current = {str(f.get("id", "")): f for f in features}
+    changed = tuple(
+        fid for fid, f in current.items() if prior_hashes.get(fid) != feature_hash(f)
+    )
+    removed = tuple(sorted(fid for fid in prior_hashes if fid not in current))
+    prior_open = tuple(
+        f for f in ledger.get("open_findings") or [] if isinstance(f, dict)
+    )
+    prior_open_ids = tuple(
+        dict.fromkeys(
+            str(f.get("feature_id", ""))
+            for f in prior_open
+            if str(f.get("feature_id", "")) in current
+            and str(f.get("feature_id", "")) not in changed
+        )
+    )
+    dependents = tuple(
+        fid
+        for fid, f in current.items()
+        if set(map(str, f.get("depends_on") or [])) & set(removed)
+    )
+    in_scope = tuple(dict.fromkeys(changed + prior_open_ids + dependents))
+    return ReviewScope(
+        mode="scoped",
+        in_scope=in_scope,
+        changed=changed,
+        prior_open_ids=prior_open_ids,
+        removed=removed,
+        prior_open=prior_open,
+        last_reviewed_at=str(ledger.get("reviewed_at", "")),
+    )
+
+
+def apply_scope(envelope: DesignVolleyEnvelope, scope: ReviewScope) -> DesignVolleyEnvelope:
+    """Move findings on out-of-scope features into ``out_of_scope``. When the
+    reviewer said needs_changes and nothing in scope remains, the verdict is
+    downgraded to signed_off (recorded in ``scope_note``)."""
+    if scope.mode == "full":
+        return envelope
+    allowed = set(scope.in_scope)
+    in_scope = [f for f in envelope.findings if f.feature_id in allowed]
+    out = [f.to_dict() for f in envelope.findings if f.feature_id not in allowed]
+    envelope.findings = in_scope
+    envelope.out_of_scope.extend(out)
+    if envelope.verdict == "needs_changes" and out and not in_scope:
+        envelope.verdict = "signed_off"
+        envelope.scope_note = (
+            f"needs_changes downgraded to signed_off: all {len(out)} finding(s) "
+            "were on unchanged, already-reviewed features (out of scope)"
+        )
+    return envelope
+
+
+def write_ledger(
+    path: Path,
+    features: Sequence[dict],
+    envelope: DesignVolleyEnvelope,
+    scope: ReviewScope,
+    prior: dict | None,
+) -> None:
+    """Record this review. ``open_findings`` = this run's in-scope findings
+    (prior open findings not re-raised are resolved); out-of-scope findings are
+    appended to ``out_of_scope_history`` for audit. Raises OSError on failure."""
+    reviewed_at = datetime.now(timezone.utc).isoformat()
+    history = list((prior or {}).get("out_of_scope_history") or [])
+    if envelope.out_of_scope:
+        history.append({"reviewed_at": reviewed_at, "findings": list(envelope.out_of_scope)})
+    blob = {
+        "schema": LEDGER_SCHEMA,
+        "reviewed_at": reviewed_at,
+        "mode": scope.mode,
+        "feature_hashes": {str(f.get("id", "")): feature_hash(f) for f in features},
+        "open_findings": [f.to_dict() for f in envelope.findings],
+        "out_of_scope_history": history,
+    }
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(blob, indent=2, sort_keys=True) + "\n")
+
+
 # ─────────────────────────────── prompts ───────────────────────────────────
+
+
+def _scope_block(scope: ReviewScope | None) -> str:
+    if scope is None or scope.mode == "full":
+        return ""
+    lines = [
+        "",
+        "SCOPED RE-REVIEW. Every feature below was already reviewed in full on",
+        f"{scope.last_reviewed_at or 'a previous lock'}. Review ONLY these in-scope features:",
+        f"  in-scope: {', '.join(scope.in_scope) or '(none)'}",
+        f"  changed since last review: {', '.join(scope.changed) or '(none)'}",
+    ]
+    if scope.removed:
+        lines.append(f"  removed since last review: {', '.join(scope.removed)}")
+    if scope.prior_open:
+        lines.append("Prior open findings to re-check (re-raise only if still open):")
+        lines.extend(
+            f"  - [{f.get('kind')}/{f.get('severity')}] {f.get('feature_id')}: "
+            f"{f.get('evidence')}"
+            for f in scope.prior_open
+        )
+    lines.append(
+        "Unchanged features outside that list were already reviewed in full; do "
+        "not raise new findings on them unless the changed text causes them. "
+        "Findings on out-of-scope features are recorded as advisory only."
+    )
+    return "\n".join(lines) + "\n"
 
 
 def build_design_reviewer_prompt(
     plan_id: str,
     features: Sequence[dict],
     objective_contract: dict | None = None,
+    scope: ReviewScope | None = None,
 ) -> str:
     """The design-reviewer auditor prompt: consumes the plan's features +
     objective_contract and instructs the reviewer to emit a strict JSON envelope
-    keyed to the closed design taxonomy."""
+    keyed to the closed design taxonomy. A scoped ``scope`` keeps the full
+    features.json as context but names the in-scope features and prior open
+    findings to re-check."""
     contract_block = (
         json.dumps(objective_contract, indent=2)
         if objective_contract
@@ -166,7 +354,7 @@ objective_contract:
 
 features.json:
 {feature_block}
-
+{_scope_block(scope)}
 Return ONLY a JSON object:
   {{"verdict": "signed_off" | "needs_changes" | "blocked",
     "findings": [{{"kind": <one of: {taxonomy}>, "severity": "block"|"warn",
@@ -203,6 +391,27 @@ prerequisites, reorder dependencies). Return the revised features as JSON."""
 # ─────────────────────────────── parsing ───────────────────────────────────
 
 
+_JSON_FENCE_RE = re.compile(r"\A```(?:json)?\s*\n(.*)\n```\Z", re.DOTALL)
+
+
+def _load_envelope_blob(raw: object) -> dict | None:
+    """``raw`` as a JSON object carrying a ``verdict``, else None. Tolerates
+    one surrounding ```json fence."""
+    if not isinstance(raw, str):
+        return None
+    text = raw.strip()
+    fenced = _JSON_FENCE_RE.match(text)
+    if fenced:
+        text = fenced.group(1).strip()
+    try:
+        blob = json.loads(text)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(blob, dict) or "verdict" not in blob:
+        return None
+    return blob
+
+
 def parse_design_envelope(raw: str, *, rounds: int = 1) -> DesignVolleyEnvelope:
     """Parse a design-reviewer's raw response into the standard envelope.
 
@@ -210,12 +419,9 @@ def parse_design_envelope(raw: str, *, rounds: int = 1) -> DesignVolleyEnvelope:
     ``unrecognized`` so the returned ``findings`` list is taxonomy-pure. A
     response that is not valid JSON or lacks a verdict is treated as
     ``blocked`` (the reviewer failed to produce a usable envelope)."""
-    try:
-        blob = json.loads(raw)
-    except (json.JSONDecodeError, TypeError):
-        return DesignVolleyEnvelope(verdict="blocked", rounds=rounds)
-    if not isinstance(blob, dict) or "verdict" not in blob:
-        return DesignVolleyEnvelope(verdict="blocked", rounds=rounds)
+    blob = _load_envelope_blob(raw)
+    if blob is None:
+        return DesignVolleyEnvelope(verdict="blocked", rounds=rounds, reviewed=False)
 
     verdict = blob.get("verdict")
     if verdict not in ("signed_off", "needs_changes", "blocked"):
@@ -246,8 +452,9 @@ def _dispatch_review(
     features: Sequence[dict],
     objective_contract: dict | None,
     iteration: int,
+    scope: ReviewScope | None = None,
 ) -> str:
-    prompt = build_design_reviewer_prompt(plan_id, features, objective_contract)
+    prompt = build_design_reviewer_prompt(plan_id, features, objective_contract, scope)
     task = DispatchTask(
         plan_id=plan_id,
         plan_dir=plan_dir,
@@ -262,6 +469,13 @@ def _dispatch_review(
     result = auditor.dispatch(task)
     if not result.success:
         return ""  # parse_design_envelope → blocked
+    # The executor's ``summary`` is the reviewer's final message; for Codex
+    # ``raw_response`` is the whole ``exec --json`` event stream, which never
+    # parses as an envelope. Take the first candidate that does.
+    candidates = (result.summary, result.raw_response)
+    for candidate in candidates:
+        if _load_envelope_blob(candidate) is not None:
+            return candidate
     return result.raw_response or result.summary or ""
 
 
@@ -274,6 +488,7 @@ def run_design_volley(
     objective_contract: dict | None = None,
     plan_dir=None,
     max_iterations: int = 2,
+    scope: ReviewScope | None = None,
 ) -> DesignVolleyEnvelope:
     """Run the design-reviewer auditor (optionally against a planner implementer
     that revises on ``needs_changes``) and return the standard envelope.
@@ -283,7 +498,19 @@ def run_design_volley(
     re-reviews, up to ``max_iterations`` rounds. Terminates immediately on
     ``signed_off`` / ``blocked`` or when no planner can make progress. Pure
     w.r.t. the filesystem beyond what the injected executors do — which is
-    nothing in the synthetic test (acceptance #4)."""
+    nothing in the synthetic test (acceptance #4).
+
+    ``scope`` (from :func:`compute_scope`) narrows a re-review to what changed
+    since the ledger's last review; a scoped run with nothing in scope returns
+    signed_off without dispatching (zero paid calls)."""
+    scope = scope or FULL_SCOPE
+    if scope.nothing_to_review:
+        return DesignVolleyEnvelope(
+            verdict="signed_off",
+            rounds=0,
+            scope_note="unchanged since last full review",
+            reviewed=False,
+        )
     current_features = list(features)
     last: DesignVolleyEnvelope | None = None
     for iteration in range(max(1, max_iterations)):
@@ -294,8 +521,9 @@ def run_design_volley(
             features=current_features,
             objective_contract=objective_contract,
             iteration=iteration,
+            scope=scope,
         )
-        last = parse_design_envelope(raw, rounds=iteration + 1)
+        last = apply_scope(parse_design_envelope(raw, rounds=iteration + 1), scope)
         if last.verdict != "needs_changes" or planner is None:
             return last
         # Planner revises to resolve the findings, then we re-review.

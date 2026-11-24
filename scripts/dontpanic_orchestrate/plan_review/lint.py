@@ -339,18 +339,33 @@ def tag_surfaces(text: str) -> tuple[str, ...]:
     return surfaces_in(text) or (_DEFAULT_SURFACE,)
 
 
+_AC_MARKER_RE = re.compile(r"\((\d+)\)\s*")
+
+
 def split_acceptance(acceptance: str) -> tuple[str, ...]:
     """Split an acceptance string into individual criteria.
 
     Handles the ``(1) ... (2) ...`` numbered convention used across the plans;
     falls back to one criterion (the whole non-empty string) when no markers
     are present.
+
+    A ``(n)`` marker opens a new criterion only when ``n`` is the next number
+    in sequence (1, then 2, ...). Out-of-sequence markers are cross-references
+    inside a criterion (``"in (2)-(6)"``, ``"see (4)"``) and stay in its text.
     """
     text = acceptance.strip()
     if not text:
         return ()
-    # Split on numbered markers like "(1)" / "(12)" that open a criterion.
-    parts = re.split(r"\(\d+\)\s*", text)
+    parts: list[str] = []
+    start = 0
+    expected = 1
+    for marker in _AC_MARKER_RE.finditer(text):
+        if int(marker.group(1)) != expected:
+            continue  # cross-reference, not a criterion boundary
+        parts.append(text[start : marker.start()])
+        start = marker.end()
+        expected += 1
+    parts.append(text[start:])
     criteria = [p.strip() for p in parts if p.strip()]
     if criteria:
         return tuple(criteria)

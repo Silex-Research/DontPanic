@@ -3904,6 +3904,7 @@ def _run_pre_lock_design_volley(
     operator_requested: bool,
     executor=None,
     run_volley=None,
+    full_review: bool = False,
 ) -> None:
     """Plan 2026-06-01-001 F005 — opt-in design-review volley at pre_lock
     (operator decision D019: minimal, bounded, advisory). Runs ONLY when the
@@ -3948,6 +3949,13 @@ def _run_pre_lock_design_volley(
                 contract = json.loads(contract_path.read_text())
             except (OSError, json.JSONDecodeError):
                 contract = None
+        # Convergence rule: with a ledger from an earlier review, re-review
+        # only what changed (+ prior open findings); --design-review-full or
+        # no ledger -> full review.
+        ledger_path = plan_dir / design_review.LEDGER_RELPATH
+        ledger = None if full_review else design_review.load_ledger(ledger_path)
+        scope = design_review.compute_scope(feature_dicts, ledger)
+        print(f"[plan lock] design-review scope: {scope.describe()}")
         runner = run_volley if run_volley is not None else design_review.run_design_volley
         envelope = runner(
             loaded.plan_id,
@@ -3955,10 +3963,29 @@ def _run_pre_lock_design_volley(
             auditor=auditor,
             objective_contract=contract,
             plan_dir=plan_dir,
+            scope=scope,
         )
         print(f"[plan lock] design-review volley: verdict={envelope.verdict}")
         for f in envelope.findings:
             print(f"  [{f.kind}/{f.severity}] {f.feature_id}: {f.evidence}")
+        scope_note = getattr(envelope, "scope_note", "")
+        if scope_note:
+            print(f"[plan lock] design-review: {scope_note}")
+        out_of_scope = getattr(envelope, "out_of_scope", None) or []
+        if out_of_scope:
+            print("[plan lock] design-review out-of-scope (advisory, unchanged text):")
+            for f in out_of_scope:
+                print(
+                    f"  [{f.get('kind')}/{f.get('severity')}] "
+                    f"{f.get('feature_id')}: {f.get('evidence')}"
+                )
+        # Only a real, parsed review advances the ledger (a skipped or
+        # unparseable run leaves the last good review in place).
+        if isinstance(envelope, design_review.DesignVolleyEnvelope) and envelope.reviewed:
+            try:
+                design_review.write_ledger(ledger_path, feature_dicts, envelope, scope, ledger)
+            except OSError as exc:
+                print(f"[plan lock] WARN: design-review ledger not written ({exc!r})")
     except Exception as exc:  # noqa: BLE001 — advisory; never block the lock
         print(f"[plan lock] WARN: design-review volley skipped ({exc!r})")
 
@@ -4108,6 +4135,17 @@ def _plan_lock_main(argv: list[str]) -> int:
             "lock; prints the verdict + findings."
         ),
     )
+    parser.add_argument(
+        "--design-review-full",
+        action="store_true",
+        dest="design_review_full",
+        help=(
+            "Like --design-review, but review every feature even when an "
+            "earlier review's ledger (evidence/design-review/ledger.json) "
+            "would scope the re-review to changed features. Implies "
+            "--design-review."
+        ),
+    )
     _add_worktree_guard_flag(parser)
     args = parser.parse_args(argv)
 
@@ -4162,7 +4200,11 @@ def _plan_lock_main(argv: list[str]) -> int:
 
     # Plan 2026-06-01-001 F005 — opt-in design-review volley (advisory, never
     # blocks the lock). Runs on lint uncertainty OR --design-review.
-    _run_pre_lock_design_volley(plan_dir, operator_requested=args.design_review)
+    _run_pre_lock_design_volley(
+        plan_dir,
+        operator_requested=args.design_review or args.design_review_full,
+        full_review=args.design_review_full,
+    )
 
     # Plan 2026-06-08-006 — generate the pre-impl sufficiency findings before the
     # gate checks for them, so a gated plan locks in one command instead of

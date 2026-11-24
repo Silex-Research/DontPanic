@@ -72,6 +72,23 @@ Surfaces affected: <comma-separated list — see docs/RELEASE_IMPACT.md>
   whose plan-level signoff belongs only to other features gets that feature's
   evidence repaired without paid calls and without touching the plan-level
   signoff.
+- The `pre_merge` human stop is now per feature. Approving it for F001 no
+  longer lets F002 write a success signoff without its own stop; each feature
+  pauses and is approved separately. A plan whose gate state only records a
+  plan-wide `pre_merge` clearance pauses again rather than skipping, while
+  `pre_impl` stays plan-wide.
+- The plan-review lint no longer counts acceptance cross-references such as
+  "in (2)-(6)" or "see (4)" as extra criteria. A `(n)` marker starts a new
+  criterion only when it is the next number in sequence, so a seven-criterion
+  feature is no longer blocked as having ten.
+- The `--design-review` volley at `dontpanic plan lock` now reads the Codex
+  reviewer's final message instead of its raw event stream, so its real verdict
+  and findings are printed instead of an empty `blocked`. Re-locks now review
+  only features that changed since the last review, plus any still-open
+  findings, using a ledger at `evidence/design-review/ledger.json`. Findings on
+  unchanged features are shown as advisory and never block, an unchanged plan
+  costs no reviewer call, and the new `--design-review-full` flag forces a full
+  review.
 
 ## 2026-11-12 — 0.2.1: Gate and signoff correctness fixes
 

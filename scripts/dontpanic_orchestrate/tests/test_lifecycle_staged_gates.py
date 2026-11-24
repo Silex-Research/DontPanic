@@ -220,8 +220,14 @@ def _force_auditor_status(monkeypatch: pytest.MonkeyPatch, statuses: list[str]) 
     monkeypatch.setattr(supervisor, "_run_round", wrapped)
 
 
-def _preclear_stage(plan_dir: Path, plan_id: str, stage: str) -> None:
-    gate_pause.record_pause(plan_dir, plan_id=plan_id, pause_gates=[stage], stage=stage)
+def _preclear_stage(
+    plan_dir: Path, plan_id: str, stage: str, feature_id: str | None = None
+) -> None:
+    # pre_merge is per-feature (a plan-wide pre-clear no longer skips the
+    # stop), so a pre_merge pre-clear names the feature it approves.
+    gate_pause.record_pause(
+        plan_dir, plan_id=plan_id, pause_gates=[stage], stage=stage, feature_id=feature_id
+    )
     assert gate_pause.approve_gate(plan_dir, stage, plan_id=plan_id)
 
 
@@ -279,7 +285,7 @@ def test_pre_merge_cleared_success_path_writes_signoff_after_stage_check(
     plan_id = "2026-05-04-903-infra-pre-merge-success"
     plan_dir = _make_plan(tmp_path, plan_id, ["pre_impl", "pre_merge"])
     _preclear_stage(plan_dir, plan_id, "pre_impl")
-    _preclear_stage(plan_dir, plan_id, "pre_merge")
+    _preclear_stage(plan_dir, plan_id, "pre_merge", "F001")
 
     calls: list[str] = []
     original_eval = gate_pause.evaluate_human_gates
@@ -370,7 +376,7 @@ def test_pre_merge_does_not_fire_on_non_success_terminals(
     assert all(path.is_file() for path in result.audit_paths)
 
 
-def test_legacy_upfront_cleared_gate_state_is_treated_as_completed(
+def test_legacy_upfront_cleared_gate_state_keeps_pre_impl_but_pre_merge_fails_closed(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     order: list[str] = []
@@ -399,8 +405,13 @@ def test_legacy_upfront_cleared_gate_state_is_treated_as_completed(
 
     result = supervisor.dispatch_volley(plan_dir, "F001", max_iterations=1)
 
-    assert result.final_status == "signed_off", result
+    # Legacy plan-wide pre_impl clearance is still honored (implementer +
+    # auditor ran), but a plan-wide pre_merge with no per-feature record no
+    # longer authorizes a success signoff: the stop fails closed and pauses.
     assert len(impl.dispatches) == 1 and len(aud.dispatches) == 1
+    assert result.final_status == "paused_on_gate", result
+    assert gate_pause.pending_stage(plan_dir) == "pre_merge"
+    assert not signoff_writer.signoff_path(plan_dir, plan_id).is_file()
 
 
 def test_new_gate_state_shape_round_trips_pending_and_gate_events(tmp_path: Path) -> None:
@@ -476,7 +487,7 @@ def test_stage_completion_skips_re_evaluation_on_later_dispatches(
     plan_id = "2026-05-04-907-infra-stage-idempotency"
     plan_dir = _make_plan(tmp_path, plan_id, ["pre_impl", "pre_merge"])
     _preclear_stage(plan_dir, plan_id, "pre_impl")
-    _preclear_stage(plan_dir, plan_id, "pre_merge")
+    _preclear_stage(plan_dir, plan_id, "pre_merge", "F001")
 
     calls: list[str] = []
     original_eval = gate_pause.evaluate_human_gates

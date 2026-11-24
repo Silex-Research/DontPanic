@@ -1139,7 +1139,12 @@ def finalize_signed_off_feature(
             f"'signed_off'; refuse to finalize. Address findings and re-audit first.",
         )
 
-    if not gate_pause.is_gate_cleared(plan_dir, PRE_MERGE_GATE):
+    # pre_merge is per-feature: a later feature's pause re-arms the plan-wide
+    # entry, so this feature's own recorded approval also counts.
+    if not (
+        gate_pause.is_gate_cleared(plan_dir, PRE_MERGE_GATE)
+        or gate_pause.is_stage_completed(plan_dir, "pre_merge", feature_id=feature_id)
+    ):
         raise FinalizeError(
             "pre_merge_uncleared",
             f"pre_merge gate is not cleared for {plan_id}; finalize requires the "
