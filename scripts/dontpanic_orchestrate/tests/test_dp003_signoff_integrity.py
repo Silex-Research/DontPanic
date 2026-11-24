@@ -200,9 +200,22 @@ def _write_envelopes(
     return auditor
 
 
-def _clear_pre_merge(plan_dir: Path, plan_id: str) -> None:
-    gate_pause.record_pause(plan_dir, plan_id=plan_id, pause_gates=["pre_merge"], stage="pre_merge")
-    assert gate_pause.approve_gate(plan_dir, "pre_merge", plan_id=plan_id)
+def _clear_pre_merge(
+    plan_dir: Path, plan_id: str, feature_ids: tuple[str, ...] = ("F001",)
+) -> None:
+    """Record ``pre_merge`` as already approved for each of ``feature_ids``.
+
+    ``pre_merge`` is a per-feature human stop: a plan-wide clearance fails
+    closed, so each feature a test dispatches needs its own approval. Goes
+    through the production path the supervisor + ``dontpanic approve`` use:
+    a per-feature ``record_pause`` followed by ``approve_gate``, which records
+    ``completed_stage_features["pre_merge"]``."""
+    for fid in feature_ids:
+        gate_pause.record_pause(
+            plan_dir, plan_id=plan_id, pause_gates=["pre_merge"], stage="pre_merge", feature_id=fid
+        )
+        assert gate_pause.approve_gate(plan_dir, "pre_merge", plan_id=plan_id)
+        assert gate_pause.is_stage_completed(plan_dir, "pre_merge", feature_id=fid)
 
 
 def _write_valid_signoff(
@@ -2698,7 +2711,7 @@ def test_r10_two_feature_finalize_through_real_supervisor_volleys(
     """Real ``dispatch_volley`` for F001 then F002 (the second rewrites the
     plan-level signoff); finalizing F001 then F002 both succeed."""
     plan_dir, plan_id = _r10_plan(repo, child=False)
-    _clear_pre_merge(plan_dir, plan_id)
+    _clear_pre_merge(plan_dir, plan_id, ("F001", "F002"))
     assert supervisor.dispatch_volley(plan_dir, "F001", max_iterations=1).final_status == "signed_off"
     f001_evidence = _r10_fsig(plan_dir, plan_id, "F001").read_bytes()
     assert supervisor.dispatch_volley(plan_dir, "F002", max_iterations=1).final_status == "signed_off"

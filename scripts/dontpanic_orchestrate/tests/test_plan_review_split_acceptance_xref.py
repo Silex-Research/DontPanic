@@ -1,4 +1,5 @@
-"""split_acceptance: "(n)" opens a criterion only when n is next in sequence.
+"""split_acceptance: the first "(n)" anchors the sequence; after it, "(n)"
+opens a criterion only when n is the previous number + 1.
 
 Real case (Spin plan F002): seven criteria whose (7) says "in (2)-(6)." were
 counted as 10, tripping the over_ac block at >= 10.
@@ -66,6 +67,11 @@ def test_back_reference_does_not_split():
         ("", ()),
         ("Preamble here. (1) a (2) b", ("Preamble here.", "a", "b")),
         ("(1)a(2)b(12)c", ("a", "b(12)c")),
+        # The first marker anchors the sequence whatever its number (split
+        # children keep their parent's numbering).
+        ("(3) C", ("C",)),
+        ("(4) D (5) E", ("D", "E")),
+        ("(3) C see (1)", ("C see (1)",)),
     ],
 )
 def test_existing_numbered_and_fallback_behavior(text, expected):

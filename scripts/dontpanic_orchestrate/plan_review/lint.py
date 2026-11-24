@@ -349,22 +349,25 @@ def split_acceptance(acceptance: str) -> tuple[str, ...]:
     falls back to one criterion (the whole non-empty string) when no markers
     are present.
 
-    A ``(n)`` marker opens a new criterion only when ``n`` is the next number
-    in sequence (1, then 2, ...). Out-of-sequence markers are cross-references
-    inside a criterion (``"in (2)-(6)"``, ``"see (4)"``) and stay in its text.
+    The first ``(n)`` marker opens a criterion whatever ``n`` is (it anchors
+    the sequence, so a split child starting at ``(3)`` still splits). After
+    that a marker opens a new criterion only when its number is the previous
+    marker's number + 1. Out-of-sequence markers are cross-references inside
+    a criterion (``"in (2)-(6)"``, ``"see (4)"``) and stay in its text.
     """
     text = acceptance.strip()
     if not text:
         return ()
     parts: list[str] = []
     start = 0
-    expected = 1
+    expected: int | None = None  # None until the first marker anchors it
     for marker in _AC_MARKER_RE.finditer(text):
-        if int(marker.group(1)) != expected:
+        number = int(marker.group(1))
+        if expected is not None and number != expected:
             continue  # cross-reference, not a criterion boundary
         parts.append(text[start : marker.start()])
         start = marker.end()
-        expected += 1
+        expected = number + 1
     parts.append(text[start:])
     criteria = [p.strip() for p in parts if p.strip()]
     if criteria:

@@ -78,9 +78,11 @@ Surfaces affected: <comma-separated list — see docs/RELEASE_IMPACT.md>
   plan-wide `pre_merge` clearance pauses again rather than skipping, while
   `pre_impl` stays plan-wide.
 - The plan-review lint no longer counts acceptance cross-references such as
-  "in (2)-(6)" or "see (4)" as extra criteria. A `(n)` marker starts a new
-  criterion only when it is the next number in sequence, so a seven-criterion
-  feature is no longer blocked as having ten.
+  "in (2)-(6)" or "see (4)" as extra criteria. The first `(n)` marker starts a
+  criterion whatever its number (so a split child beginning at `(3)` still
+  splits); after that a marker starts a new criterion only when it is the
+  previous number plus one, so a seven-criterion feature is no longer blocked
+  as having ten.
 - The `--design-review` volley at `dontpanic plan lock` now reads the Codex
   reviewer's final message instead of its raw event stream, so its real verdict
   and findings are printed instead of an empty `blocked`. Re-locks now review
