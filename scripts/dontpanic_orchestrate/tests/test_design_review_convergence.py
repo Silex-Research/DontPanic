@@ -64,6 +64,16 @@ _FEATURES = [
 ]
 
 
+@pytest.fixture(autouse=True)
+def _hermetic_codex_home(tmp_path_factory, monkeypatch):
+    """Point CODEX_HOME at a tmp dir whose config.toml names the default model,
+    so reviewer-model resolution (MED-B) never reads the real ~/.codex."""
+    home = tmp_path_factory.mktemp("codex-home")
+    (home / "config.toml").write_text('model = "gpt-test-reviewer"\n')
+    monkeypatch.setenv("CODEX_HOME", str(home))
+    return home
+
+
 def _finding(fid: str, kind: str = "hidden_coupling", severity: str = "block") -> dict:
     return {"kind": kind, "severity": severity, "feature_id": fid, "evidence": f"{fid} issue"}
 
@@ -218,7 +228,7 @@ def test_changed_feature_scopes_review_and_quarantines_unchanged_findings(tmp_pa
     changed = [*_FEATURES[:2], _feature("F010", "a small helper for retries with backoff")]
     _write_features(plan_dir, pid, changed)
     reviewer = _CodexLikeReviewer(
-        [{"verdict": "needs_changes", "findings": [_finding("F010"), _finding("F002")]}]
+        [{"verdict": "needs_changes", "findings": [_finding("F010"), _finding("F002", "oversize")]}]
     )
     out = _lock_volley(plan_dir, reviewer)
 
@@ -233,7 +243,7 @@ def test_changed_feature_scopes_review_and_quarantines_unchanged_findings(tmp_pa
         "p1",
         changed,
         auditor=_CodexLikeReviewer(
-            [{"verdict": "needs_changes", "findings": [_finding("F010"), _finding("F002")]}]
+            [{"verdict": "needs_changes", "findings": [_finding("F010"), _finding("F002", "oversize")]}]
         ),
         scope=dr.ReviewScope(
             mode="scoped",
@@ -243,17 +253,17 @@ def test_changed_feature_scopes_review_and_quarantines_unchanged_findings(tmp_pa
         ),
     )
     assert [f.feature_id for f in env.findings] == ["F010"]
-    assert env.out_of_scope == [_finding("F002")]
+    assert env.out_of_scope == [_finding("F002", "oversize")]
     assert env.verdict == "needs_changes"
 
     ledger = _ledger(plan_dir)
     assert ledger["mode"] == "scoped"
     assert ledger["open_findings"] == [_finding("F010")]
-    assert ledger["out_of_scope_history"][-1]["findings"] == [_finding("F002")]
+    assert ledger["out_of_scope_history"][-1]["findings"] == [_finding("F002", "oversize")]
 
 
 def test_only_out_of_scope_findings_downgrade_to_signed_off():
-    reviewer = _CodexLikeReviewer([{"verdict": "needs_changes", "findings": [_finding("F002")]}])
+    reviewer = _CodexLikeReviewer([{"verdict": "needs_changes", "findings": [_finding("F002", "oversize")]}])
     env = dr.run_design_volley(
         "p1",
         _FEATURES,
@@ -267,7 +277,7 @@ def test_only_out_of_scope_findings_downgrade_to_signed_off():
     )
     assert env.verdict == "signed_off"
     assert env.findings == []
-    assert env.out_of_scope == [_finding("F002")]
+    assert env.out_of_scope == [_finding("F002", "oversize")]
     assert "downgraded" in env.scope_note
 
 

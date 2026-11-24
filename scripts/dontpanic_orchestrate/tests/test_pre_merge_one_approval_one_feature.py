@@ -333,8 +333,10 @@ def test_mid_run_gate_tamper_pauses_on_drift_and_finalize_refuses(
 
     assert result.final_status in ("paused_on_drift", "paused_on_gate"), result
     assert _r10_passes(plan_dir, "F002") is False
-    if tamper != "cleared_gates":
+    if tamper == "legacy_marker":
         # The edit grants F002 authority on its face, so only drift stops it.
+        # (A bare completed_stage_features entry no longer does: it has no
+        # matching approval event, so the gate itself stays pending — HIGH-Y.)
         assert result.final_status == "paused_on_drift", result
     rc = cli._finalize_main([str(plan_dir), "--feature", "F002"])
     assert rc != 0

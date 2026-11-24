@@ -341,9 +341,10 @@ def tag_surfaces(text: str) -> tuple[str, ...]:
 
 _AC_MARKER_RE = re.compile(r"\((\d+)\)\s*")
 # A marker preceded by one of these words is a back-reference ("see (4)",
-# "in (2)", "per (3)") rather than a criterion boundary.
+# "in (2)", "per (3)") rather than a criterion boundary. "step(s)" / "item(s)"
+# are NOT: "Step (1) a Step (2) b" labels criteria, it does not cite them.
 _AC_XREF_BEFORE_RE = re.compile(
-    r"(?:\b(?:in|see|per|of|from|cf\.?|under|criterion|criteria|step|steps|item|items)"
+    r"(?:\b(?:in|see|per|of|from|cf\.?|under|criterion|criteria)"
     r"|\(\d+\)\s*(?:[-\u2013\u2014]|to|through|and|or|,))\s*$",
     re.IGNORECASE,
 )

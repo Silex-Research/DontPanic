@@ -35,6 +35,7 @@ engagement-surface v2 concern.
 from __future__ import annotations
 
 import datetime as dt
+import hashlib
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -330,20 +331,119 @@ def approval_refusal(plan_dir: Path, gate: Any, feature_id: str | None = None) -
     return _per_feature_approval_refusal(_read_state(plan_dir), stage, feature_id)
 
 
-def _is_feature_stage_completed(state: dict[str, Any], stage: str, feature_id: str | None) -> bool:
+# Outcome fields the finalizer (closeout) writes on the feature record AFTER
+# the approval (passes flip + evidence). They are not part of the approved
+# revision, or a legit finalize would void its own approval.
+_REVISION_EXCLUDED_FIELDS: frozenset[str] = frozenset(
+    {"passes", "evidence_refs", "verified_by", "verified_at"}
+)
+
+# Per-feature approval bindings: ``{stage: {feature_id: binding}}`` beside
+# ``completed_stage_features`` (whose list-of-ids shape is unchanged).
+_COMPLETED_BINDINGS_KEY = "completed_stage_bindings"
+
+
+def approval_binding(plan_dir: Path, feature_id: str | None) -> dict[str, str | None]:
+    """What a per-feature approval is bound to: the plan (``task_id`` of the
+    plan's ``features.json``) and the feature's revision (sha256 of the
+    canonical JSON of its ``features.json`` record, minus the finalizer's
+    outcome fields). Missing file / record -> None for that part."""
+    plan_id: str | None = None
+    revision: str | None = None
+    try:
+        data = json.loads((Path(plan_dir) / "features.json").read_text())
+    except (OSError, ValueError):
+        data = None
+    if isinstance(data, dict):
+        plan_id = str(data["task_id"]) if data.get("task_id") else None
+        for record in data.get("features") or []:
+            if isinstance(record, dict) and str(record.get("id")) == str(feature_id):
+                canonical = json.dumps(
+                    {k: v for k, v in record.items() if k not in _REVISION_EXCLUDED_FIELDS},
+                    sort_keys=True,
+                    separators=(",", ":"),
+                    ensure_ascii=False,
+                )
+                revision = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+                break
+    return {"plan_id": plan_id, "feature_revision": revision}
+
+
+def _entry_binding(state: dict[str, Any], stage: str, feature_id: str) -> Any:
+    by_stage = state.get(_COMPLETED_BINDINGS_KEY)
+    if not isinstance(by_stage, dict) or not isinstance(by_stage.get(stage), dict):
+        return None
+    return by_stage[stage].get(feature_id)
+
+
+def _is_feature_stage_completed(
+    state: dict[str, Any],
+    stage: str,
+    feature_id: str | None,
+    binding: dict[str, str | None],
+) -> bool:
     """Fail closed: no feature id, or no per-feature record -> not completed.
-    The only plan-wide exception is the D004/D009 legacy authority."""
+    The record counts only when both its ``completed_stage_features`` entry and
+    a matching approval event are bound to ``binding`` (the current plan and
+    the feature's current revision). The only plan-wide exception is the
+    D004/D009 legacy authority."""
     if not feature_id:
         return False
-    if str(feature_id) in _completed_features(state, stage):
+    fid = str(feature_id)
+    if (
+        fid in _completed_features(state, stage)
+        and _entry_binding(state, stage, fid) == binding
+        and _has_feature_approval_event(state, stage, fid, binding)
+    ):
         return True
     return stage == "pre_merge" and _legacy_pre_merge_authority(state)
 
 
-def _mark_feature_stage_completed(
-    state: dict[str, Any], stage: str, feature_id: str | None
+# Actor recorded on the gate event written by the D004/D009 legacy migration.
+LEGACY_MIGRATION_ACTOR = "legacy_upfront_migration"
+
+
+def _has_feature_approval_event(
+    state: dict[str, Any], stage: str, feature_id: str, binding: dict[str, str | None]
+) -> bool:
+    """True iff ``gate_events`` holds an approval of ``stage`` for
+    ``feature_id`` bound to ``binding``. A ``completed_stage_features`` entry
+    without one (e.g. hand-written before dispatch, copied from another plan,
+    or approved before the feature's record was edited) is not trusted."""
+    events = state.get("gate_events")
+    if not isinstance(events, list):
+        return False
+    return any(
+        isinstance(e, dict)
+        and e.get("gate") in _STAGE_GATES.get(stage, ())
+        and e.get("stage") == stage
+        and str(e.get("feature_id") or "") == feature_id
+        and e.get("plan_id") == binding["plan_id"]
+        and e.get("feature_revision") == binding["feature_revision"]
+        for e in events
+    )
+
+
+def _bind_entry(
+    state: dict[str, Any], stage: str, feature_id: str, binding: dict[str, str | None]
 ) -> None:
-    """Record ``stage`` complete for ``feature_id`` and drop it from pending."""
+    by_stage = state.get(_COMPLETED_BINDINGS_KEY)
+    by_stage = dict(by_stage) if isinstance(by_stage, dict) else {}
+    per_feature = by_stage.get(stage)
+    per_feature = dict(per_feature) if isinstance(per_feature, dict) else {}
+    per_feature[feature_id] = dict(binding)
+    by_stage[stage] = per_feature
+    state[_COMPLETED_BINDINGS_KEY] = by_stage
+
+
+def _mark_feature_stage_completed(
+    state: dict[str, Any],
+    stage: str,
+    feature_id: str | None,
+    binding: dict[str, str | None],
+) -> None:
+    """Record ``stage`` complete for ``feature_id`` (bound to ``binding``) and
+    drop it from pending."""
     if stage not in PER_FEATURE_STAGES or not feature_id:
         return
     by_stage = state.get("completed_stage_features")
@@ -353,6 +453,7 @@ def _mark_feature_stage_completed(
         done.append(str(feature_id))
     by_stage[stage] = done
     state["completed_stage_features"] = by_stage
+    _bind_entry(state, stage, str(feature_id), binding)
     _set_pending_features(
         state, stage, [f for f in _pending_features(state, stage) if f != str(feature_id)]
     )
@@ -384,14 +485,19 @@ def record_legacy_upfront_pre_merge(plan_dir: Path, *, plan_id: str, feature_id:
         done.append(str(feature_id))
     by_stage["pre_merge"] = done
     state["completed_stage_features"] = by_stage
+    binding = approval_binding(plan_dir, feature_id)
+    _bind_entry(state, "pre_merge", str(feature_id), binding)
     state["plan_id"] = plan_id
+    now = _now_iso()
+    _append_gate_event(state, "pre_merge", "pre_merge", LEGACY_MIGRATION_ACTOR, now)
+    state["gate_events"][-1].update({"feature_id": str(feature_id), **binding})
     history = list(state.get("history") or [])
     history.append(
         {
             "action": "legacy_upfront_pre_merge",
             "gate": "pre_merge",
             "feature_id": str(feature_id),
-            "at": _now_iso(),
+            "at": now,
             "actor": "supervisor",
         }
     )
@@ -418,7 +524,9 @@ def is_stage_completed(plan_dir: Path, stage: str, *, feature_id: str | None = N
         return False
     state = _read_state(plan_dir)
     if stage in PER_FEATURE_STAGES:
-        return _is_feature_stage_completed(state, stage, feature_id)
+        return _is_feature_stage_completed(
+            state, stage, feature_id, approval_binding(plan_dir, feature_id)
+        )
     completed = state.get("completed_stages") or []
     if isinstance(completed, list) and stage in completed:
         return True
@@ -645,10 +753,11 @@ def approve_gate(
     # Plan 2026-05-04-002 F001 D004 — record a per-clearance audit entry on
     # `gate_events` whenever a lifecycle-staged gate is cleared. Non-lifecycle
     # gates (on_escalation, breaker:*, defer:*) do not write `gate_events`.
+    target_binding = approval_binding(plan_dir, target_feature)
     if stage is not None:
         _append_gate_event(state, gate_str, stage, actor, now)
         if target_feature is not None:
-            state["gate_events"][-1]["feature_id"] = target_feature
+            state["gate_events"][-1].update({"feature_id": target_feature, **target_binding})
 
     if is_breaker:
         # F006 transient lifecycle: pop from active_breakers; do NOT accumulate
@@ -684,7 +793,7 @@ def approve_gate(
     # re-evaluating the stage (idempotency contract).
     if stage is not None:
         _mark_stage_completed_if_done(state, stage)
-        _mark_feature_stage_completed(state, stage, target_feature)
+        _mark_feature_stage_completed(state, stage, target_feature, target_binding)
 
     _maybe_clear_pause_marker(state)
     _write_state(plan_dir, state)
@@ -767,6 +876,7 @@ def resume_all(
     history = list(state.get("history") or [])
     now = _now_iso()
     cleared_stages: set[str] = set()
+    new_events: dict[str, list[dict[str, Any]]] = {}
     for g in newly:
         history.append({"action": "resume_all", "gate": g, "at": now, "actor": actor})
         # Plan 2026-05-04-002 F001 — bulk-clear also records gate_events for
@@ -774,6 +884,7 @@ def resume_all(
         stage = _stage_for_gate(g)
         if stage is not None:
             _append_gate_event(state, g, stage, actor, now)
+            new_events.setdefault(stage, []).append(state["gate_events"][-1])
             cleared_stages.add(stage)
     for b in pending_breakers:
         history.append({"action": "resume_all", "gate": b, "at": now, "actor": actor})
@@ -796,7 +907,12 @@ def resume_all(
         _mark_stage_completed_if_done(state, stage_name)
         resumed = _pending_features(state, stage_name)
         if len(resumed) == 1:
-            _mark_feature_stage_completed(state, stage_name, resumed[0])
+            # Bind this call's approval event(s) to the credited feature so the
+            # per-feature completion is backed by an event (HIGH-Y).
+            binding = approval_binding(plan_dir, resumed[0])
+            for event in new_events.get(stage_name, []):
+                event.update({"feature_id": resumed[0], **binding})
+            _mark_feature_stage_completed(state, stage_name, resumed[0], binding)
     state["history"] = history
     _maybe_clear_pause_marker(state)
     _write_state(plan_dir, state)
@@ -1272,7 +1388,9 @@ def evaluate_human_gates(
     compat = load_gate_state_compat(plan_dir)
     stage_gates = _STAGE_GATES[stage]
     if stage in PER_FEATURE_STAGES:
-        done = _is_feature_stage_completed(compat.raw, stage, feature_id)
+        done = _is_feature_stage_completed(
+            compat.raw, stage, feature_id, approval_binding(plan_dir, feature_id)
+        )
         pending = [g for g in declared_strs if g in stage_gates and not done]
         return GatePauseInfo(stage=stage, pending=pending, declared=list(declared_strs))
     cleared = set(compat.cleared_gates)

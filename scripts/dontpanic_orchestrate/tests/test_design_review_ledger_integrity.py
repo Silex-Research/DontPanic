@@ -20,6 +20,7 @@ from dontpanic_orchestrate.tests.test_design_review_convergence import (
     _CodexLikeReviewer,
     _feature,
     _finding,
+    _hermetic_codex_home,  # noqa: F401 — autouse fixture: tmp CODEX_HOME
     _ledger,
     _lock_volley,
     _make_plan,
@@ -118,7 +119,7 @@ def test_plan_level_finding_in_a_scoped_review_stays_in_findings() -> None:
         mode="scoped", in_scope=("F010",), changed=("F010",), feature_ids=("F002", "F009", "F010")
     )
     reviewer = _CodexLikeReviewer(
-        [{"verdict": "needs_changes", "findings": [_finding("(plan)"), _finding("F002")]}]
+        [{"verdict": "needs_changes", "findings": [_finding("(plan)"), _finding("F002", "oversize")]}]
     )
     env = dr.run_design_volley("p1", _FEATURES, auditor=reviewer, scope=scope)
     assert [f.feature_id for f in env.findings] == ["(plan)"]
@@ -164,7 +165,7 @@ def test_p4_finding_on_dependent_of_changed_feature_is_kept(tmp_path: Path) -> N
         [
             {
                 "verdict": "needs_changes",
-                "findings": [_finding("F002", severity="high"), _finding("F004")],
+                "findings": [_finding("F002", severity="high"), _finding("F004", "oversize")],
             }
         ]
     )
@@ -174,7 +175,7 @@ def test_p4_finding_on_dependent_of_changed_feature_is_kept(tmp_path: Path) -> N
     assert "verdict=needs_changes" in out
     ledger = _ledger(plan_dir)
     assert ledger["open_findings"] == [_finding("F002", severity="high")]
-    assert ledger["out_of_scope_history"][-1]["findings"] == [_finding("F004")]
+    assert ledger["out_of_scope_history"][-1]["findings"] == [_finding("F004", "oversize")]
 
 
 def test_compute_scope_pulls_transitive_dependents_of_changed() -> None:
@@ -319,7 +320,7 @@ def test_ledger_records_its_binding(tmp_path: Path) -> None:
     _lock_volley(plan_dir, _CodexLikeReviewer([_SIGNED]))
     blob = _ledger(plan_dir)
     assert blob["plan_id"] == PID
-    assert blob["reviewer"] == {"agent": "codex", "model": None}
+    assert blob["reviewer"] == {"agent": "codex", "model": "gpt-test-reviewer"}
     assert blob["prompt_version"] == dr.PROMPT_VERSION
     assert blob["objective_contract_digest"] == dr.objective_contract_digest({"goal": "g"})
     assert blob["verdict"] == "signed_off"

@@ -165,7 +165,7 @@ def test_signoff_pre_merge_pending_shows_gate_state_and_approve():
     g = og.build_guidance(PLAN_ID, feature_id="F001", signoff=s)
     approve = _by_kind(g, og.KIND_APPROVE_GATE)
     assert "pre_merge PENDING" in approve.rationale
-    assert approve.exact_command == f"dontpanic approve {PLAN_ID} pre_merge"
+    assert approve.exact_command == f"dontpanic approve {PLAN_ID} pre_merge --feature F001"
     assert og.KIND_FINALIZE not in _kinds(g)
 
 
@@ -484,7 +484,11 @@ def test_collect_state_signoff_cleared_offers_finalize(tmp_path, monkeypatch):
     assert gate_pause.approve_gate(plan_dir, "pre_impl", plan_id=COLLECT_PLAN_ID)
     # F1: pre_merge is only approvable while the pre_merge stage is pending.
     gate_pause.record_pause(
-        plan_dir, plan_id=COLLECT_PLAN_ID, pause_gates=["pre_merge"], stage="pre_merge"
+        plan_dir,
+        plan_id=COLLECT_PLAN_ID,
+        pause_gates=["pre_merge"],
+        stage="pre_merge",
+        feature_id="F001",
     )
     assert gate_pause.approve_gate(plan_dir, "pre_merge", plan_id=COLLECT_PLAN_ID)
     g = og.collect_state(plan_dir, plan_id=COLLECT_PLAN_ID, feature_id="F001")
@@ -501,11 +505,15 @@ def test_collect_state_signoff_pending_shows_approve(tmp_path, monkeypatch):
     # emitted `approve` mirrors a runnable CLI invocation (not an exit-2 usage
     # error). collect_state derives pre_merge_pending from this gate-state.
     gate_pause.record_pause(
-        plan_dir, plan_id=COLLECT_PLAN_ID, pause_gates=["pre_merge"], stage="pre_merge"
+        plan_dir,
+        plan_id=COLLECT_PLAN_ID,
+        pause_gates=["pre_merge"],
+        stage="pre_merge",
+        feature_id="F001",
     )
     g = og.collect_state(plan_dir, plan_id=COLLECT_PLAN_ID, feature_id="F001")
     approve = _by_kind(g, og.KIND_APPROVE_GATE)
-    assert approve.exact_command == f"dontpanic approve {COLLECT_PLAN_ID} pre_merge"
+    assert approve.exact_command == f"dontpanic approve {COLLECT_PLAN_ID} pre_merge --feature F001"
     assert "pre_merge PENDING" in approve.rationale
 
 
@@ -546,7 +554,11 @@ def test_dashboard_gathers_operations_action_items(tmp_path, monkeypatch):
     assert gate_pause.approve_gate(plan_dir, "pre_impl", plan_id=COLLECT_PLAN_ID)
     # F1: pre_merge is only approvable while the pre_merge stage is pending.
     gate_pause.record_pause(
-        plan_dir, plan_id=COLLECT_PLAN_ID, pause_gates=["pre_merge"], stage="pre_merge"
+        plan_dir,
+        plan_id=COLLECT_PLAN_ID,
+        pause_gates=["pre_merge"],
+        stage="pre_merge",
+        feature_id="F001",
     )
     assert gate_pause.approve_gate(plan_dir, "pre_merge", plan_id=COLLECT_PLAN_ID)
 
@@ -599,7 +611,11 @@ def test_dashboard_surfaces_f007_blocked_feature(tmp_path, monkeypatch):
     assert gate_pause.approve_gate(plan_dir, "pre_impl", plan_id=COLLECT_PLAN_ID)
     # F1: pre_merge is only approvable while the pre_merge stage is pending.
     gate_pause.record_pause(
-        plan_dir, plan_id=COLLECT_PLAN_ID, pause_gates=["pre_merge"], stage="pre_merge"
+        plan_dir,
+        plan_id=COLLECT_PLAN_ID,
+        pause_gates=["pre_merge"],
+        stage="pre_merge",
+        feature_id="F007",
     )
     assert gate_pause.approve_gate(plan_dir, "pre_merge", plan_id=COLLECT_PLAN_ID)
 

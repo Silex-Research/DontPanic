@@ -798,7 +798,9 @@ def test_r3b_unloadable_plan_refused_even_with_valid_existing_signoff(repo: Path
     _clear_pre_merge(plan_dir, TOP_ID)
     _write_valid_signoff(plan_dir, TOP_ID, auditor)
     features = plan_dir / "features.json"
-    features.write_text(features.read_text().replace('"category": "test",', ""))
+    # Break the plan outside F001's own record: editing the approved record
+    # itself now voids its pre_merge approval first (pre_merge_uncleared).
+    features.write_text(features.read_text().replace('"schema_version": "1.0"', '"schema_version": "9.9"'))
     _assert_refused(plan_dir, TOP_ID, "plan_unloadable")
 
 

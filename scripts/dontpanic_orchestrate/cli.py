@@ -4015,6 +4015,15 @@ def _run_pre_lock_design_volley(
         print(f"[plan lock] design-review volley: verdict={envelope.verdict}")
         for f in envelope.findings:
             print(f"  [{f.kind}/{f.severity}] {f.feature_id}: {f.evidence}")
+        unrecognized = getattr(envelope, "unrecognized", None) or []
+        if unrecognized:
+            print(
+                f"[plan lock] design-review: {len(unrecognized)} unrecognized or "
+                "malformed finding(s) (outside the taxonomy); review not counted "
+                "as completed, ledger not advanced:"
+            )
+            for item in unrecognized:
+                print(f"  {json.dumps(item, sort_keys=True, default=str)}")
         scope_note = getattr(envelope, "scope_note", "")
         if scope_note:
             print(f"[plan lock] design-review: {scope_note}")

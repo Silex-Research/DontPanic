@@ -85,6 +85,19 @@ Surfaces affected: <comma-separated list — see docs/RELEASE_IMPACT.md>
   upfront still resumes and finalizes every feature without a new stop; any
   newer gate state gets no plan-wide `pre_merge` authority. `pre_impl` stays
   plan-wide.
+- Warning: a truly legacy gate state (written before staged gates) that
+  cleared `pre_merge` upfront still authorizes `pre_merge` for every feature
+  of that plan, by design (D004/D009).
+- A feature's `pre_merge` completion counts only when `gate_events` holds a
+  matching approval event for that feature; a `completed_stage_features` entry
+  without one is ignored (the stop pauses and `finalize` refuses). Both the
+  entry and its event are bound to the plan (`features.json` `task_id`) and to
+  the feature's revision (sha256 of its `features.json` record, without the
+  `passes` / evidence fields `finalize` writes). A gate state copied from
+  another plan, or an approval whose feature record was edited afterwards, no
+  longer counts: the stop re-arms and `finalize` refuses. `what-now`
+  reads the per-feature state and its approve command always names the
+  feature (`--feature <id>`).
 - Plan-drift detection now covers the per-feature `pre_merge` record and the
   legacy-resume marker, so adding a feature to `completed_stage_features` by
   hand mid-run pauses the run (and `finalize` refuses) just as clearing a
@@ -95,22 +108,29 @@ Surfaces affected: <comma-separated list — see docs/RELEASE_IMPACT.md>
   longest run of `(n)` markers counting up by one (a split child that starts
   at `(3)` still splits). When another marker does not read as a
   cross-reference (a skipped number, or a leading "See (9)" style reference),
-  the count never drops below the plain one-per-marker count, so the
-  ten-criteria block cannot be dodged.
+  the count never drops below the plain one-per-marker count. "Step (n)" and
+  "Item (n)" label criteria; they are not read as cross-references.
 - The `--design-review` volley at `dontpanic plan lock` now reads the Codex
-  reviewer's final message instead of its raw event stream, so its real verdict
-  and findings are printed instead of an empty `blocked`. Re-locks review
+  reviewer's final message, so its real verdict and findings are printed
+  instead of an empty `blocked`. Re-locks review
   only what changed since the last completed review, every feature that
-  depends on a changed feature, and any still-open findings, using a ledger at
+  depends on a changed feature, every feature a changed feature depends on,
+  and any still-open findings, using a ledger at
   `evidence/design-review/ledger.json`. Only a `signed_off` or `needs_changes`
-  review updates the ledger; a `blocked` or unrecognized verdict, an
+  review updates the ledger; a `blocked` or unrecognized verdict, a finding of
+  an unrecognized kind or a non-list `findings` (printed by the lock), an
   unreadable reply or a failed call never does. A plan-level open finding
   forces a full review. The ledger is tied to the plan, `objective_contract.json`,
-  the reviewer and the prompt version and carries a checksum; a mismatch or a
-  hand-edited ledger means a full review (the reason is printed). An
-  unchanged plan costs no reviewer call only when the last review signed off
-  with no open findings. Findings on unchanged, unrelated features are shown
-  as advisory and never block, and the new `--design-review-full` flag forces
+  the reviewer agent and model (the Codex model is read from the run's own
+  session log, else Codex's configured default; an unknown model means a full
+  review) and the prompt version; a mismatch means a full review (the reason
+  is printed). Its checksum is an integrity check, not authentication: it
+  catches torn or stale ledgers, but a structurally valid ledger written by
+  hand with a recomputed checksum is not prevented. An unchanged plan costs no
+  reviewer call only when the last review signed off with no open findings
+  and demoted nothing. Findings on unchanged, unrelated features are shown as
+  advisory and never block, except `hidden_coupling` (an undeclared
+  dependency), which always counts; the new `--design-review-full` flag forces
   a full review.
 
 ## 2026-11-12 — 0.2.1: Gate and signoff correctness fixes

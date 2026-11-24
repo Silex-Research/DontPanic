@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 from collections.abc import Sequence
 from dataclasses import dataclass, field
@@ -110,6 +111,9 @@ class DesignVolleyEnvelope:
     # False when the reviewer produced no parseable envelope (or the dispatch
     # failed / was skipped); such a run never advances the review ledger.
     reviewed: bool = True
+    # The model that actually ran the review, when it can be resolved (see
+    # :func:`resolve_reviewer_model`); recorded in the ledger binding.
+    reviewer_model: str | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -157,7 +161,7 @@ LEDGER_SCHEMA = 2
 # Bump whenever the reviewer prompt (build_design_reviewer_prompt /
 # _scope_block) changes meaning: a ledger written under another prompt version
 # is ignored (full review).
-PROMPT_VERSION = "design-review-prompt-2026-11-23.2"
+PROMPT_VERSION = "design-review-prompt-2026-11-24.3"
 
 # Only these verdicts are a completed review that may advance the ledger. A
 # ``blocked`` verdict (including an unknown verdict coerced to blocked), a parse
@@ -190,7 +194,8 @@ class ReviewScope:
     feature (no usable ledger, or ``--design-review-full``). ``"scoped"``
     reviews only ``in_scope`` = changed/new features + features with prior
     open findings + every feature that depends (directly or transitively) on a
-    changed, new or removed feature. ``feature_ids`` is the plan's current
+    changed, new or removed feature + every upstream prerequisite (declared
+    ``depends_on``, transitively) of a changed or new feature. ``feature_ids`` is the plan's current
     feature set: a finding whose ``feature_id`` is not in it is plan-level and
     always stays in scope."""
 
@@ -204,6 +209,7 @@ class ReviewScope:
     dependents: tuple[str, ...] = ()
     feature_ids: tuple[str, ...] = ()
     reason: str = ""
+    prerequisites: tuple[str, ...] = ()
 
     @property
     def nothing_to_review(self) -> bool:
@@ -217,6 +223,8 @@ class ReviewScope:
             parts.append(f"{','.join(self.changed)} (changed)")
         if self.dependents:
             parts.append(f"{','.join(self.dependents)} (depends on changed)")
+        if self.prerequisites:
+            parts.append(f"{','.join(self.prerequisites)} (prerequisite of changed)")
         if self.prior_open_ids:
             parts.append(f"{','.join(self.prior_open_ids)} (prior open)")
         if self.removed:
@@ -243,12 +251,102 @@ def objective_contract_digest(contract: dict | None) -> str | None:
     return hashlib.sha256(_canonical(contract).encode("utf-8")).hexdigest()
 
 
-def reviewer_identity(auditor: object) -> dict:
-    """The reviewer a ledger is bound to: executor agent name + model if known."""
-    model = getattr(auditor, "model", None)
+def _codex_home() -> Path:
+    home = os.environ.get("CODEX_HOME")
+    return Path(home) if home else Path.home() / ".codex"
+
+
+_TOML_MODEL_RE = re.compile(r"""^\s*model\s*=\s*["']([^"']+)["']\s*(?:#.*)?$""")
+_THREAD_ID_RE = re.compile(r"\A[A-Za-z0-9-]{1,128}\Z")
+
+
+def codex_config_model(home: Path) -> str | None:
+    """The top-level ``model = "..."`` of ``<home>/config.toml`` — the model
+    ``codex exec`` uses when no ``--model`` is passed. Read-only; None if absent."""
+    try:
+        text = (Path(home) / "config.toml").read_text()
+    except (OSError, UnicodeDecodeError):
+        return None
+    for line in text.splitlines():
+        if line.lstrip().startswith("["):
+            break  # top-level keys only; tables (profiles etc.) come after
+        match = _TOML_MODEL_RE.match(line)
+        if match:
+            return match.group(1)
+    return None
+
+
+def codex_thread_id(raw_stream: str | None) -> str | None:
+    """The ``thread_id`` of the ``thread.started`` event in a ``codex exec
+    --json`` stream, or None."""
+    for line in (raw_stream or "").splitlines():
+        line = line.strip()
+        if not line.startswith("{"):
+            continue
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(event, dict) and event.get("type") == "thread.started":
+            thread_id = event.get("thread_id")
+            return str(thread_id) if thread_id else None
+    return None
+
+
+def codex_rollout_model(home: Path, thread_id: str | None) -> str | None:
+    """The last ``turn_context.model`` in the rollout file of ``thread_id``
+    under ``<home>/sessions`` (read-only), or None."""
+    if not thread_id or not _THREAD_ID_RE.match(thread_id):
+        return None
+    model: str | None = None
+    for path in sorted((Path(home) / "sessions").glob(f"*/*/*/rollout-*-{thread_id}.jsonl")):
+        try:
+            lines = path.read_text().splitlines()
+        except (OSError, UnicodeDecodeError):
+            continue
+        for line in lines:
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(event, dict):
+                continue
+            payload = event.get("payload")
+            if event.get("type") == "turn_context" and isinstance(payload, dict):
+                if isinstance(payload.get("model"), str) and payload["model"]:
+                    model = payload["model"]
+    return model
+
+
+def resolve_reviewer_model(
+    auditor: object, *, task_model: str | None = None, raw_response: str | None = None
+) -> str | None:
+    """The reviewer's real model: the DispatchTask model when set; else a
+    model the executor declares; else, for Codex, the run's own rollout
+    (``thread.started`` id -> ``turn_context.model``) when ``raw_response`` is
+    given; else Codex's config default. None when it cannot be resolved."""
+    if task_model:
+        return str(task_model)
+    declared = getattr(auditor, "model", None)
+    if declared:
+        return str(declared)
+    if getattr(auditor, "agent_name", "") != "codex":
+        return None
+    home = _codex_home()
+    if raw_response is not None:
+        from_run = codex_rollout_model(home, codex_thread_id(raw_response))
+        if from_run:
+            return from_run
+    return codex_config_model(home)
+
+
+def reviewer_identity(auditor: object, *, task_model: str | None = None) -> dict:
+    """The reviewer a ledger is bound to: executor agent name + the model it
+    will run (:func:`resolve_reviewer_model`; None when unknown, and a ledger
+    with a null model is never reused)."""
     return {
         "agent": str(getattr(auditor, "agent_name", "") or type(auditor).__name__),
-        "model": str(model) if model else None,
+        "model": resolve_reviewer_model(auditor, task_model=task_model),
     }
 
 
@@ -275,6 +373,8 @@ def _ledger_digest(blob: dict) -> str:
         "prompt_version": blob.get("prompt_version"),
         "verdict": blob.get("verdict"),
         "open_findings": blob.get("open_findings"),
+        "reviewed_at": blob.get("reviewed_at"),
+        "out_of_scope_history": blob.get("out_of_scope_history"),
     }
     return hashlib.sha256(_canonical(bound).encode("utf-8")).hexdigest()
 
@@ -345,6 +445,8 @@ def ledger_rejection(blob: object, binding: LedgerBinding) -> str | None:
         return "objective_contract.json changed since the last review"
     if blob["reviewer"] != binding.reviewer:
         return f"reviewer changed ({blob['reviewer']} -> {binding.reviewer})"
+    if blob["reviewer"]["model"] is None:
+        return "reviewer model unknown (null); a null-model ledger is not reusable"
     if blob["prompt_version"] != PROMPT_VERSION:
         return f"reviewer prompt version changed ({blob['prompt_version']} -> {PROMPT_VERSION})"
     return None
@@ -391,6 +493,37 @@ def _transitive_dependents(current: dict[str, dict], roots: set[str]) -> tuple[s
     return tuple(fid for fid in current if fid in reached)
 
 
+def _transitive_prerequisites(current: dict[str, dict], roots: set[str]) -> tuple[str, ...]:
+    """Every current feature that any of ``roots`` depends on, directly or
+    transitively, via declared ``depends_on`` (excluding the roots), in plan
+    order."""
+    reached: set[str] = set()
+    frontier = set(roots)
+    while frontier:
+        nxt = {
+            str(dep)
+            for fid in frontier
+            for dep in (current.get(fid, {}).get("depends_on") or [])
+            if str(dep) in current and str(dep) not in reached and str(dep) not in roots
+        }
+        reached |= nxt
+        frontier = nxt
+    return tuple(fid for fid in current if fid in reached)
+
+
+def _last_run_demoted(ledger: dict) -> int:
+    """How many findings the run that wrote ``ledger`` demoted to out_of_scope
+    (its own ``out_of_scope_history`` entry carries the same ``reviewed_at``)."""
+    history = ledger.get("out_of_scope_history") or []
+    if not history or not isinstance(history[-1], dict):
+        return 0
+    last = history[-1]
+    if last.get("reviewed_at") != ledger.get("reviewed_at"):
+        return 0
+    findings = last.get("findings")
+    return len(findings) if isinstance(findings, list) else 0
+
+
 def compute_scope(features: Sequence[dict], ledger: dict | None) -> ReviewScope:
     """Full scope without a usable ledger; otherwise the scoped re-review set.
 
@@ -425,9 +558,20 @@ def compute_scope(features: Sequence[dict], ledger: dict | None) -> ReviewScope:
         for fid in _transitive_dependents(current, set(changed) | set(removed))
         if fid not in changed
     )
-    in_scope = tuple(dict.fromkeys(changed + dependents + prior_open_ids))
+    prerequisites = tuple(
+        fid for fid in _transitive_prerequisites(current, set(changed)) if fid not in changed
+    )
+    in_scope = tuple(dict.fromkeys(changed + dependents + prerequisites + prior_open_ids))
     if not in_scope and not removed and (ledger.get("verdict") != "signed_off" or prior_open):
         return ReviewScope(mode="full", reason="last review did not sign off")
+    demoted = _last_run_demoted(ledger)
+    if not in_scope and not removed and demoted:
+        # The last run demoted findings to out_of_scope: never take the
+        # zero-call shortcut on top of them (MED-A).
+        return ReviewScope(
+            mode="full",
+            reason=f"last review demoted {demoted} finding(s) as out of scope",
+        )
     return ReviewScope(
         mode="scoped",
         in_scope=in_scope,
@@ -438,6 +582,7 @@ def compute_scope(features: Sequence[dict], ledger: dict | None) -> ReviewScope:
         last_reviewed_at=str(ledger.get("reviewed_at", "")),
         dependents=dependents,
         feature_ids=tuple(current),
+        prerequisites=prerequisites,
     )
 
 
@@ -453,6 +598,11 @@ def apply_scope(envelope: DesignVolleyEnvelope, scope: ReviewScope) -> DesignVol
     known = set(scope.feature_ids)
 
     def keep(f: DesignFinding) -> bool:
+        # hidden_coupling is the kind for a dependency MISSING from
+        # depends_on, so declared-dependency scoping cannot rule it out: it
+        # is never demoted (MED-A).
+        if f.kind == "hidden_coupling":
+            return True
         return f.feature_id in allowed or f.feature_id not in known
 
     in_scope = [f for f in envelope.findings if keep(f)]
@@ -500,7 +650,11 @@ def write_ledger(
         "mode": scope.mode,
         "feature_hashes": {str(f.get("id", "")): feature_hash(f) for f in features},
         "objective_contract_digest": objective_contract_digest(binding.objective_contract),
-        "reviewer": dict(binding.reviewer),
+        "reviewer": {
+            **binding.reviewer,
+            # The model that actually ran (MED-B), when the run resolved one.
+            "model": envelope.reviewer_model or binding.reviewer.get("model"),
+        },
         "prompt_version": PROMPT_VERSION,
         "verdict": envelope.verdict,
         "open_findings": [f.to_dict() for f in envelope.findings],
@@ -542,7 +696,8 @@ def _scope_block(scope: ReviewScope | None) -> str:
     lines.append(
         "Unchanged features outside that list were already reviewed in full; do "
         "not raise new findings on them unless the changed text causes them. "
-        "Findings on out-of-scope features are recorded as advisory only."
+        "Findings on out-of-scope features are recorded as advisory only, "
+        "except hidden_coupling (an undeclared dependency), which always counts."
     )
     return "\n".join(lines) + "\n"
 
@@ -657,19 +812,28 @@ def parse_design_envelope(raw: str, *, rounds: int = 1) -> DesignVolleyEnvelope:
 
     findings: list[DesignFinding] = []
     unrecognized: list[dict] = []
-    for raw_finding in blob.get("findings") or []:
-        if not isinstance(raw_finding, dict):
-            continue
-        if raw_finding.get("kind") in DESIGN_TAXONOMY:
+    raw_findings = blob.get("findings")
+    if raw_findings is None:
+        raw_findings = []
+    if not isinstance(raw_findings, list):
+        # A non-list ``findings`` is malformed: quarantine it whole (MED-D).
+        unrecognized.append({"findings": raw_findings})
+        raw_findings = []
+    for raw_finding in raw_findings:
+        if isinstance(raw_finding, dict) and raw_finding.get("kind") in DESIGN_TAXONOMY:
             findings.append(DesignFinding.from_dict(raw_finding))
-        else:
+        elif isinstance(raw_finding, dict):
             unrecognized.append(dict(raw_finding))
+        else:
+            unrecognized.append({"finding": raw_finding})
+    # Any unrecognized / malformed finding means the review is NOT complete:
+    # it never advances the convergence ledger (MED-D).
     return DesignVolleyEnvelope(
         verdict=verdict,
         findings=findings,
         rounds=rounds,
         unrecognized=unrecognized,
-        reviewed=not coerced,
+        reviewed=not coerced and not unrecognized,
     )
 
 
@@ -685,7 +849,8 @@ def _dispatch_review(
     objective_contract: dict | None,
     iteration: int,
     scope: ReviewScope | None = None,
-) -> str:
+) -> tuple[str, str | None]:
+    """``(reviewer text, resolved reviewer model)``."""
     prompt = build_design_reviewer_prompt(plan_id, features, objective_contract, scope)
     task = DispatchTask(
         plan_id=plan_id,
@@ -700,15 +865,18 @@ def _dispatch_review(
     )
     result = auditor.dispatch(task)
     if not result.success:
-        return ""  # parse_design_envelope → blocked
+        return "", None  # parse_design_envelope → blocked
+    model = resolve_reviewer_model(
+        auditor, task_model=task.model, raw_response=result.raw_response
+    )
     # The executor's ``summary`` is the reviewer's final message; for Codex
     # ``raw_response`` is the whole ``exec --json`` event stream, which never
     # parses as an envelope. Take the first candidate that does.
     candidates = (result.summary, result.raw_response)
     for candidate in candidates:
         if _load_envelope_blob(candidate) is not None:
-            return candidate
-    return result.raw_response or result.summary or ""
+            return candidate, model
+    return result.raw_response or result.summary or "", model
 
 
 def run_design_volley(
@@ -746,7 +914,7 @@ def run_design_volley(
     current_features = list(features)
     last: DesignVolleyEnvelope | None = None
     for iteration in range(max(1, max_iterations)):
-        raw = _dispatch_review(
+        raw, reviewer_model = _dispatch_review(
             auditor,
             plan_id=plan_id,
             plan_dir=plan_dir,
@@ -756,6 +924,7 @@ def run_design_volley(
             scope=scope,
         )
         last = apply_scope(parse_design_envelope(raw, rounds=iteration + 1), scope)
+        last.reviewer_model = reviewer_model
         if last.verdict != "needs_changes" or planner is None:
             return last
         # Planner revises to resolve the findings, then we re-review.
