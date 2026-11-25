@@ -36,7 +36,8 @@ The fingerprint + classifier are pure (no IO beyond reading the tracked files).
 IO layer the supervisor wires in.
 
 ``audit/gate-state.json`` IS tracked, but via a *stable semantic projection*
-(``cleared_gates`` + ``completed_stages``), not a raw hash. The supervisor
+(``cleared_gates`` + ``completed_stages`` + ``completed_stage_features`` +
+``legacy_upfront_pre_merge``), not a raw hash. The supervisor
 mutates gate-state during a normal run (record_pause appends volatile history;
 auto-clear flips a gate), so hashing the whole file would manufacture phantom
 drift on every check. Two safeguards keep the projection honest without
@@ -263,29 +264,64 @@ def _decision_id_of(token: str) -> str:
 
 
 def _gate_semantics(gate_text: str | None) -> dict[str, Any]:
-    """Stable projection of audit/gate-state.json: the cleared-gate set and the
-    completed-stage set ONLY. The volatile ``history`` list and any timestamps
-    are deliberately excluded so the supervisor's normal record_pause history
-    appends do not manufacture drift — only an externally-changed cleared/
-    completed set (e.g. a human clearing a gate mid-run to bypass a pause)
-    registers. Sorted so set-equal states with different insertion order
-    compare equal. Tolerant of a missing/malformed file (empty projection; the
-    file hash still flags the raw change)."""
+    """Stable projection of audit/gate-state.json. Projected authority fields:
+    the cleared-gate set, the completed-stage set, the per-feature completion
+    list (``completed_stage_features``) and the D004/D009
+    ``legacy_upfront_pre_merge`` marker.
+
+    NOT projected, although gate_pause reads them for authority:
+    ``completed_stage_bindings`` and ``gate_events``. A feature's ``pre_merge``
+    counts as completed only when it is listed in ``completed_stage_features``
+    AND its ``completed_stage_bindings`` entry AND a ``gate_events`` approval
+    are both bound to the current plan id and feature revision
+    (``gate_pause._is_feature_stage_completed``). So an edit to those two keys
+    alone leaves this projection unchanged: :func:`classify_drift` lists
+    gate-state.json in ``changed_files`` (raw hash) but adds no change note
+    and no drift class for it. Such an edit cannot add a feature to the
+    completed list, but it can restore authority for a feature that is already
+    listed and whose binding went stale (for example after its features.json
+    record changed), by rewriting the binding and event to the current
+    revision.
+
+    The volatile ``history`` list, timestamps and pending/pause fields are
+    excluded too, so the supervisor's normal record_pause history appends do
+    not manufacture drift. Sorted so set-equal states with different insertion
+    order compare equal. Tolerant of a missing/malformed file: the projection
+    is empty (the raw change again shows only in ``changed_files``)."""
+    empty: dict[str, Any] = {
+        "cleared_gates": [],
+        "completed_stages": [],
+        "completed_stage_features": {},
+        "legacy_upfront_pre_merge": False,
+    }
     if not gate_text:
-        return {"cleared_gates": [], "completed_stages": []}
+        return empty
     try:
         data = json.loads(gate_text)
     except json.JSONDecodeError:
-        return {"cleared_gates": [], "completed_stages": []}
+        return empty
     if not isinstance(data, dict):
-        return {"cleared_gates": [], "completed_stages": []}
+        return empty
     cleared = data.get("cleared_gates")
     completed = data.get("completed_stages")
+    by_stage = data.get("completed_stage_features")
+    features: dict[str, list[str]] = {}
+    if isinstance(by_stage, dict):
+        for stage, ids in by_stage.items():
+            if isinstance(ids, list):
+                features[str(stage)] = sorted({str(f) for f in ids})
+            else:
+                # Malformed value: project its repr so any change is visible.
+                features[str(stage)] = [f"<invalid:{json.dumps(ids, sort_keys=True)}>"]
+    elif by_stage is not None:
+        features["<invalid>"] = [json.dumps(by_stage, sort_keys=True)]
     return {
         "cleared_gates": sorted(str(g) for g in cleared) if isinstance(cleared, list) else [],
         "completed_stages": (
             sorted(str(s) for s in completed) if isinstance(completed, list) else []
         ),
+        "completed_stage_features": dict(sorted(features.items())),
+        "legacy_upfront_pre_merge": data.get("legacy_upfront_pre_merge") is True,
     }
 
 

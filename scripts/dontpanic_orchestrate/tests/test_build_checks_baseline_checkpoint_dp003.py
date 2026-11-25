@@ -162,8 +162,11 @@ def _make_child(repo: Path, plan_id: str, *, memo_status: str | None) -> Path:
 
 
 def _preclear_pre_merge(plan_dir: Path, plan_id: str) -> None:
-    gate_pause.record_pause(plan_dir, plan_id=plan_id, pause_gates=["pre_merge"], stage="pre_merge")
-    assert gate_pause.approve_gate(plan_dir, "pre_merge", plan_id=plan_id)
+    """Approve the per-feature ``pre_merge`` stop for F001 (the only feature
+    these plans dispatch) via the shared production-path helper."""
+    from dontpanic_orchestrate.tests import test_dp003_signoff_integrity as dp3
+
+    dp3._clear_pre_merge(plan_dir, plan_id, ("F001",))
 
 
 @pytest.fixture

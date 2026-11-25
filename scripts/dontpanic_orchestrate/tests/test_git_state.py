@@ -22,6 +22,7 @@ HERE = Path(__file__).resolve()
 sys.path.insert(0, str(HERE.parents[2]))
 
 from dontpanic_orchestrate import git_state  # noqa: E402
+from dontpanic_orchestrate.tests._fixture_git import disable_fixture_signing  # noqa: E402
 
 # ────────────────────────────  parse_porcelain matrix  ────────────────────────────
 
@@ -184,7 +185,7 @@ def _init_git_repo(repo: Path) -> None:
     subprocess.run(["git", "init", "-q", "-b", "main"], cwd=repo, check=True)
     subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo, check=True)
     subprocess.run(["git", "config", "user.name", "Test"], cwd=repo, check=True)
-    subprocess.run(["git", "config", "commit.gpgsign", "false"], cwd=repo, check=True)
+    disable_fixture_signing(repo)
 
 
 def test_capture_returns_none_outside_git_repo(tmp_path: Path) -> None:

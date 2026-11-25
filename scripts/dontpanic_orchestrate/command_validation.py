@@ -382,7 +382,8 @@ _VOCABULARY: Final[Mapping[str, SubcommandSpec]] = {
         positional_min=2,
         positional_max=2,
         bool_flags=frozenset({"--accept-non-satisfied"}),
-        value_flags=frozenset({"--child"}),
+        # --feature: the per-feature gate (pre_merge) approval target.
+        value_flags=frozenset({"--child", "--feature"}),
     ),
     # `resume <plan>` requires exactly one of --gate / --all per
     # cli.py:514-561 (bare `resume <plan>` exits 2 with the bare-resume usage

@@ -693,7 +693,9 @@ def build_signoff_choices(
                         f"to unblock finalization."
                     ),
                     risk=Risk.MEDIUM,
-                    exact_command=f"dontpanic approve {plan_id} pre_merge",
+                    exact_command=(
+                        f"dontpanic approve {plan_id} pre_merge --feature {state.feature_id}"
+                    ),
                     requires_human=True,
                     feature_scoped=True,
                 )
@@ -1169,16 +1171,14 @@ def collect_state(
     if envelope is not None:
         verdict = str(envelope.get("audit_status") or envelope.get("verdict") or "")
         if verdict == "signed_off":
-            cleared = gate_pause.is_gate_cleared(plan_dir, "pre_merge")
-            # AC7 (respects current state): only emit the `approve pre_merge`
-            # command when the gate is actually pending — mirror the CLI's
-            # acceptance rule (currently in pause_gates OR the canonical gate of
-            # the persisted pending_stage). Otherwise approve would exit 2.
-            compat = gate_pause.load_gate_state_compat(plan_dir)
-            pending = gate_pause.is_gate_currently_pending(plan_dir, "pre_merge") or (
-                compat.pending_stage is not None
-                and "pre_merge" == compat.pending_stage
-            )
+            # pre_merge is per feature: "cleared" is THIS feature's own
+            # recorded approval (what the finalizer checks), never the
+            # plan-wide cleared_gates entry.
+            cleared = gate_pause.is_stage_completed(plan_dir, "pre_merge", feature_id=feat)
+            # AC7 (respects current state): only emit the `approve pre_merge
+            # --feature <id>` command when THIS feature is paused on pre_merge —
+            # otherwise the CLI's per-feature check refuses it (exit 2).
+            pending = feat in gate_pause.pending_features(plan_dir, "pre_merge")
             signoff = SignoffState(
                 feature_id=feat,
                 verdict=verdict,

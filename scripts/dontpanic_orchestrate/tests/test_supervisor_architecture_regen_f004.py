@@ -29,6 +29,7 @@ import pytest
 from dontpanic_orchestrate import architecture as arch
 from dontpanic_orchestrate import architecture_regen_hook as hook
 from dontpanic_orchestrate import inbox
+from dontpanic_orchestrate.tests._fixture_git import disable_fixture_signing
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -91,6 +92,7 @@ def git_repo(tmp_path: Path) -> Path:
     repo.mkdir()
     _build_synthetic_repo(repo)
     _git(repo, "init", "--quiet", "--initial-branch=main")
+    disable_fixture_signing(repo)
     _git(repo, "add", ".")
     _git(repo, "commit", "--quiet", "-m", "init")
     # Seed an architecture.json so we can observe state_transition + diffs.

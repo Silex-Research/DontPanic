@@ -339,18 +339,124 @@ def tag_surfaces(text: str) -> tuple[str, ...]:
     return surfaces_in(text) or (_DEFAULT_SURFACE,)
 
 
+_AC_MARKER_RE = re.compile(r"\((\d+)\)\s*")
+# A marker preceded by one of these words MAY be a back-reference ("see (4)",
+# "in (2)", "per (3)") rather than a criterion boundary \u2014 unless it is part of
+# a restarted ascending run (see split_acceptance). "step(s)" / "item(s)" /
+# "criterion" / "criteria" are NOT cues: they label criteria, not cite them.
+_AC_XREF_CUE_BEFORE_RE = re.compile(
+    r"\b(?:in|see|per|of|from|cf\.?|under)\s*$",
+    re.IGNORECASE,
+)
+_AC_RANGE_SEP = r"(?:[-\u2013\u2014]|to|through|and|or|,)"
+# A marker joined to a neighbouring marker by a range/list separator is part of
+# a "(2)-(6)" / "(2) to (6)" / "(2), (3)" reference.
+_AC_RANGE_BEFORE_RE = re.compile(r"\(\d+\)\s*" + _AC_RANGE_SEP + r"\s*$", re.IGNORECASE)
+_AC_RANGE_AFTER_RE = re.compile(r"\A\s*" + _AC_RANGE_SEP + r"\s*\(\d+\)", re.IGNORECASE)
+
+
+def _longest_ascending_run(numbers: list[int]) -> list[int]:
+    """Indices of the longest subsequence (in text order) whose numbers go up
+    by exactly one each step. Ties keep the run that starts earliest."""
+    best_len = [1] * len(numbers)
+    prev: list[int | None] = [None] * len(numbers)
+    for i, n in enumerate(numbers):
+        for j in range(i):
+            if numbers[j] == n - 1 and best_len[j] + 1 > best_len[i]:
+                best_len[i] = best_len[j] + 1
+                prev[i] = j
+    if not numbers:
+        return []
+    end = max(range(len(numbers)), key=lambda k: (best_len[k], -k))
+    run: list[int] = []
+    cursor: int | None = end
+    while cursor is not None:
+        run.append(cursor)
+        cursor = prev[cursor]
+    return run[::-1]
+
+
+def _is_range(text: str, marker: re.Match[str]) -> bool:
+    before = text[: marker.start()]
+    after = text[marker.start() :]
+    closing = after.find(")")
+    return bool(
+        _AC_RANGE_BEFORE_RE.search(before)
+        or _AC_RANGE_AFTER_RE.match(after[closing + 1 :] if closing >= 0 else "")
+    )
+
+
+def _has_cue(text: str, marker: re.Match[str]) -> bool:
+    return bool(_AC_XREF_CUE_BEFORE_RE.search(text[: marker.start()]))
+
+
+def _restarted_run_members(numbers: list[int]) -> set[int]:
+    """Positions in ``numbers`` that belong to a maximal stretch of >= 2
+    consecutive entries going up by exactly one (a restarted numbered list)."""
+    members: set[int] = set()
+    start = 0
+    for i in range(1, len(numbers) + 1):
+        if i == len(numbers) or numbers[i] != numbers[i - 1] + 1:
+            if i - start >= 2:
+                members.update(range(start, i))
+            start = i
+    return members
+
+
+def _outside_all_cross_references(text: str, outside: list[re.Match[str]]) -> bool:
+    """True when every out-of-run marker reads as a cross-reference: a range,
+    or a cue-word back-reference that is not part of a restarted run."""
+    singles = [m for m in outside if not _is_range(text, m)]
+    restarted = _restarted_run_members([int(m.group(1)) for m in singles])
+    return all(
+        k not in restarted and _has_cue(text, m) for k, m in enumerate(singles)
+    )
+
+
+def _split_at(text: str, markers: list[re.Match[str]]) -> list[str]:
+    parts: list[str] = []
+    start = 0
+    for marker in markers:
+        parts.append(text[start : marker.start()])
+        start = marker.end()
+    parts.append(text[start:])
+    return [p.strip() for p in parts if p.strip()]
+
+
 def split_acceptance(acceptance: str) -> tuple[str, ...]:
     """Split an acceptance string into individual criteria.
 
     Handles the ``(1) ... (2) ...`` numbered convention used across the plans;
     falls back to one criterion (the whole non-empty string) when no markers
     are present.
+
+    Criterion boundaries are the LONGEST run of ``(n)`` markers whose numbers
+    go up by one (in text order), so a split child starting at ``(3)`` still
+    splits and an in-criterion cross-reference such as ``"in (2)-(6)"`` or
+    ``"see (4)"`` stays in its criterion's text. This count feeds the blocking
+    ``over_ac`` check, so it must not under-count: when a marker outside the
+    run does NOT read as a cross-reference — e.g. a skipped number
+    ``(1) a (3) b`` or a leading ``See (9)`` the pattern misses — the count is
+    conservative: the larger of the run split and the plain split at every
+    marker. An out-of-run marker is a cross-reference only when it is part of
+    a range (``(2)-(6)``, ``(2) to (6)``) or follows a cue word (``in / see /
+    per / of / from / cf. / under``) AND is not part of a restarted ascending
+    run (>= 2 out-of-run, non-range markers whose numbers go up by one, such as
+    a second ``See (1) .. See (5)`` list).
     """
     text = acceptance.strip()
     if not text:
         return ()
-    # Split on numbered markers like "(1)" / "(12)" that open a criterion.
-    parts = re.split(r"\(\d+\)\s*", text)
+    markers = list(_AC_MARKER_RE.finditer(text))
+    run_idx = _longest_ascending_run([int(m.group(1)) for m in markers])
+    run_set = set(run_idx)
+    run_parts = _split_at(text, [markers[k] for k in run_idx])
+    outside = [m for k, m in enumerate(markers) if k not in run_set]
+    if not _outside_all_cross_references(text, outside):
+        every_parts = _split_at(text, markers)
+        if len(every_parts) > len(run_parts):
+            run_parts = every_parts
+    parts = run_parts
     criteria = [p.strip() for p in parts if p.strip()]
     if criteria:
         return tuple(criteria)

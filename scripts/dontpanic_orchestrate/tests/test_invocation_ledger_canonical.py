@@ -31,6 +31,7 @@ sys.path.insert(0, str(HERE.parents[2]))
 
 from dontpanic_orchestrate import invocation_ledger as il  # noqa: E402
 from dontpanic_orchestrate import operator_console as oc  # noqa: E402
+from dontpanic_orchestrate.tests._fixture_git import disable_fixture_signing  # noqa: E402
 
 _NOW = "2026-06-17T00:00:00Z"
 _LATER = "2026-06-17T00:00:01Z"
@@ -46,6 +47,7 @@ def _run(cmd: list[str], cwd: Path) -> None:
 def _git_init(path: Path) -> None:
     path.mkdir(parents=True, exist_ok=True)
     _run(["git", "init", "-q"], path)
+    disable_fixture_signing(path)
     _run(["git", "config", "user.email", "t@example.com"], path)
     _run(["git", "config", "user.name", "tester"], path)
     (path / "README.md").write_text("seed")

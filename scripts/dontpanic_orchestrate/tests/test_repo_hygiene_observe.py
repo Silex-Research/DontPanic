@@ -18,6 +18,7 @@ from pathlib import Path
 import pytest
 
 from dontpanic_orchestrate import repo_hygiene as rh
+from dontpanic_orchestrate.tests._fixture_git import disable_fixture_signing
 
 
 def run_git(repo: Path, *args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -34,7 +35,7 @@ def init_repo(path: Path, *, branch: str = "main") -> Path:
     subprocess.run(["git", "init", "-q", "-b", branch, str(path)], check=True)
     run_git(path, "config", "user.email", "test@example.com")
     run_git(path, "config", "user.name", "Test")
-    run_git(path, "config", "commit.gpgsign", "false")
+    disable_fixture_signing(path)
     return path
 
 
