@@ -264,18 +264,30 @@ def _decision_id_of(token: str) -> str:
 
 
 def _gate_semantics(gate_text: str | None) -> dict[str, Any]:
-    """Stable projection of audit/gate-state.json: every field that grants gate
-    AUTHORITY — the cleared-gate set, the completed-stage set, the per-feature
-    completion record (``completed_stage_features``, which is what authorizes a
-    feature's ``pre_merge``) and the D004/D009 ``legacy_upfront_pre_merge``
-    marker. The volatile ``history`` list, timestamps and pending/pause fields
-    are deliberately excluded so the supervisor's normal record_pause history
-    appends do not manufacture drift — only an externally-changed authority
-    (e.g. a human clearing a gate, or adding a feature to
-    ``completed_stage_features``, mid-run to bypass a pause) registers. Sorted
-    so set-equal states with different insertion order compare equal. Tolerant
-    of a missing/malformed file (empty projection; the file hash still flags
-    the raw change)."""
+    """Stable projection of audit/gate-state.json. Projected authority fields:
+    the cleared-gate set, the completed-stage set, the per-feature completion
+    list (``completed_stage_features``) and the D004/D009
+    ``legacy_upfront_pre_merge`` marker.
+
+    NOT projected, although gate_pause reads them for authority:
+    ``completed_stage_bindings`` and ``gate_events``. A feature's ``pre_merge``
+    counts as completed only when it is listed in ``completed_stage_features``
+    AND its ``completed_stage_bindings`` entry AND a ``gate_events`` approval
+    are both bound to the current plan id and feature revision
+    (``gate_pause._is_feature_stage_completed``). So an edit to those two keys
+    alone leaves this projection unchanged: :func:`classify_drift` lists
+    gate-state.json in ``changed_files`` (raw hash) but adds no change note
+    and no drift class for it. Such an edit cannot add a feature to the
+    completed list, but it can restore authority for a feature that is already
+    listed and whose binding went stale (for example after its features.json
+    record changed), by rewriting the binding and event to the current
+    revision.
+
+    The volatile ``history`` list, timestamps and pending/pause fields are
+    excluded too, so the supervisor's normal record_pause history appends do
+    not manufacture drift. Sorted so set-equal states with different insertion
+    order compare equal. Tolerant of a missing/malformed file: the projection
+    is empty (the raw change again shows only in ``changed_files``)."""
     empty: dict[str, Any] = {
         "cleared_gates": [],
         "completed_stages": [],

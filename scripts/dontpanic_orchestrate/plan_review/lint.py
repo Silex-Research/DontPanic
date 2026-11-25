@@ -340,16 +340,19 @@ def tag_surfaces(text: str) -> tuple[str, ...]:
 
 
 _AC_MARKER_RE = re.compile(r"\((\d+)\)\s*")
-# A marker preceded by one of these words is a back-reference ("see (4)",
-# "in (2)", "per (3)") rather than a criterion boundary. "step(s)" / "item(s)"
-# are NOT: "Step (1) a Step (2) b" labels criteria, it does not cite them.
-_AC_XREF_BEFORE_RE = re.compile(
-    r"(?:\b(?:in|see|per|of|from|cf\.?|under|criterion|criteria)"
-    r"|\(\d+\)\s*(?:[-\u2013\u2014]|to|through|and|or|,))\s*$",
+# A marker preceded by one of these words MAY be a back-reference ("see (4)",
+# "in (2)", "per (3)") rather than a criterion boundary \u2014 unless it is part of
+# a restarted ascending run (see split_acceptance). "step(s)" / "item(s)" /
+# "criterion" / "criteria" are NOT cues: they label criteria, not cite them.
+_AC_XREF_CUE_BEFORE_RE = re.compile(
+    r"\b(?:in|see|per|of|from|cf\.?|under)\s*$",
     re.IGNORECASE,
 )
-# A marker followed by a range dash opens a "(2)-(6)" range reference.
-_AC_RANGE_AFTER_RE = re.compile(r"\A\s*[-\u2013\u2014]\s*\(\d+\)")
+_AC_RANGE_SEP = r"(?:[-\u2013\u2014]|to|through|and|or|,)"
+# A marker joined to a neighbouring marker by a range/list separator is part of
+# a "(2)-(6)" / "(2) to (6)" / "(2), (3)" reference.
+_AC_RANGE_BEFORE_RE = re.compile(r"\(\d+\)\s*" + _AC_RANGE_SEP + r"\s*$", re.IGNORECASE)
+_AC_RANGE_AFTER_RE = re.compile(r"\A\s*" + _AC_RANGE_SEP + r"\s*\(\d+\)", re.IGNORECASE)
 
 
 def _longest_ascending_run(numbers: list[int]) -> list[int]:
@@ -373,13 +376,40 @@ def _longest_ascending_run(numbers: list[int]) -> list[int]:
     return run[::-1]
 
 
-def _is_cross_reference(text: str, marker: re.Match[str]) -> bool:
+def _is_range(text: str, marker: re.Match[str]) -> bool:
     before = text[: marker.start()]
     after = text[marker.start() :]
     closing = after.find(")")
     return bool(
-        _AC_XREF_BEFORE_RE.search(before)
+        _AC_RANGE_BEFORE_RE.search(before)
         or _AC_RANGE_AFTER_RE.match(after[closing + 1 :] if closing >= 0 else "")
+    )
+
+
+def _has_cue(text: str, marker: re.Match[str]) -> bool:
+    return bool(_AC_XREF_CUE_BEFORE_RE.search(text[: marker.start()]))
+
+
+def _restarted_run_members(numbers: list[int]) -> set[int]:
+    """Positions in ``numbers`` that belong to a maximal stretch of >= 2
+    consecutive entries going up by exactly one (a restarted numbered list)."""
+    members: set[int] = set()
+    start = 0
+    for i in range(1, len(numbers) + 1):
+        if i == len(numbers) or numbers[i] != numbers[i - 1] + 1:
+            if i - start >= 2:
+                members.update(range(start, i))
+            start = i
+    return members
+
+
+def _outside_all_cross_references(text: str, outside: list[re.Match[str]]) -> bool:
+    """True when every out-of-run marker reads as a cross-reference: a range,
+    or a cue-word back-reference that is not part of a restarted run."""
+    singles = [m for m in outside if not _is_range(text, m)]
+    restarted = _restarted_run_members([int(m.group(1)) for m in singles])
+    return all(
+        k not in restarted and _has_cue(text, m) for k, m in enumerate(singles)
     )
 
 
@@ -404,11 +434,15 @@ def split_acceptance(acceptance: str) -> tuple[str, ...]:
     go up by one (in text order), so a split child starting at ``(3)`` still
     splits and an in-criterion cross-reference such as ``"in (2)-(6)"`` or
     ``"see (4)"`` stays in its criterion's text. This count feeds the blocking
-    ``over_ac`` check, so it must never under-count: when a marker outside the
-    run does NOT read as a cross-reference (a range, or ``in / see / per / of
-    (n)``) — e.g. a skipped number ``(1) a (3) b`` or a leading ``See (9)`` the
-    pattern misses — the count is conservative: the larger of the run split and
-    the plain split at every marker.
+    ``over_ac`` check, so it must not under-count: when a marker outside the
+    run does NOT read as a cross-reference — e.g. a skipped number
+    ``(1) a (3) b`` or a leading ``See (9)`` the pattern misses — the count is
+    conservative: the larger of the run split and the plain split at every
+    marker. An out-of-run marker is a cross-reference only when it is part of
+    a range (``(2)-(6)``, ``(2) to (6)``) or follows a cue word (``in / see /
+    per / of / from / cf. / under``) AND is not part of a restarted ascending
+    run (>= 2 out-of-run, non-range markers whose numbers go up by one, such as
+    a second ``See (1) .. See (5)`` list).
     """
     text = acceptance.strip()
     if not text:
@@ -418,7 +452,7 @@ def split_acceptance(acceptance: str) -> tuple[str, ...]:
     run_set = set(run_idx)
     run_parts = _split_at(text, [markers[k] for k in run_idx])
     outside = [m for k, m in enumerate(markers) if k not in run_set]
-    if any(not _is_cross_reference(text, m) for m in outside):
+    if not _outside_all_cross_references(text, outside):
         every_parts = _split_at(text, markers)
         if len(every_parts) > len(run_parts):
             run_parts = every_parts

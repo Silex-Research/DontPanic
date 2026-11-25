@@ -3983,8 +3983,19 @@ def _run_pre_lock_design_volley(
         if contract_path.is_file():
             try:
                 contract = json.loads(contract_path.read_text())
-            except (OSError, json.JSONDecodeError):
+            except (OSError, json.JSONDecodeError) as exc:
                 contract = None
+                print(
+                    "[plan lock] design-review: WARN objective_contract.json "
+                    f"unreadable ({exc!r}); reviewing as if no contract"
+                )
+            else:
+                if not isinstance(contract, dict):
+                    print(
+                        "[plan lock] design-review: WARN objective_contract.json "
+                        f"is {type(contract).__name__}, not an object; "
+                        "reviewing as if no contract"
+                    )
         # Convergence rule: with a ledger from an earlier review, re-review
         # only what changed (+ prior open findings); --design-review-full or
         # no ledger -> full review.

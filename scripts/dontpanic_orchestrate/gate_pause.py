@@ -221,6 +221,7 @@ _STAGED_SCHEMA_KEYS: tuple[str, ...] = (
     "pending_stage",
     "completed_stage_features",
     "pending_stage_features",
+    "completed_stage_bindings",
 )
 
 # D004/D009 legacy-resume marker. Written ONLY by
